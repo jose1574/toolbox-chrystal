@@ -4,7 +4,8 @@
   "description": "aplicacion para complementar las herramientas de chyrstal ERP, esta apicacion ayuda a reponer inventarios de forma automatica y tambien de crear pedidos de compras automaticos. ",
   "main": "app.py",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "npx @tailwindcss/cli -i ./app/static/src/input.css -o ./app/static/dist/output.css --watch"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,10 @@
   "bugs": {
     "url": "https://github.com/jose1574/toolbox-chrystal/issues"
   },
-  "homepage": "https://github.com/jose1574/toolbox-chrystal#readme"
+  "homepage": "https://github.com/jose1574/toolbox-chrystal#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "flowbite": "^4.0.1",
+    "tailwindcss": "^4.1.18"
+  }
 }
