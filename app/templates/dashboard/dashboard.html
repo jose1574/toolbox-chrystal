@@ -2,4 +2,11 @@
 {% block title %}Dashboard - Toolbox{% endblock %}
 
 {% block content %}
+<h1>Dashboard</h1>
+<ul>
+    {% for user in users %}
+    <li>{{ user.description }}</li>
+    {% endfor %}
+</ul>
+
 {% endblock %}
