@@ -1,5 +1,7 @@
 # coding: utf-8
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from sqlalchemy import and_
 
 
 # Cambia esto si es necesario:
@@ -10,7 +12,7 @@ from app import db
 
 class AccountAccounting(db.Model):
     __tablename__ = 'account_accounting'
-
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
 
@@ -18,6 +20,7 @@ class AccountAccounting(db.Model):
 
 class AdditionalFieldsConfig(db.Model):
     __tablename__ = 'additional_fields_config'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     module = db.Column(db.Integer, primary_key=True, nullable=False)
     code = db.Column(db.String, primary_key=True, nullable=False)
@@ -32,6 +35,7 @@ class AdditionalFieldsConfig(db.Model):
 
 class AditionalDataEntity(db.Model):
     __tablename__ = 'aditional_data_entity'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     description = db.Column(db.String)
@@ -43,8 +47,9 @@ class AditionalDataEntity(db.Model):
 
 class AditionalDataEntityDetail(db.Model):
     __tablename__ = 'aditional_data_entity_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('aditional_data_entity.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.aditional_data_entity.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     field = db.Column(db.String)
     field_label = db.Column(db.String)
     column_type = db.Column(db.String)
@@ -60,8 +65,9 @@ class AditionalDataEntityDetail(db.Model):
 
 class AditionalDataEntityRel(db.Model):
     __tablename__ = 'aditional_data_entity_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_line = db.Column(db.ForeignKey('aditional_data_entity.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_line = db.Column(db.ForeignKey('public.aditional_data_entity.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     table_name = db.Column(db.String)
     module = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -71,17 +77,18 @@ class AditionalDataEntityRel(db.Model):
 
 class ArchingBox(db.Model):
     __tablename__ = 'arching_box'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     document_no = db.Column(db.String)
     open_date = db.Column(db.Date)
     close_date = db.Column(db.Date)
-    open_user = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    close_user = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    box_user = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    open_user = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    close_user = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    box_user = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
     open_description = db.Column(db.String)
     close_description = db.Column(db.String)
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     open_hour = db.Column(db.Time)
     close_hour = db.Column(db.Time)
     status = db.Column(db.String)
@@ -95,11 +102,12 @@ class ArchingBox(db.Model):
 
 class ArchingBoxDetail(db.Model):
     __tablename__ = 'arching_box_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('arching_box.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.arching_box.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
     type_operation = db.Column(db.String)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     detail_amount = db.Column(db.Double(53))
     count_amount = db.Column(db.Double(53))
     difference = db.Column(db.Double(53))
@@ -113,6 +121,7 @@ class ArchingBoxDetail(db.Model):
 
 class AreaSale(db.Model):
     __tablename__ = 'area_sales'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -121,10 +130,11 @@ class AreaSale(db.Model):
 
 class BackupsLog(db.Model):
     __tablename__ = 'backups_log'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
     register_hour = db.Column(db.Time)
 
     user = db.relationship('User', primaryjoin='BackupsLog.user_code == User.code', backref='backups_logs')
@@ -133,11 +143,12 @@ class BackupsLog(db.Model):
 
 class BankAccount(db.Model):
     __tablename__ = 'bank_account'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
     bank = db.Column(db.String)
-    account_accounting = db.Column(db.ForeignKey('account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    account_accounting = db.Column(db.ForeignKey('public.account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
     last_check_number = db.Column(db.Integer)
     conciliation_period = db.Column(db.String)
     initial_balance = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -147,7 +158,7 @@ class BankAccount(db.Model):
     deferred_debits = db.Column(db.Double(53), server_default=db.FetchedValue())
     balance = db.Column(db.Double(53), server_default=db.FetchedValue())
     available_balance = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     movil_payment = db.Column(db.Boolean, server_default=db.FetchedValue())
     movil_payment_id = db.Column(db.String, server_default=db.FetchedValue())
     movil_payment_phone = db.Column(db.String, server_default=db.FetchedValue())
@@ -159,16 +170,17 @@ class BankAccount(db.Model):
 
 class BankAccountTax(db.Model):
     __tablename__ = 'bank_account_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    bank_account_code = db.Column(db.ForeignKey('bank_account.code', ondelete='CASCADE', onupdate='CASCADE'))
+    bank_account_code = db.Column(db.ForeignKey('public.bank_account.code', ondelete='CASCADE', onupdate='CASCADE'))
     description = db.Column(db.String)
     status = db.Column(db.Boolean)
     tax_type = db.Column(db.Integer)
     tax_value = db.Column(db.Double(53))
     apply_values_higher_to = db.Column(db.Double(53))
     destiny_bank = db.Column(db.Integer)
-    account_accountin_code = db.Column(db.ForeignKey('account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    account_accountin_code = db.Column(db.ForeignKey('public.account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
     transaction_type = db.Column(db.Integer)
     transaction_description = db.Column(db.String)
 
@@ -181,10 +193,11 @@ class BankConciliation(db.Model):
     __tablename__ = 'bank_conciliation'
     __table_args__ = (
         db.UniqueConstraint('bank_account', 'period_conciliation'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    bank_account = db.Column(db.ForeignKey('bank_account.code', ondelete='CASCADE', onupdate='CASCADE'))
+    bank_account = db.Column(db.ForeignKey('public.bank_account.code', ondelete='CASCADE', onupdate='CASCADE'))
     period_conciliation = db.Column(db.String)
     register_date = db.Column(db.Date)
     user_code = db.Column(db.String)
@@ -229,10 +242,11 @@ class BankConciliation(db.Model):
 
 class BankTransactionAccountDetail(db.Model):
     __tablename__ = 'bank_transaction_account_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    account_accounting = db.Column(db.ForeignKey('account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    account_accounting = db.Column(db.ForeignKey('public.account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit = db.Column(db.Double(53))
     debit = db.Column(db.Double(53))
 
@@ -243,9 +257,10 @@ class BankTransactionAccountDetail(db.Model):
 
 class BankTransaction(db.Model):
     __tablename__ = 'bank_transactions'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    bank_account = db.Column(db.ForeignKey('bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank_account = db.Column(db.ForeignKey('public.bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
     operation_type = db.Column(db.String)
     reference_number = db.Column(db.String)
     description = db.Column(db.String)
@@ -255,21 +270,21 @@ class BankTransaction(db.Model):
     register_date = db.Column(db.Date)
     credit = db.Column(db.Double(53))
     debit = db.Column(db.Double(53))
-    beneficiary = db.Column(db.ForeignKey('beneficiaries.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    beneficiary = db.Column(db.ForeignKey('public.beneficiaries.code', ondelete='RESTRICT', onupdate='CASCADE'))
     endosable = db.Column(db.Boolean, server_default=db.FetchedValue())
     amount_other_bank = db.Column(db.Double(53))
     amount_same_bank = db.Column(db.Double(53))
     release_date_other_bank = db.Column(db.Date)
     release_date_same_bank = db.Column(db.Date)
-    bank_account_related = db.Column(db.ForeignKey('bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank_account_related = db.Column(db.ForeignKey('public.bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
     cash = db.Column(db.Double(53))
     deferred_same_bank = db.Column(db.Boolean, server_default=db.FetchedValue())
     deferred_other_bank = db.Column(db.Boolean, server_default=db.FetchedValue())
     ready_to_conciliate = db.Column(db.Boolean, server_default=db.FetchedValue())
     correlative_conciliation = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
     beneficiary_description = db.Column(db.String)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     bank_related = db.Column(db.String, server_default=db.FetchedValue())
 
     bank_account1 = db.relationship('BankAccount', primaryjoin='BankTransaction.bank_account == BankAccount.code', backref='bankaccount_bank_transactions')
@@ -289,14 +304,15 @@ class BankTransaction(db.Model):
 
 t_bank_transactions_rel = db.Table(
     'bank_transactions_rel',
-    db.Column('correlative', db.ForeignKey('bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
-    db.Column('correlative_rel', db.ForeignKey('bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    db.Column('correlative', db.ForeignKey('public.bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
+    db.Column('correlative_rel', db.ForeignKey('public.bank_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
 
 
 
 class Bank(db.Model):
     __tablename__ = 'banks'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -307,6 +323,7 @@ class Bank(db.Model):
 
 class Beneficiary(db.Model):
     __tablename__ = 'beneficiaries'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     description = db.Column(db.String)
@@ -315,6 +332,7 @@ class Beneficiary(db.Model):
 
 class Bot(db.Model):
     __tablename__ = 'bot'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     token = db.Column(db.String, primary_key=True)
 
@@ -322,6 +340,7 @@ class Bot(db.Model):
 
 class BotUser(db.Model):
     __tablename__ = 'bot_users'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     chat_id = db.Column(db.BigInteger, primary_key=True)
     enabled = db.Column(db.Boolean, server_default=db.FetchedValue())
@@ -332,6 +351,7 @@ class BotUser(db.Model):
 
 class Browser(db.Model):
     __tablename__ = 'browser'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -343,7 +363,7 @@ class Browser(db.Model):
     lenght = db.Column(db.Integer)
     width = db.Column(db.Integer)
     show_coin = db.Column(db.Boolean, server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     paginate = db.Column(db.Boolean, server_default=db.FetchedValue())
     query_count = db.Column(db.String, server_default=db.FetchedValue())
     max_rows_by_page = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -355,8 +375,9 @@ class Browser(db.Model):
 
 class BrowserColumn(db.Model):
     __tablename__ = 'browser_columns'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     field = db.Column(db.String, primary_key=True, nullable=False)
     field_label = db.Column(db.String)
     width = db.Column(db.Integer)
@@ -372,8 +393,9 @@ class BrowserColumn(db.Model):
 
 class BrowserFilter(db.Model):
     __tablename__ = 'browser_filters'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     field = db.Column(db.String, primary_key=True, nullable=False)
     field_label = db.Column(db.String)
     index_column = db.Column(db.Integer)
@@ -386,8 +408,9 @@ class BrowserFilter(db.Model):
 
 class BrowserParameter(db.Model):
     __tablename__ = 'browser_parameters'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.browser.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     default_value = db.Column(db.String)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
 
@@ -397,6 +420,7 @@ class BrowserParameter(db.Model):
 
 class CardType(db.Model):
     __tablename__ = 'card_types'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -406,13 +430,14 @@ class CardType(db.Model):
 
 class CashOperation(db.Model):
     __tablename__ = 'cash_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
     document_no = db.Column(db.String)
     operation_type = db.Column(db.String)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station_code = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station_code = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description = db.Column(db.String)
     operation_comments = db.Column(db.String)
 
@@ -423,6 +448,7 @@ class CashOperation(db.Model):
 
 class City(db.Model):
     __tablename__ = 'citys'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -431,6 +457,7 @@ class City(db.Model):
 
 class ClientGroup(db.Model):
     __tablename__ = 'client_groups'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -439,6 +466,7 @@ class ClientGroup(db.Model):
 
 class Client(db.Model):
     __tablename__ = 'clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -447,23 +475,23 @@ class Client(db.Model):
     email = db.Column(db.String)
     phone = db.Column(db.String)
     contact = db.Column(db.String)
-    country = db.Column(db.ForeignKey('countrys.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    province = db.Column(db.ForeignKey('provinces.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    city = db.Column(db.ForeignKey('citys.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    town = db.Column(db.ForeignKey('towns.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    area_sales = db.Column(db.ForeignKey('area_sales.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    seller = db.Column(db.ForeignKey('sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    client_group = db.Column(db.ForeignKey('client_groups.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    country = db.Column(db.ForeignKey('public.countrys.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    province = db.Column(db.ForeignKey('public.provinces.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    city = db.Column(db.ForeignKey('public.citys.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    town = db.Column(db.ForeignKey('public.towns.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    area_sales = db.Column(db.ForeignKey('public.area_sales.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    seller = db.Column(db.ForeignKey('public.sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_group = db.Column(db.ForeignKey('public.client_groups.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit_days = db.Column(db.Integer)
     credit_limit = db.Column(db.Double(53))
     discount = db.Column(db.Double(53))
-    client_type = db.Column(db.ForeignKey('person_type.code', ondelete='RESTRICT', onupdate='CASCADE'), db.ForeignKey('person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_type = db.Column(db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'), db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_price = db.Column(db.Integer)
     status = db.Column(db.String)
     name_fiscal = db.Column(db.Integer)
     generic_client = db.Column(db.Boolean)
-    cond_property_type = db.Column(db.ForeignKey('cond_property_type.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    cond_floor = db.Column(db.ForeignKey('cond_floor.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    cond_property_type = db.Column(db.ForeignKey('public.cond_property_type.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    cond_floor = db.Column(db.ForeignKey('public.cond_floor.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     cond_aliquot = db.Column(db.Double(53), server_default=db.FetchedValue())
     cond_surface = db.Column(db.Double(53), server_default=db.FetchedValue())
     client_classification = db.Column(db.String, server_default=db.FetchedValue())
@@ -488,8 +516,9 @@ class Client(db.Model):
 
 class ClientsAddres(db.Model):
     __tablename__ = 'clients_address'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    client_code = db.Column(db.ForeignKey('clients.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    client_code = db.Column(db.ForeignKey('public.clients.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     index_order = db.Column(db.Integer, primary_key=True, nullable=False)
     address = db.Column(db.String)
     contact = db.Column(db.String)
@@ -502,8 +531,9 @@ class ClientsAddres(db.Model):
 
 class ClientsBalance(db.Model):
     __tablename__ = 'clients_balance'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    client = db.Column(db.ForeignKey('clients.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    client = db.Column(db.ForeignKey('public.clients.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     emission_date = db.Column(db.Date, primary_key=True, nullable=False)
     initial_balance = db.Column(db.Double(53), server_default=db.FetchedValue())
     credits = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -516,14 +546,15 @@ class ClientsBalance(db.Model):
 
 class ClosingSalesPoint(db.Model):
     __tablename__ = 'closing_sales_point'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     document_no = db.Column(db.String)
     emission_date = db.Column(db.Date)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    sale_point = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    bank_account = db.Column(db.ForeignKey('bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_point = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank_account = db.Column(db.ForeignKey('public.bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
     lot = db.Column(db.String)
     emission_date_sale_point = db.Column(db.Date)
     date_bank_credit = db.Column(db.Date)
@@ -542,8 +573,9 @@ class ClosingSalesPoint(db.Model):
 
 class ClosingSalesPointBank(db.Model):
     __tablename__ = 'closing_sales_point_bank'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     bank_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
 
     closing_sales_point = db.relationship('ClosingSalesPoint', primaryjoin='ClosingSalesPointBank.main_correlative == ClosingSalesPoint.correlative', backref='closing_sales_point_banks')
@@ -552,10 +584,11 @@ class ClosingSalesPointBank(db.Model):
 
 class ClosingSalesPointCard(db.Model):
     __tablename__ = 'closing_sales_point_card'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
-    card_type = db.Column(db.ForeignKey('card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    card_type = db.Column(db.ForeignKey('public.card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_details = db.Column(db.Double(53))
     total_sales_point = db.Column(db.Double(53))
     percent_commission = db.Column(db.Double(53))
@@ -573,14 +606,15 @@ class ClosingSalesPointCard(db.Model):
 
 t_closing_sales_point_way_to_pay = db.Table(
     'closing_sales_point_way_to_pay',
-    db.Column('main_correlative', db.ForeignKey('closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
-    db.Column('line_way_to_pay_detail', db.ForeignKey('way_to_pay_details.line', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    db.Column('main_correlative', db.ForeignKey('public.closing_sales_point.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
+    db.Column('line_way_to_pay_detail', db.ForeignKey('public.way_to_pay_details.line', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
 
 
 
 class CodesIslr(db.Model):
     __tablename__ = 'codes_islr'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -607,6 +641,7 @@ class CodesIslr(db.Model):
 
 class Coin(db.Model):
     __tablename__ = 'coin'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -624,14 +659,15 @@ class Coin(db.Model):
 
 class CoinHistory(db.Model):
     __tablename__ = 'coin_history'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    main_code = db.Column(db.ForeignKey('coin.code', ondelete='CASCADE', onupdate='CASCADE'))
+    main_code = db.Column(db.ForeignKey('public.coin.code', ondelete='CASCADE', onupdate='CASCADE'))
     sales_aliquot = db.Column(db.Double(53))
     buy_aliquot = db.Column(db.Double(53))
     register_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     coin = db.relationship('Coin', primaryjoin='CoinHistory.main_code == Coin.code', backref='coin_histories')
     user = db.relationship('User', primaryjoin='CoinHistory.user_code == User.code', backref='coin_histories')
@@ -640,6 +676,7 @@ class CoinHistory(db.Model):
 
 class Color(db.Model):
     __tablename__ = 'colors'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -648,10 +685,11 @@ class Color(db.Model):
 
 class Command(db.Model):
     __tablename__ = 'command'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    department = db.Column(db.ForeignKey('department.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    department = db.Column(db.ForeignKey('public.department.code', ondelete='RESTRICT', onupdate='CASCADE'))
     printer = db.Column(db.String)
     display_format = db.Column(db.Integer, server_default=db.FetchedValue())
 
@@ -661,6 +699,7 @@ class Command(db.Model):
 
 class Company(db.Model):
     __tablename__ = 'company'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -668,7 +707,7 @@ class Company(db.Model):
     phone = db.Column(db.String)
     logo = db.Column(db.LargeBinary)
     logo_type = db.Column(db.String)
-    email = db.Column(db.ForeignKey('emails.account', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    email = db.Column(db.ForeignKey('public.emails.account', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     contact = db.Column(db.String)
     key_activation = db.Column(db.LargeBinary)
     serial_no = db.Column(db.String)
@@ -714,6 +753,7 @@ class Company(db.Model):
 
 class CondAdditionalShare(db.Model):
     __tablename__ = 'cond_additional_share'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     document_no = db.Column(db.String)
@@ -721,8 +761,8 @@ class CondAdditionalShare(db.Model):
     emission_date = db.Column(db.Date)
     register_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total = db.Column(db.Double(53))
     share_no = db.Column(db.Double(53))
     total_share = db.Column(db.Double(53))
@@ -734,9 +774,10 @@ class CondAdditionalShare(db.Model):
 
 class CondAdditionalShareCoin(db.Model):
     __tablename__ = 'cond_additional_share_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_additional_share.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_additional_share.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     factor_aliquot = db.Column(db.Double(53))
     total = db.Column(db.Double(53))
@@ -749,8 +790,9 @@ class CondAdditionalShareCoin(db.Model):
 
 class CondAdditionalShareDetail(db.Model):
     __tablename__ = 'cond_additional_share_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_additional_share.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_additional_share.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
     correlative_receivable = db.Column(db.Integer)
 
@@ -760,10 +802,11 @@ class CondAdditionalShareDetail(db.Model):
 
 class CondClosureExpConcept(db.Model):
     __tablename__ = 'cond_closure_exp_concept'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    concept_code = db.Column(db.ForeignKey('cond_concept.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    concept_code = db.Column(db.ForeignKey('public.cond_concept.code', ondelete='RESTRICT', onupdate='CASCADE'))
     concept_description = db.Column(db.String)
     total_detail = db.Column(db.Double(53))
     total = db.Column(db.Double(53))
@@ -776,12 +819,13 @@ class CondClosureExpConcept(db.Model):
 class CondClosureExpConceptCoin(db.Model):
     __tablename__ = 'cond_closure_exp_concept_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['cond_closure_exp_concept.main_correlative', 'cond_closure_exp_concept.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.cond_closure_exp_concept.main_correlative', 'public.cond_closure_exp_concept.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_line = db.Column(db.Integer, primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     total_detail = db.Column(db.Double(53))
     total = db.Column(db.Double(53))
 
@@ -792,8 +836,9 @@ class CondClosureExpConceptCoin(db.Model):
 
 class CondClosureExpDetail(db.Model):
     __tablename__ = 'cond_closure_exp_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_rel = db.Column(db.Integer, primary_key=True, nullable=False)
     module_rel = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -803,6 +848,7 @@ class CondClosureExpDetail(db.Model):
 
 class CondClosureExpense(db.Model):
     __tablename__ = 'cond_closure_expense'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
@@ -810,8 +856,8 @@ class CondClosureExpense(db.Model):
     register_date = db.Column(db.Date)
     period = db.Column(db.String)
     description = db.Column(db.String)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_expense = db.Column(db.Double(53))
     total_income = db.Column(db.Double(53))
     total_prevision = db.Column(db.Double(53))
@@ -825,9 +871,10 @@ class CondClosureExpense(db.Model):
 
 class CondClosureExpenseCoin(db.Model):
     __tablename__ = 'cond_closure_expense_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     factor_aliquot = db.Column(db.Double(53))
     total_expense = db.Column(db.Double(53))
@@ -842,6 +889,7 @@ class CondClosureExpenseCoin(db.Model):
 
 class CondConcept(db.Model):
     __tablename__ = 'cond_concept'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -854,7 +902,7 @@ class CondConcept(db.Model):
     amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     formula = db.Column(db.String, server_default=db.FetchedValue())
     edit_name = db.Column(db.Boolean, server_default=db.FetchedValue())
-    status = db.Column(db.ForeignKey('status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     allow_edit_value = db.Column(db.Boolean, server_default=db.FetchedValue())
     show_if_cero = db.Column(db.Boolean, server_default=db.FetchedValue())
     calc_order = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -866,6 +914,7 @@ class CondConcept(db.Model):
 
 class CondCondominium(db.Model):
     __tablename__ = 'cond_condominium'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id_condominium = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -878,6 +927,7 @@ class CondCondominium(db.Model):
 
 class CondFloor(db.Model):
     __tablename__ = 'cond_floor'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -886,6 +936,7 @@ class CondFloor(db.Model):
 
 class CondPropertyType(db.Model):
     __tablename__ = 'cond_property_type'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -894,18 +945,19 @@ class CondPropertyType(db.Model):
 
 class CondReceipt(db.Model):
     __tablename__ = 'cond_receipt'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    correlative_rel = db.Column(db.ForeignKey('cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    correlative_rel = db.Column(db.ForeignKey('public.cond_closure_expense.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     emission_date = db.Column(db.Date)
     exp_date = db.Column(db.Date)
     register_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
     document_no = db.Column(db.String)
     description = db.Column(db.String)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    property_code = db.Column(db.ForeignKey('clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    property_code = db.Column(db.ForeignKey('public.clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
     property_description = db.Column(db.String)
     property_id = db.Column(db.String)
     property_address = db.Column(db.String)
@@ -918,7 +970,7 @@ class CondReceipt(db.Model):
     total = db.Column(db.Double(53))
     total_individual_exp = db.Column(db.Double(53))
     total_operation = db.Column(db.Double(53))
-    correlative_receivable = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    correlative_receivable = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     balance_indexing = db.Column(db.Double(53), server_default=db.FetchedValue())
 
     receivable = db.relationship('Receivable', primaryjoin='CondReceipt.correlative_receivable == Receivable.correlative', backref='cond_receipts')
@@ -931,8 +983,9 @@ class CondReceipt(db.Model):
 
 class CondReceiptCoin(db.Model):
     __tablename__ = 'cond_receipt_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_rel = db.Column(db.Integer)
     coin_code = db.Column(db.String, primary_key=True, nullable=False)
     total_expense = db.Column(db.Double(53))
@@ -948,8 +1001,9 @@ class CondReceiptCoin(db.Model):
 
 class CondReceiptConcept(db.Model):
     __tablename__ = 'cond_receipt_concept'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     main_line = db.Column(db.Integer, nullable=False)
     total = db.Column(db.Double(53))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
@@ -963,7 +1017,8 @@ class CondReceiptConcept(db.Model):
 class CondReceiptConceptCoin(db.Model):
     __tablename__ = 'cond_receipt_concept_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'coin_code'], ['cond_receipt_coins.main_correlative', 'cond_receipt_coins.coin_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'coin_code'], ['public.cond_receipt_coins.main_correlative', 'public.cond_receipt_coins.coin_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, nullable=False)
@@ -978,14 +1033,15 @@ class CondReceiptConceptCoin(db.Model):
 
 t_cond_receipt_details = db.Table(
     'cond_receipt_details',
-    db.Column('main_correlative', db.ForeignKey('cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
-    db.Column('correlative_rel', db.ForeignKey('shopping_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    db.Column('main_correlative', db.ForeignKey('public.cond_receipt.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
+    db.Column('correlative_rel', db.ForeignKey('public.shopping_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
 
 
 
 class Country(db.Model):
     __tablename__ = 'countrys'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -994,6 +1050,7 @@ class Country(db.Model):
 
 class Debtstopay(db.Model):
     __tablename__ = 'debtstopay'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
@@ -1002,7 +1059,7 @@ class Debtstopay(db.Model):
     emission_date = db.Column(db.Date)
     register_date = db.Column(db.Date)
     register_hour = db.Column(db.Time(True))
-    provider_code = db.Column(db.ForeignKey('provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    provider_code = db.Column(db.ForeignKey('public.provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
     provider_name = db.Column(db.String)
     provider_id = db.Column(db.String)
     provider_address = db.Column(db.String)
@@ -1011,8 +1068,8 @@ class Debtstopay(db.Model):
     expiration_date = db.Column(db.Date)
     description = db.Column(db.String)
     operation_comments = db.Column(db.String)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1029,7 +1086,7 @@ class Debtstopay(db.Model):
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
     repayment_applied = db.Column(db.Double(53), server_default=db.FetchedValue())
     reception_date = db.Column(db.Date)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     indexing_factor = db.Column(db.Double(53), server_default=db.FetchedValue())
     indexing_debit = db.Column(db.Double(53), server_default=db.FetchedValue())
     indexing_credit = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1051,13 +1108,14 @@ class Debtstopay(db.Model):
     user = db.relationship('User', primaryjoin='Debtstopay.user_code == User.code', backref='debtstopays')
 
 
-class DebtstopayReturnedCheck(Debtstopay):
+class DebtstopayReturnedCheck(db.Model):
     __tablename__ = 'debtstopay_returned_check'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    main_correlative = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     check_date = db.Column(db.Date)
     check_number = db.Column(db.String)
-    bank = db.Column(db.ForeignKey('banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank = db.Column(db.ForeignKey('public.banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     bank1 = db.relationship('Bank', primaryjoin='DebtstopayReturnedCheck.bank == Bank.code', backref='debtstopay_returned_checks')
 
@@ -1065,9 +1123,10 @@ class DebtstopayReturnedCheck(Debtstopay):
 
 class DebtstopayCoin(db.Model):
     __tablename__ = 'debtstopay_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     factor_aliquot = db.Column(db.Double(53))
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1096,9 +1155,10 @@ class DebtstopayCoin(db.Model):
 
 class DebtstopayDetail(db.Model):
     __tablename__ = 'debtstopay_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_related = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_related = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
     module_related = db.Column(db.String)
     balance_applied = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1118,9 +1178,10 @@ class DebtstopayDetail(db.Model):
 
 class DebtstopayDetailsCoin(db.Model):
     __tablename__ = 'debtstopay_details_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_related = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_related = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer, nullable=False)
     module_related = db.Column(db.String)
     coin_code = db.Column(db.String, primary_key=True, nullable=False)
@@ -1139,14 +1200,15 @@ class DebtstopayDetailsCoin(db.Model):
 
 class DebtstopayTax(db.Model):
     __tablename__ = 'debtstopay_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.debtstopay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
-    tax_type = db.Column(db.ForeignKey('tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     debtstopay = db.relationship('Debtstopay', primaryjoin='DebtstopayTax.main_correlative == Debtstopay.correlative', backref='debtstopay_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='DebtstopayTax.tax_type == TaxType.code', backref='debtstopay_taxes')
@@ -1157,14 +1219,15 @@ class DebtstopayTax(db.Model):
 class DebtstopayTaxesCoin(db.Model):
     __tablename__ = 'debtstopay_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['debtstopay_taxes.main_correlative', 'debtstopay_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.debtstopay_taxes.main_correlative', 'public.debtstopay_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='DebtstopayTaxesCoin.coin_code == Coin.code', backref='debtstopay_taxes_coins')
@@ -1174,6 +1237,7 @@ class DebtstopayTaxesCoin(db.Model):
 
 class DeliveryOperation(db.Model):
     __tablename__ = 'delivery_operations'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
@@ -1183,12 +1247,12 @@ class DeliveryOperation(db.Model):
     operation_comments = db.Column(db.String)
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
-    driver = db.Column(db.ForeignKey('drivers.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    vehicle = db.Column(db.ForeignKey('vehicles.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    driver = db.Column(db.ForeignKey('public.drivers.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    vehicle = db.Column(db.ForeignKey('public.vehicles.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_weight = db.Column(db.Double(53), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     pending = db.Column(db.Boolean)
     canceled = db.Column(db.Boolean)
 
@@ -1201,10 +1265,11 @@ class DeliveryOperation(db.Model):
 
 class DeliveryOperationsDetail(db.Model):
     __tablename__ = 'delivery_operations_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('delivery_operations.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.delivery_operations.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    correlative_related = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    correlative_related = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
 
     sales_operation = db.relationship('SalesOperation', primaryjoin='DeliveryOperationsDetail.correlative_related == SalesOperation.correlative', backref='delivery_operations_details')
     delivery_operation = db.relationship('DeliveryOperation', primaryjoin='DeliveryOperationsDetail.main_correlative == DeliveryOperation.correlative', backref='delivery_operations_details')
@@ -1224,14 +1289,15 @@ t_delivery_operations_details_load = db.Table(
     db.Column('main_line', db.Integer, primary_key=True),
     db.Column('load_correlative', db.Integer),
     db.Column('load_line', db.Integer),
-    db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['delivery_operations_details.main_correlative', 'delivery_operations_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
-    db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['delivery_operations_details.main_correlative', 'delivery_operations_details.line'], ondelete='CASCADE', onupdate='CASCADE')
+    db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['public.delivery_operations_details.main_correlative', 'public.delivery_operations_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
+    db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.delivery_operations_details.main_correlative', 'public.delivery_operations_details.line'], ondelete='CASCADE', onupdate='CASCADE')
 )
 
 
 
 class Department(db.Model):
     __tablename__ = 'department'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1244,22 +1310,25 @@ class Department(db.Model):
 
 class DepartmentsImage(Department):
     __tablename__ = 'departments_image'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('department.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    main_code = db.Column(db.ForeignKey('public.department.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     image_type = db.Column(db.String)
     department_image = db.Column(db.LargeBinary)
 
 
 class RestPosDepartment(Department):
     __tablename__ = 'rest_pos_department'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    code = db.Column(db.ForeignKey('department.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    code = db.Column(db.ForeignKey('public.department.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     index_order = db.Column(db.Integer)
 
 
 
 class Driver(db.Model):
     __tablename__ = 'drivers'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1269,6 +1338,7 @@ class Driver(db.Model):
 
 class Email(db.Model):
     __tablename__ = 'emails'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     account = db.Column(db.String, primary_key=True)
     account_password = db.Column(db.String)
@@ -1282,6 +1352,7 @@ class Email(db.Model):
 
 class FiscalPrinterConfig(db.Model):
     __tablename__ = 'fiscal_printer_config'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
     station_code = db.Column(db.String, primary_key=True)
@@ -1303,6 +1374,7 @@ class FiscalPrinterConfig(db.Model):
 
 class FiscalPrinterConfigDetail(db.Model):
     __tablename__ = 'fiscal_printer_config_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True, nullable=False)
     description = db.Column(db.String)
@@ -1312,7 +1384,7 @@ class FiscalPrinterConfigDetail(db.Model):
     operation_type = db.Column(db.String, primary_key=True, nullable=False)
     visible = db.Column(db.Boolean)
     position_field = db.Column(db.Integer)
-    main_correlative = db.Column(db.ForeignKey('fiscal_printer_config.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.fiscal_printer_config.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     fiscal_printer_config = db.relationship('FiscalPrinterConfig', primaryjoin='FiscalPrinterConfigDetail.main_correlative == FiscalPrinterConfig.correlative', backref='fiscal_printer_config_details')
 
@@ -1320,6 +1392,7 @@ class FiscalPrinterConfigDetail(db.Model):
 
 class FiscalPrinterZ(db.Model):
     __tablename__ = 'fiscal_printer_z'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     fiscal_printer_serial = db.Column(db.String)
@@ -1336,8 +1409,9 @@ class FiscalPrinterZ(db.Model):
 
 class FiscalPrinterZDetail(db.Model):
     __tablename__ = 'fiscal_printer_z_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('fiscal_printer_z.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.fiscal_printer_z.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
     taxable = db.Column(db.Double(53))
@@ -1350,6 +1424,7 @@ class FiscalPrinterZDetail(db.Model):
 
 class InventoryOperation(db.Model):
     __tablename__ = 'inventory_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
@@ -1357,10 +1432,10 @@ class InventoryOperation(db.Model):
     emission_date = db.Column(db.Date)
     wait = db.Column(db.Boolean)
     description = db.Column(db.String)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    destination_store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    destination_location = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    destination_store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    destination_location = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
     operation_comments = db.Column(db.String)
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
@@ -1368,11 +1443,11 @@ class InventoryOperation(db.Model):
     register_date = db.Column(db.Date)
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     total_details = db.Column(db.Integer, server_default=db.FetchedValue())
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     internal_use = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     coin = db.relationship('Coin', primaryjoin='InventoryOperation.coin_code == Coin.code', backref='inventory_operations')
@@ -1387,9 +1462,10 @@ class InventoryOperation(db.Model):
 
 class InventoryOperationCoin(db.Model):
     __tablename__ = 'inventory_operation_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     buy_aliquot = db.Column(db.Double(53))
     sales_aliquot = db.Column(db.Double(53))
@@ -1402,31 +1478,32 @@ class InventoryOperationCoin(db.Model):
 
 class InventoryOperationDetail(db.Model):
     __tablename__ = 'inventory_operation_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
     model = db.Column(db.String)
     amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    destination_store = db.Column(db.ForeignKey('store.code', ondelete='CASCADE', onupdate='CASCADE'))
-    destination_location = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    destination_store = db.Column(db.ForeignKey('public.store.code', ondelete='CASCADE', onupdate='CASCADE'))
+    destination_location = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
-    buy_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    buy_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     aliquot = db.Column(db.Double(53))
     total_cost = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
     load_by_adjustment = db.Column(db.Double(53), server_default=db.FetchedValue())
     download_by_adjustment = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     change_price = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     tax = db.relationship('Tax', primaryjoin='InventoryOperationDetail.buy_tax == Tax.code', backref='inventory_operation_details')
@@ -1443,7 +1520,8 @@ class InventoryOperationDetail(db.Model):
 class InventoryOperationDetailsLot(InventoryOperationDetail):
     __tablename__ = 'inventory_operation_details_lots'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['inventory_operation_details.main_correlative', 'inventory_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.inventory_operation_details.main_correlative', 'public.inventory_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -1459,9 +1537,10 @@ class InventoryOperationDetailsLot(InventoryOperationDetail):
 
 class InventoryOperationDetailsProductsUnit(db.Model):
     __tablename__ = 'inventory_operation_details_products_units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_line = db.Column(db.ForeignKey('inventory_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_units = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_line = db.Column(db.ForeignKey('public.inventory_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_units = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     unitary_cost = db.Column(db.Double(53))
     calculated_cost = db.Column(db.Double(53))
     average_cost = db.Column(db.Double(53))
@@ -1488,7 +1567,8 @@ class InventoryOperationDetailsProductsUnit(db.Model):
 class InventoryOperationDetailsSerial(db.Model):
     __tablename__ = 'inventory_operation_details_serials'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['inventory_operation_details.main_correlative', 'inventory_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.inventory_operation_details.main_correlative', 'public.inventory_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -1503,13 +1583,14 @@ class InventoryOperationDetailsSerial(db.Model):
 
 class InventoryOperationTax(db.Model):
     __tablename__ = 'inventory_operation_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.inventory_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    tax_type = db.Column(db.ForeignKey('tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     inventory_operation = db.relationship('InventoryOperation', primaryjoin='InventoryOperationTax.main_correlative == InventoryOperation.correlative', backref='inventory_operation_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='InventoryOperationTax.tax_type == TaxType.code', backref='inventory_operation_taxes')
@@ -1519,10 +1600,11 @@ class InventoryOperationTax(db.Model):
 
 class Location(db.Model):
     __tablename__ = 'locations'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    parent_store = db.Column(db.ForeignKey('store.code', onupdate='CASCADE'))
+    parent_store = db.Column(db.ForeignKey('public.store.code', onupdate='CASCADE'))
 
     store = db.relationship('Store', primaryjoin='Location.parent_store == Store.code', backref='locations')
 
@@ -1530,6 +1612,7 @@ class Location(db.Model):
 
 class Mark(db.Model):
     __tablename__ = 'marks'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1538,6 +1621,7 @@ class Mark(db.Model):
 
 class Menu(db.Model):
     __tablename__ = 'menus'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1548,6 +1632,7 @@ class Menu(db.Model):
 
 class ModuleNumbering(db.Model):
     __tablename__ = 'module_numbering'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1556,10 +1641,11 @@ class ModuleNumbering(db.Model):
 
 class Numbering(db.Model):
     __tablename__ = 'numbering'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True, nullable=False)
     last_number = db.Column(db.Integer)
-    module = db.Column(db.ForeignKey('module_numbering.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    module = db.Column(db.ForeignKey('public.module_numbering.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     description = db.Column(db.String)
     last_number_in_wait = db.Column(db.Integer)
     factor = db.Column(db.Integer)
@@ -1572,6 +1658,7 @@ class Numbering(db.Model):
 
 class Numeration(db.Model):
     __tablename__ = 'numeration'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1582,6 +1669,7 @@ class Numeration(db.Model):
 
 class Origin(db.Model):
     __tablename__ = 'origin'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1590,6 +1678,7 @@ class Origin(db.Model):
 
 class PersonType(db.Model):
     __tablename__ = 'person_type'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1598,10 +1687,11 @@ class PersonType(db.Model):
 
 class PettyCash(db.Model):
     __tablename__ = 'petty_cash'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    account_accounting = db.Column(db.ForeignKey('account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    account_accounting = db.Column(db.ForeignKey('public.account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
     conciliation_period = db.Column(db.String)
     initial_balance = db.Column(db.Double(53), server_default=db.FetchedValue())
     credits = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1609,7 +1699,7 @@ class PettyCash(db.Model):
     balance = db.Column(db.Double(53), server_default=db.FetchedValue())
     last_in = db.Column(db.Integer, server_default=db.FetchedValue())
     last_out = db.Column(db.Integer, server_default=db.FetchedValue())
-    coin = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     account_accounting1 = db.relationship('AccountAccounting', primaryjoin='PettyCash.account_accounting == AccountAccounting.code', backref='petty_cash')
     coin1 = db.relationship('Coin', primaryjoin='PettyCash.coin == Coin.code', backref='petty_cash')
@@ -1620,10 +1710,11 @@ class PettyCashConciliation(db.Model):
     __tablename__ = 'petty_cash_conciliation'
     __table_args__ = (
         db.UniqueConstraint('petty_cash', 'period_conciliation'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    petty_cash = db.Column(db.ForeignKey('petty_cash.code', ondelete='CASCADE', onupdate='CASCADE'))
+    petty_cash = db.Column(db.ForeignKey('public.petty_cash.code', ondelete='CASCADE', onupdate='CASCADE'))
     period_conciliation = db.Column(db.String)
     register_date = db.Column(db.Date)
     user_code = db.Column(db.String)
@@ -1644,10 +1735,11 @@ class PettyCashConciliation(db.Model):
 
 class PettyCashTransactionAccountDetail(db.Model):
     __tablename__ = 'petty_cash_transaction_account_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('petty_cash_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.petty_cash_transactions.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    account_accounting = db.Column(db.ForeignKey('account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    account_accounting = db.Column(db.ForeignKey('public.account_accounting.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit = db.Column(db.Double(53))
     debit = db.Column(db.Double(53))
 
@@ -1658,9 +1750,10 @@ class PettyCashTransactionAccountDetail(db.Model):
 
 class PettyCashTransaction(db.Model):
     __tablename__ = 'petty_cash_transactions'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    petty_cash = db.Column(db.ForeignKey('petty_cash.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    petty_cash = db.Column(db.ForeignKey('public.petty_cash.code', ondelete='RESTRICT', onupdate='CASCADE'))
     operation_type = db.Column(db.String)
     reference_number = db.Column(db.String)
     description = db.Column(db.String)
@@ -1679,6 +1772,7 @@ class PettyCashTransaction(db.Model):
 
 class PictureGallery(db.Model):
     __tablename__ = 'picture_gallery'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     image = db.Column(db.LargeBinary)
@@ -1689,12 +1783,13 @@ class PictureGallery(db.Model):
 
 class ProdFormula(db.Model):
     __tablename__ = 'prod_formulas'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     code = db.Column(db.String, unique=True)
     description = db.Column(db.String)
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    product_unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     qty = db.Column(db.Double(53))
     status = db.Column(db.Boolean)
 
@@ -1705,11 +1800,12 @@ class ProdFormula(db.Model):
 
 class ProdFormulasDetail(db.Model):
     __tablename__ = 'prod_formulas_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    formula_id = db.Column(db.ForeignKey('prod_formulas.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    formula_id = db.Column(db.ForeignKey('public.prod_formulas.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     id = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    product_unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     qty = db.Column(db.Double(53))
     status = db.Column(db.Boolean)
 
@@ -1721,6 +1817,7 @@ class ProdFormulasDetail(db.Model):
 
 class Product(db.Model):
     __tablename__ = 'products'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -1728,29 +1825,29 @@ class Product(db.Model):
     mark = db.Column(db.String)
     model = db.Column(db.String)
     referenc = db.Column(db.String)
-    department = db.Column(db.ForeignKey('department.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    department = db.Column(db.ForeignKey('public.department.code', ondelete='RESTRICT', onupdate='CASCADE'))
     days_warranty = db.Column(db.Integer)
-    sale_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    buy_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    buy_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     rounding_type = db.Column(db.Integer)
     costing_type = db.Column(db.Integer)
     discount = db.Column(db.Double(53))
     max_discount = db.Column(db.Double(53), nullable=False, server_default=db.FetchedValue())
     minimal_sale = db.Column(db.Double(53), nullable=False, server_default=db.FetchedValue())
     maximal_sale = db.Column(db.Double(53), nullable=False, server_default=db.FetchedValue())
-    status = db.Column(db.ForeignKey('status.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    origin = db.Column(db.ForeignKey('origin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    origin = db.Column(db.ForeignKey('public.origin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     take_department_utility = db.Column(db.Boolean)
     allow_decimal = db.Column(db.Boolean)
     edit_name = db.Column(db.Boolean)
     sale_price = db.Column(db.Integer)
     product_type = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     request_technician = db.Column(db.Boolean, server_default=db.FetchedValue())
     serialized = db.Column(db.Boolean, server_default=db.FetchedValue())
     request_details = db.Column(db.Boolean, server_default=db.FetchedValue())
     request_amount = db.Column(db.Boolean, server_default=db.FetchedValue())
-    coin = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     allow_negative_stock = db.Column(db.Boolean, server_default=db.FetchedValue())
     use_scale = db.Column(db.Boolean, server_default=db.FetchedValue())
     add_unit_description = db.Column(db.Boolean, server_default=db.FetchedValue())
@@ -1775,24 +1872,27 @@ class Product(db.Model):
 
 class ProductsImage(Product):
     __tablename__ = 'products_image'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    main_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     image_type = db.Column(db.String)
     product_image = db.Column(db.LargeBinary)
 
 
 class RestPosProduct(Product):
     __tablename__ = 'rest_pos_products'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     index_order = db.Column(db.Integer)
 
 
 
 class ProductsCode(db.Model):
     __tablename__ = 'products_codes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     other_code = db.Column(db.String, primary_key=True)
     code_type = db.Column(db.String, server_default=db.FetchedValue())
 
@@ -1802,8 +1902,9 @@ class ProductsCode(db.Model):
 
 class ProductsCommission(db.Model):
     __tablename__ = 'products_commission'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     comission_type = db.Column(db.String, primary_key=True, nullable=False)
     value_type = db.Column(db.String)
     perc_maximum_price = db.Column(db.Double(53))
@@ -1816,30 +1917,16 @@ class ProductsCommission(db.Model):
 
 
 
-class ProductsFailure(db.Model):
-    __tablename__ = 'products_failures'
-    __table_args__ = (
-        db.UniqueConstraint('product_code', 'store_code'),
-    )
-
-    correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    product_code = db.Column(db.ForeignKey('products.code'), nullable=False)
-    store_code = db.Column(db.ForeignKey('store.code'), nullable=False)
-    minimal_stock = db.Column(db.Integer, nullable=False)
-    maximum_stock = db.Column(db.Integer, nullable=False)
-    location = db.Column(db.String(100))
-
-    product = db.relationship('Product', primaryjoin='ProductsFailure.product_code == Product.code', backref='products_failures')
-    store = db.relationship('Store', primaryjoin='ProductsFailure.store_code == Store.code', backref='products_failures')
 
 
 
 class ProductsLot(db.Model):
     __tablename__ = 'products_lots'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     lot_number = db.Column(db.String)
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'))
     entry_date = db.Column(db.Date)
     entry_module = db.Column(db.String)
     entry_correlative = db.Column(db.Integer)
@@ -1855,10 +1942,11 @@ class ProductsLot(db.Model):
 
 class ProductsLotsStock(db.Model):
     __tablename__ = 'products_lots_stock'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('products_lots.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.products_lots.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     stock = db.Column(db.Double(53), server_default=db.FetchedValue())
     ordered_stock = db.Column(db.Double(53), server_default=db.FetchedValue())
     committed_stock = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1871,9 +1959,10 @@ class ProductsLotsStock(db.Model):
 
 class ProductsLotsUnit(db.Model):
     __tablename__ = 'products_lots_units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('products_units.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    lots_correlative = db.Column(db.ForeignKey('products_lots.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    lots_correlative = db.Column(db.ForeignKey('public.products_lots.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     unitary_cost = db.Column(db.Double(53))
     calculated_cost = db.Column(db.Double(53))
     average_cost = db.Column(db.Double(53))
@@ -1899,10 +1988,11 @@ class ProductsLotsUnit(db.Model):
 
 class ProductsPart(db.Model):
     __tablename__ = 'products_parts'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'))
-    part_code = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    main_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'))
+    part_code = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     amount = db.Column(db.Double(53))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     cost_type = db.Column(db.String, server_default=db.FetchedValue())
@@ -1915,10 +2005,11 @@ class ProductsPart(db.Model):
 
 class ProductsProvider(db.Model):
     __tablename__ = 'products_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'))
-    provider_code = db.Column(db.ForeignKey('provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'))
+    provider_code = db.Column(db.ForeignKey('public.provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
     unitary_cost = db.Column(db.Double(53))
     document_type = db.Column(db.String)
     document_no = db.Column(db.String)
@@ -1936,13 +2027,14 @@ class ProductsProvider(db.Model):
 
 class ProductsSerial(db.Model):
     __tablename__ = 'products_serial'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     serial_no = db.Column(db.String)
     stock = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     correlative_in = db.Column(db.Integer)
     module_in = db.Column(db.String)
 
@@ -1954,10 +2046,11 @@ class ProductsSerial(db.Model):
 
 class ProductsStatistic(db.Model):
     __tablename__ = 'products_statistics'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     statistic_date = db.Column(db.Date, primary_key=True, nullable=False)
     initial_stock = db.Column(db.Double(53), server_default=db.FetchedValue())
     load_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -1995,10 +2088,11 @@ class ProductsStatistic(db.Model):
 
 class ProductsStock(db.Model):
     __tablename__ = 'products_stock'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     stock = db.Column(db.Double(53))
     ordered_stock = db.Column(db.Double(53), server_default=db.FetchedValue())
     committed_stock = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2011,10 +2105,11 @@ class ProductsStock(db.Model):
 
 class ProductsUnit(db.Model):
     __tablename__ = 'products_units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    unit = db.Column(db.ForeignKey('units.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.units.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'))
     main_unit = db.Column(db.Boolean)
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
@@ -2051,6 +2146,7 @@ class ProductsUnit(db.Model):
 
 class Profile(db.Model):
     __tablename__ = 'profile'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -2060,6 +2156,7 @@ class Profile(db.Model):
 
 class PropertiesGroup(db.Model):
     __tablename__ = 'properties_group'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -2068,6 +2165,7 @@ class PropertiesGroup(db.Model):
 
 class Provider(db.Model):
     __tablename__ = 'provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -2076,13 +2174,13 @@ class Provider(db.Model):
     email = db.Column(db.String)
     phone = db.Column(db.String)
     contact = db.Column(db.String)
-    country = db.Column(db.ForeignKey('countrys.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    province = db.Column(db.ForeignKey('provinces.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    city = db.Column(db.ForeignKey('citys.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    town = db.Column(db.ForeignKey('towns.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    country = db.Column(db.ForeignKey('public.countrys.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    province = db.Column(db.ForeignKey('public.provinces.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    city = db.Column(db.ForeignKey('public.citys.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    town = db.Column(db.ForeignKey('public.towns.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit_days = db.Column(db.Integer)
     credit_limit = db.Column(db.Double(53))
-    provider_type = db.Column(db.ForeignKey('person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    provider_type = db.Column(db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
     status = db.Column(db.String)
     domiciled = db.Column(db.Integer)
     percent_tax_retention = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2102,8 +2200,9 @@ class Provider(db.Model):
 
 class ProvidersBalance(db.Model):
     __tablename__ = 'providers_balance'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    provider = db.Column(db.ForeignKey('provider.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    provider = db.Column(db.ForeignKey('public.provider.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     emission_date = db.Column(db.Date, primary_key=True, nullable=False)
     initial_balance = db.Column(db.Double(53), server_default=db.FetchedValue())
     credits = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2116,6 +2215,7 @@ class ProvidersBalance(db.Model):
 
 class Province(db.Model):
     __tablename__ = 'provinces'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -2124,6 +2224,7 @@ class Province(db.Model):
 
 class Receivable(db.Model):
     __tablename__ = 'receivable'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
@@ -2132,7 +2233,7 @@ class Receivable(db.Model):
     emission_date = db.Column(db.Date)
     register_date = db.Column(db.Date)
     register_hour = db.Column(db.Time(True))
-    client_code = db.Column(db.ForeignKey('clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_code = db.Column(db.ForeignKey('public.clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
     client_name = db.Column(db.String)
     client_id = db.Column(db.String)
     client_address = db.Column(db.String)
@@ -2142,9 +2243,9 @@ class Receivable(db.Model):
     expiration_date = db.Column(db.Date)
     description = db.Column(db.String)
     operation_comments = db.Column(db.String)
-    seller = db.Column(db.ForeignKey('sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    seller = db.Column(db.ForeignKey('public.sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2165,7 +2266,7 @@ class Receivable(db.Model):
     fiscal_printer_serial = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_z = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_date = db.Column(db.DateTime)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     indexing_coin = db.Column(db.String, server_default=db.FetchedValue())
     indexing_factor = db.Column(db.Double(53), server_default=db.FetchedValue())
     indexing_debit = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2189,11 +2290,12 @@ class Receivable(db.Model):
 
 class ReceivableReturnedCheck(Receivable):
     __tablename__ = 'receivable_returned_check'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    main_correlative = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     check_date = db.Column(db.Date)
     check_number = db.Column(db.String)
-    bank = db.Column(db.ForeignKey('banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank = db.Column(db.ForeignKey('public.banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     bank1 = db.relationship('Bank', primaryjoin='ReceivableReturnedCheck.bank == Bank.code', backref='receivable_returned_checks')
 
@@ -2201,9 +2303,10 @@ class ReceivableReturnedCheck(Receivable):
 
 class ReceivableCoin(db.Model):
     __tablename__ = 'receivable_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     factor_aliquot = db.Column(db.Double(53))
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2232,9 +2335,10 @@ class ReceivableCoin(db.Model):
 
 class ReceivableDetail(db.Model):
     __tablename__ = 'receivable_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_related = db.Column(db.ForeignKey('receivable.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_related = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
     module_related = db.Column(db.String)
     balance_applied = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2254,9 +2358,10 @@ class ReceivableDetail(db.Model):
 
 class ReceivableDetailsCoin(db.Model):
     __tablename__ = 'receivable_details_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_related = db.Column(db.ForeignKey('receivable.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_related = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer, nullable=False)
     module_related = db.Column(db.String)
     coin_code = db.Column(db.String, primary_key=True, nullable=False)
@@ -2275,14 +2380,15 @@ class ReceivableDetailsCoin(db.Model):
 
 class ReceivableTax(db.Model):
     __tablename__ = 'receivable_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.receivable.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
-    tax_type = db.Column(db.ForeignKey('tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     receivable = db.relationship('Receivable', primaryjoin='ReceivableTax.main_correlative == Receivable.correlative', backref='receivable_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='ReceivableTax.tax_type == TaxType.code', backref='receivable_taxes')
@@ -2293,14 +2399,15 @@ class ReceivableTax(db.Model):
 class ReceivableTaxesCoin(db.Model):
     __tablename__ = 'receivable_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['receivable_taxes.main_correlative', 'receivable_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.receivable_taxes.main_correlative', 'public.receivable_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='ReceivableTaxesCoin.coin_code == Coin.code', backref='receivable_taxes_coins')
@@ -2310,6 +2417,7 @@ class ReceivableTaxesCoin(db.Model):
 
 class RecyclerRetentionIslrClient(db.Model):
     __tablename__ = 'recycler_retention_islr_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2328,10 +2436,11 @@ class RecyclerRetentionIslrClient(db.Model):
 
 class RecyclerRetentionIslrClientsDetail(db.Model):
     __tablename__ = 'recycler_retention_islr_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_retention_islr_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_retention_islr_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     line = db.Column(db.Integer, primary_key=True)
-    code_islr = db.Column(db.ForeignKey('codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_islr = db.Column(db.ForeignKey('public.codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
     calculation_base = db.Column(db.Double(53))
     percent_retention = db.Column(db.Double(53))
     sustraendo = db.Column(db.Double(53))
@@ -2348,6 +2457,7 @@ class RecyclerRetentionIslrClientsDetail(db.Model):
 
 class RecyclerRetentionIslrProvider(db.Model):
     __tablename__ = 'recycler_retention_islr_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2367,10 +2477,11 @@ class RecyclerRetentionIslrProvider(db.Model):
 
 class RecyclerRetentionIslrProviderDetail(db.Model):
     __tablename__ = 'recycler_retention_islr_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_retention_islr_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_retention_islr_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     line = db.Column(db.Integer, primary_key=True)
-    code_islr = db.Column(db.ForeignKey('codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_islr = db.Column(db.ForeignKey('public.codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
     calculation_base = db.Column(db.Double(53))
     percent_retention = db.Column(db.Double(53))
     sustraendo = db.Column(db.Double(53))
@@ -2387,6 +2498,7 @@ class RecyclerRetentionIslrProviderDetail(db.Model):
 
 class RecyclerRetentionMunicipalClient(db.Model):
     __tablename__ = 'recycler_retention_municipal_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2406,8 +2518,9 @@ class RecyclerRetentionMunicipalClient(db.Model):
 
 class RecyclerRetentionMunicipalClientsDetail(db.Model):
     __tablename__ = 'recycler_retention_municipal_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_retention_municipal_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.recycler_retention_municipal_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True)
@@ -2420,6 +2533,7 @@ class RecyclerRetentionMunicipalClientsDetail(db.Model):
 
 class RecyclerRetentionMunicipalProvider(db.Model):
     __tablename__ = 'recycler_retention_municipal_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2440,8 +2554,9 @@ class RecyclerRetentionMunicipalProvider(db.Model):
 
 class RecyclerRetentionMunicipalProviderDetail(db.Model):
     __tablename__ = 'recycler_retention_municipal_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_retention_municipal_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.recycler_retention_municipal_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, unique=True)
@@ -2454,6 +2569,7 @@ class RecyclerRetentionMunicipalProviderDetail(db.Model):
 
 class RecyclerRetentionTaxClient(db.Model):
     __tablename__ = 'recycler_retention_tax_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2473,8 +2589,9 @@ class RecyclerRetentionTaxClient(db.Model):
 
 class RecyclerRetentionTaxClientsDetail(db.Model):
     __tablename__ = 'recycler_retention_tax_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_tax_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.retention_tax_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True)
@@ -2487,6 +2604,7 @@ class RecyclerRetentionTaxClientsDetail(db.Model):
 
 class RecyclerRetentionTaxProvider(db.Model):
     __tablename__ = 'recycler_retention_tax_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -2507,8 +2625,9 @@ class RecyclerRetentionTaxProvider(db.Model):
 
 class RecyclerRetentionTaxProviderDetail(db.Model):
     __tablename__ = 'recycler_retention_tax_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_retention_tax_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.recycler_retention_tax_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True)
@@ -2521,9 +2640,10 @@ class RecyclerRetentionTaxProviderDetail(db.Model):
 
 class RecyclerSalesDocumentsRel(db.Model):
     __tablename__ = 'recycler_sales_documents_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True)
-    main_correlative = db.Column(db.ForeignKey('recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_related = db.Column(db.Integer, primary_key=True, nullable=False)
     module_related = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -2533,6 +2653,7 @@ class RecyclerSalesDocumentsRel(db.Model):
 
 class RecyclerSalesOperation(db.Model):
     __tablename__ = 'recycler_sales_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     operation_type = db.Column(db.String)
@@ -2541,21 +2662,21 @@ class RecyclerSalesOperation(db.Model):
     emission_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
-    client_code = db.Column(db.ForeignKey('clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_code = db.Column(db.ForeignKey('public.clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
     client_name = db.Column(db.String)
     client_id = db.Column(db.String)
     client_address = db.Column(db.String)
     client_phone = db.Column(db.String)
     client_name_fiscal = db.Column(db.Integer)
-    seller = db.Column(db.ForeignKey('sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    seller = db.Column(db.ForeignKey('public.sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit_days = db.Column(db.Integer)
     expiration_date = db.Column(db.Date)
     wait = db.Column(db.Boolean)
     description = db.Column(db.String)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_net_details = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2578,7 +2699,7 @@ class RecyclerSalesOperation(db.Model):
     total_count_details = db.Column(db.Double(53), server_default=db.FetchedValue())
     pending = db.Column(db.Boolean)
     canceled = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
-    freight_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    freight_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     freight_aliquot = db.Column(db.Double(53))
     total_retention_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_retention_municipal = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2592,7 +2713,7 @@ class RecyclerSalesOperation(db.Model):
     fiscal_printer_serial = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_z = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_date = db.Column(db.DateTime)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_point = db.Column(db.Boolean, server_default=db.FetchedValue())
     address_send = db.Column(db.String)
     contact_send = db.Column(db.String)
@@ -2619,9 +2740,10 @@ class RecyclerSalesOperation(db.Model):
 
 class RecyclerSalesOperationCoin(db.Model):
     __tablename__ = 'recycler_sales_operation_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     buy_aliquot = db.Column(db.Double(53))
     sales_aliquot = db.Column(db.Double(53))
@@ -2653,22 +2775,23 @@ class RecyclerSalesOperationCoin(db.Model):
 
 class RecyclerSalesOperationDetail(db.Model):
     __tablename__ = 'recycler_sales_operation_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
     model = db.Column(db.String)
     amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
-    sale_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_aliquot = db.Column(db.Double(53))
     price = db.Column(db.Double(53), server_default=db.FetchedValue())
     type_price = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -2691,8 +2814,8 @@ class RecyclerSalesOperationDetail(db.Model):
     amount_discharged_by_load_delivery_note = db.Column(db.Double(53), server_default=db.FetchedValue())
     product_type = db.Column(db.String)
     description = db.Column(db.String)
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_weight = db.Column(db.Double(53), server_default=db.FetchedValue())
 
     product = db.relationship('Product', primaryjoin='RecyclerSalesOperationDetail.code_product == Product.code', backref='recycler_sales_operation_details')
@@ -2708,7 +2831,8 @@ class RecyclerSalesOperationDetail(db.Model):
 class RecyclerSalesOperationDetailsLot(RecyclerSalesOperationDetail):
     __tablename__ = 'recycler_sales_operation_details_lots'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_sales_operation_details.main_correlative', 'recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_sales_operation_details.main_correlative', 'public.recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -2725,7 +2849,8 @@ class RecyclerSalesOperationDetailsLot(RecyclerSalesOperationDetail):
 class RecyclerSalesOperationDetailsCoin(db.Model):
     __tablename__ = 'recycler_sales_operation_details_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_sales_operation_details.main_correlative', 'recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_sales_operation_details.main_correlative', 'public.recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -2742,7 +2867,7 @@ class RecyclerSalesOperationDetailsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='RecyclerSalesOperationDetailsCoin.coin_code == Coin.code', backref='recycler_sales_operation_details_coins')
     recycler_sales_operation_detail = db.relationship('RecyclerSalesOperationDetail', primaryjoin='and_(RecyclerSalesOperationDetailsCoin.main_correlative == RecyclerSalesOperationDetail.main_correlative, RecyclerSalesOperationDetailsCoin.main_line == RecyclerSalesOperationDetail.line)', backref='recycler_sales_operation_details_coins')
@@ -2752,8 +2877,9 @@ class RecyclerSalesOperationDetailsCoin(db.Model):
 class RecyclerSalesOperationDetailsLoad(db.Model):
     __tablename__ = 'recycler_sales_operation_details_load'
     __table_args__ = (
-        db.ForeignKeyConstraint(['load_line', 'load_correlative'], ['recycler_sales_operation_details.line', 'recycler_sales_operation_details.main_correlative'], ondelete='RESTRICT', onupdate='CASCADE'),
-        db.ForeignKeyConstraint(['main_line', 'main_correlative'], ['recycler_sales_operation_details.line', 'recycler_sales_operation_details.main_correlative'], ondelete='CASCADE', onupdate='CASCADE')
+        db.ForeignKeyConstraint(['load_line', 'load_correlative'], ['public.recycler_sales_operation_details.line', 'public.recycler_sales_operation_details.main_correlative'], ondelete='RESTRICT', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_line', 'main_correlative'], ['public.recycler_sales_operation_details.line', 'public.recycler_sales_operation_details.main_correlative'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_line = db.Column(db.Integer, primary_key=True)
@@ -2770,13 +2896,14 @@ class RecyclerSalesOperationDetailsLoad(db.Model):
 class RecyclerSalesOperationDetailsPart(db.Model):
     __tablename__ = 'recycler_sales_operation_details_parts'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_sales_operation_details.main_correlative', 'recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_sales_operation_details.main_correlative', 'public.recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_line = db.Column(db.Integer, primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
@@ -2784,13 +2911,13 @@ class RecyclerSalesOperationDetailsPart(db.Model):
     show_line = db.Column(db.Boolean)
     part_amount = db.Column(db.Double(53))
     total_amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
-    sale_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_aliquot = db.Column(db.Double(53))
     price = db.Column(db.Double(53), server_default=db.FetchedValue())
     type_price = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -2809,8 +2936,8 @@ class RecyclerSalesOperationDetailsPart(db.Model):
     buy_aliquot = db.Column(db.Double(53))
     product_type = db.Column(db.String)
     description = db.Column(db.String)
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     product = db.relationship('Product', primaryjoin='RecyclerSalesOperationDetailsPart.code_product == Product.code', backref='recycler_sales_operation_details_parts')
     coin = db.relationship('Coin', primaryjoin='RecyclerSalesOperationDetailsPart.coin_code == Coin.code', backref='recycler_sales_operation_details_parts')
@@ -2826,7 +2953,8 @@ class RecyclerSalesOperationDetailsPart(db.Model):
 class RecyclerSalesOperationDetailsPartsCoin(db.Model):
     __tablename__ = 'recycler_sales_operation_details_parts_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line', 'main_part_line'], ['recycler_sales_operation_details_parts.main_correlative', 'recycler_sales_operation_details_parts.main_line', 'recycler_sales_operation_details_parts.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line', 'main_part_line'], ['public.recycler_sales_operation_details_parts.main_correlative', 'public.recycler_sales_operation_details_parts.main_line', 'public.recycler_sales_operation_details_parts.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -2844,7 +2972,7 @@ class RecyclerSalesOperationDetailsPartsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='RecyclerSalesOperationDetailsPartsCoin.coin_code == Coin.code', backref='recycler_sales_operation_details_parts_coins')
     recycler_sales_operation_details_part = db.relationship('RecyclerSalesOperationDetailsPart', primaryjoin='and_(RecyclerSalesOperationDetailsPartsCoin.main_correlative == RecyclerSalesOperationDetailsPart.main_correlative, RecyclerSalesOperationDetailsPartsCoin.main_line == RecyclerSalesOperationDetailsPart.main_line, RecyclerSalesOperationDetailsPartsCoin.main_part_line == RecyclerSalesOperationDetailsPart.line)', backref='recycler_sales_operation_details_parts_coins')
@@ -2854,7 +2982,8 @@ class RecyclerSalesOperationDetailsPartsCoin(db.Model):
 class RecyclerSalesOperationDetailsSerial(db.Model):
     __tablename__ = 'recycler_sales_operation_details_serials'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_sales_operation_details.main_correlative', 'recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_sales_operation_details.main_correlative', 'public.recycler_sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -2870,14 +2999,15 @@ class RecyclerSalesOperationDetailsSerial(db.Model):
 
 class RecyclerSalesOperationTax(db.Model):
     __tablename__ = 'recycler_sales_operation_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False)
-    tax_type = db.Column(db.ForeignKey('tax_types.code', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', onupdate='CASCADE'))
 
     recycler_sales_operation = db.relationship('RecyclerSalesOperation', primaryjoin='RecyclerSalesOperationTax.main_correlative == RecyclerSalesOperation.correlative', backref='recycler_sales_operation_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='RecyclerSalesOperationTax.tax_type == TaxType.code', backref='recycler_sales_operation_taxes')
@@ -2888,14 +3018,15 @@ class RecyclerSalesOperationTax(db.Model):
 class RecyclerSalesOperationTaxesCoin(db.Model):
     __tablename__ = 'recycler_sales_operation_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['recycler_sales_operation_taxes.main_correlative', 'recycler_sales_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.recycler_sales_operation_taxes.main_correlative', 'public.recycler_sales_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='RecyclerSalesOperationTaxesCoin.coin_code == Coin.code', backref='recycler_sales_operation_taxes_coins')
@@ -2905,9 +3036,10 @@ class RecyclerSalesOperationTaxesCoin(db.Model):
 
 class RecyclerShoppingDocumentsRel(db.Model):
     __tablename__ = 'recycler_shopping_documents_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, unique=True)
-    main_correlative = db.Column(db.ForeignKey('recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_related = db.Column(db.Integer, primary_key=True, nullable=False)
     module_related = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -2917,6 +3049,7 @@ class RecyclerShoppingDocumentsRel(db.Model):
 
 class RecyclerShoppingOperation(db.Model):
     __tablename__ = 'recycler_shopping_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     operation_type = db.Column(db.String)
@@ -2926,7 +3059,7 @@ class RecyclerShoppingOperation(db.Model):
     reception_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
-    provider_code = db.Column(db.ForeignKey('provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    provider_code = db.Column(db.ForeignKey('public.provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
     provider_name = db.Column(db.String)
     provider_id = db.Column(db.String)
     provider_address = db.Column(db.String)
@@ -2935,10 +3068,10 @@ class RecyclerShoppingOperation(db.Model):
     expiration_date = db.Column(db.Date)
     wait = db.Column(db.Boolean)
     description = db.Column(db.String)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_net_details = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -2966,7 +3099,7 @@ class RecyclerShoppingOperation(db.Model):
     retention_tax_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
     retention_islr_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
     retention_municipal_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     free_tax = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
 
     coin = db.relationship('Coin', primaryjoin='RecyclerShoppingOperation.coin_code == Coin.code', backref='recycler_shopping_operations')
@@ -2980,9 +3113,10 @@ class RecyclerShoppingOperation(db.Model):
 
 class RecyclerShoppingOperationCoin(db.Model):
     __tablename__ = 'recycler_shopping_operation_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     buy_aliquot = db.Column(db.Double(53))
     sales_aliquot = db.Column(db.Double(53))
@@ -3011,18 +3145,19 @@ class RecyclerShoppingOperationCoin(db.Model):
 
 class RecyclerShoppingOperationDetail(db.Model):
     __tablename__ = 'recycler_shopping_operation_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
     model = db.Column(db.String)
     amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
@@ -3035,13 +3170,13 @@ class RecyclerShoppingOperationDetail(db.Model):
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
     pending_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
-    buy_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    buy_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     buy_aliquot = db.Column(db.Double(53))
     update_inventory = db.Column(db.Boolean, server_default=db.FetchedValue())
     amount_released_by_load_order = db.Column(db.Double(53), server_default=db.FetchedValue())
     amount_charged_by_load_delivery_note = db.Column(db.Double(53), server_default=db.FetchedValue())
     product_type = db.Column(db.String)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     change_price = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     tax = db.relationship('Tax', primaryjoin='RecyclerShoppingOperationDetail.buy_tax == Tax.code', backref='recycler_shopping_operation_details')
@@ -3056,7 +3191,8 @@ class RecyclerShoppingOperationDetail(db.Model):
 class RecyclerShoppingOperationDetailsLot(RecyclerShoppingOperationDetail):
     __tablename__ = 'recycler_shopping_operation_details_lots'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_shopping_operation_details.main_correlative', 'recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_shopping_operation_details.main_correlative', 'public.recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -3073,7 +3209,8 @@ class RecyclerShoppingOperationDetailsLot(RecyclerShoppingOperationDetail):
 class RecyclerShoppingOperationDetailsCoin(db.Model):
     __tablename__ = 'recycler_shopping_operation_details_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_shopping_operation_details.main_correlative', 'recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_shopping_operation_details.main_correlative', 'public.recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -3086,7 +3223,7 @@ class RecyclerShoppingOperationDetailsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='RecyclerShoppingOperationDetailsCoin.coin_code == Coin.code', backref='recycler_shopping_operation_details_coins')
     recycler_shopping_operation_detail = db.relationship('RecyclerShoppingOperationDetail', primaryjoin='and_(RecyclerShoppingOperationDetailsCoin.main_correlative == RecyclerShoppingOperationDetail.main_correlative, RecyclerShoppingOperationDetailsCoin.main_line == RecyclerShoppingOperationDetail.line)', backref='recycler_shopping_operation_details_coins')
@@ -3096,8 +3233,9 @@ class RecyclerShoppingOperationDetailsCoin(db.Model):
 class RecyclerShoppingOperationDetailsLoad(db.Model):
     __tablename__ = 'recycler_shopping_operation_details_load'
     __table_args__ = (
-        db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['recycler_shopping_operation_details.main_correlative', 'recycler_shopping_operation_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_shopping_operation_details.main_correlative', 'recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE')
+        db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['public.recycler_shopping_operation_details.main_correlative', 'public.recycler_shopping_operation_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_shopping_operation_details.main_correlative', 'public.recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_line = db.Column(db.Integer, primary_key=True)
@@ -3113,9 +3251,10 @@ class RecyclerShoppingOperationDetailsLoad(db.Model):
 
 class RecyclerShoppingOperationDetailsProductsUnit(db.Model):
     __tablename__ = 'recycler_shopping_operation_details_products_units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_line = db.Column(db.ForeignKey('recycler_shopping_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_units = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_line = db.Column(db.ForeignKey('public.recycler_shopping_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_units = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     unitary_cost = db.Column(db.Double(53))
     calculated_cost = db.Column(db.Double(53))
     average_cost = db.Column(db.Double(53))
@@ -3142,7 +3281,8 @@ class RecyclerShoppingOperationDetailsProductsUnit(db.Model):
 class RecyclerShoppingOperationDetailsSerial(db.Model):
     __tablename__ = 'recycler_shopping_operation_details_serials'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_shopping_operation_details.main_correlative', 'recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_shopping_operation_details.main_correlative', 'public.recycler_shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -3158,14 +3298,15 @@ class RecyclerShoppingOperationDetailsSerial(db.Model):
 
 class RecyclerShoppingOperationTax(db.Model):
     __tablename__ = 'recycler_shopping_operation_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False)
-    tax_type = db.Column(db.ForeignKey('tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     recycler_shopping_operation = db.relationship('RecyclerShoppingOperation', primaryjoin='RecyclerShoppingOperationTax.main_correlative == RecyclerShoppingOperation.correlative', backref='recycler_shopping_operation_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='RecyclerShoppingOperationTax.tax_type == TaxType.code', backref='recycler_shopping_operation_taxes')
@@ -3176,14 +3317,15 @@ class RecyclerShoppingOperationTax(db.Model):
 class RecyclerShoppingOperationTaxesCoin(db.Model):
     __tablename__ = 'recycler_shopping_operation_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['recycler_shopping_operation_taxes.main_correlative', 'recycler_shopping_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.recycler_shopping_operation_taxes.main_correlative', 'public.recycler_shopping_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='RecyclerShoppingOperationTaxesCoin.coin_code == Coin.code', backref='recycler_shopping_operation_taxes_coins')
@@ -3193,6 +3335,7 @@ class RecyclerShoppingOperationTaxesCoin(db.Model):
 
 class RecyclerWayToPay(db.Model):
     __tablename__ = 'recycler_way_to_pay'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True)
     type_operation = db.Column(db.String)
@@ -3216,9 +3359,9 @@ class RecyclerWayToPay(db.Model):
     petty_cash = db.Column(db.Double(53), server_default=db.FetchedValue())
     correlative_advance_generated = db.Column(db.Integer, server_default=db.FetchedValue())
     change = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     arching_box_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     description = db.Column(db.String, server_default=db.FetchedValue())
     bio_payment = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -3233,9 +3376,10 @@ class RecyclerWayToPay(db.Model):
 
 class RecyclerWayToPayCoin(db.Model):
     __tablename__ = 'recycler_way_to_pay_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     way_pay_aliquot = db.Column(db.Double(53))
     total_operation = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -3262,30 +3406,31 @@ class RecyclerWayToPayCoin(db.Model):
 
 class RecyclerWayToPayDetail(db.Model):
     __tablename__ = 'recycler_way_to_pay_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('recycler_way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.recycler_way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
     type_operation = db.Column(db.String)
     bank_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     reference_number = db.Column(db.String)
     amount = db.Column(db.Double(53), server_default=db.FetchedValue())
-    card_type = db.Column(db.ForeignKey('card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    card_type = db.Column(db.ForeignKey('public.card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
     reference_key = db.Column(db.String)
     titular = db.Column(db.String)
     code = db.Column(db.String)
     phone = db.Column(db.String)
-    bank = db.Column(db.ForeignKey('banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank = db.Column(db.ForeignKey('public.banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
     emission_date = db.Column(db.Date)
     cash = db.Column(db.Double(53), server_default=db.FetchedValue())
     bank_account = db.Column(db.String)
     amount_same_bank = db.Column(db.Double(53), server_default=db.FetchedValue())
     amount_other_bank = db.Column(db.Double(53), server_default=db.FetchedValue())
-    sale_point = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_point = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     related_module = db.Column(db.String, server_default=db.FetchedValue())
     closing_sales_point_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     petty_cash = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     amount_local = db.Column(db.Double(53), server_default=db.FetchedValue())
 
     bank1 = db.relationship('Bank', primaryjoin='RecyclerWayToPayDetail.bank == Bank.code', backref='recycler_way_to_pay_details')
@@ -3299,7 +3444,8 @@ class RecyclerWayToPayDetail(db.Model):
 class RecyclerWayToPayDetailsDet(db.Model):
     __tablename__ = 'recycler_way_to_pay_details_det'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['recycler_way_to_pay_details.main_correlative', 'recycler_way_to_pay_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.recycler_way_to_pay_details.main_correlative', 'public.recycler_way_to_pay_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -3318,10 +3464,11 @@ class RecyclerWayToPayDetailsDet(db.Model):
 
 class Report(db.Model):
     __tablename__ = 'report'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     title = db.Column(db.String)
-    menu = db.Column(db.ForeignKey('menus.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    menu = db.Column(db.ForeignKey('public.menus.code', ondelete='RESTRICT', onupdate='CASCADE'))
     report_type = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
     virtualizer = db.Column(db.Boolean, server_default=db.FetchedValue())
 
@@ -3332,7 +3479,8 @@ class Report(db.Model):
 class ReportChart(db.Model):
     __tablename__ = 'report_charts'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_code', 'index_order_display_format', 'index_order_query'], ['report_querys.main_code_display_format', 'report_querys.index_order_display_format', 'report_querys.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_code', 'index_order_display_format', 'index_order_query'], ['public.report_querys.main_code_display_format', 'public.report_querys.index_order_display_format', 'public.report_querys.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     chart_type = db.Column(db.Integer)
@@ -3347,8 +3495,9 @@ class ReportChart(db.Model):
 
 class ReportChartsCategory(db.Model):
     __tablename__ = 'report_charts_categories'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('report_charts.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.report_charts.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     index_field = db.Column(db.Integer)
 
@@ -3358,8 +3507,9 @@ class ReportChartsCategory(db.Model):
 
 class ReportChartsSery(db.Model):
     __tablename__ = 'report_charts_series'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('report_charts.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.report_charts.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     index_field = db.Column(db.Integer)
 
@@ -3369,8 +3519,9 @@ class ReportChartsSery(db.Model):
 
 class ReportDisplayFormat(db.Model):
     __tablename__ = 'report_display_format'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     title = db.Column(db.String)
     format = db.Column(db.String)
     index_order = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -3389,7 +3540,8 @@ class ReportDisplayFormat(db.Model):
 class ReportField(db.Model):
     __tablename__ = 'report_fields'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_code_display_format', 'index_order_display_format', 'index_order_query'], ['report_querys.main_code_display_format', 'report_querys.index_order_display_format', 'report_querys.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_code_display_format', 'index_order_display_format', 'index_order_query'], ['public.report_querys.main_code_display_format', 'public.report_querys.index_order_display_format', 'public.report_querys.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_code_display_format = db.Column(db.String, primary_key=True, nullable=False)
@@ -3418,7 +3570,8 @@ class ReportField(db.Model):
 class ReportFilter(db.Model):
     __tablename__ = 'report_filter'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_code', 'main_panel'], ['report_panel.main_code', 'report_panel.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_code', 'main_panel'], ['public.report_panel.main_code', 'public.report_panel.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_code = db.Column(db.String, primary_key=True, nullable=False)
@@ -3435,6 +3588,7 @@ class ReportFilter(db.Model):
 
 class ReportList(db.Model):
     __tablename__ = 'report_list'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -3445,8 +3599,9 @@ class ReportList(db.Model):
 
 class ReportListDetail(db.Model):
     __tablename__ = 'report_list_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('report_list.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.report_list.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     code = db.Column(db.String, primary_key=True, nullable=False)
 
     report_list = db.relationship('ReportList', primaryjoin='ReportListDetail.main_code == ReportList.code', backref='report_list_details')
@@ -3455,8 +3610,9 @@ class ReportListDetail(db.Model):
 
 class ReportPanel(db.Model):
     __tablename__ = 'report_panel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     title = db.Column(db.String)
     index_order = db.Column(db.Integer, primary_key=True, nullable=False)
 
@@ -3466,8 +3622,9 @@ class ReportPanel(db.Model):
 
 class ReportParameter(db.Model):
     __tablename__ = 'report_parameter'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_code = db.Column(db.ForeignKey('public.report.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     index_order = db.Column(db.Integer, primary_key=True, nullable=False)
     code = db.Column(db.String)
     parameter_type = db.Column(db.String, server_default=db.FetchedValue())
@@ -3480,7 +3637,8 @@ class ReportParameter(db.Model):
 class ReportQuery(db.Model):
     __tablename__ = 'report_querys'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_code_display_format', 'index_order_display_format'], ['report_display_format.main_code', 'report_display_format.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_code_display_format', 'index_order_display_format'], ['public.report_display_format.main_code', 'public.report_display_format.index_order'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_code_display_format = db.Column(db.String, primary_key=True, nullable=False)
@@ -3500,6 +3658,7 @@ class ReportQuery(db.Model):
 
 class RestDetailsComment(db.Model):
     __tablename__ = 'rest_details_comments'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -3509,6 +3668,7 @@ class RestDetailsComment(db.Model):
 
 class RestDetailsGroup(db.Model):
     __tablename__ = 'rest_details_group'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -3517,6 +3677,7 @@ class RestDetailsGroup(db.Model):
 
 class RestLocation(db.Model):
     __tablename__ = 'rest_location'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -3525,10 +3686,11 @@ class RestLocation(db.Model):
 
 class RestTable(db.Model):
     __tablename__ = 'rest_table'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    rest_location = db.Column(db.ForeignKey('rest_location.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    rest_location = db.Column(db.ForeignKey('public.rest_location.code', ondelete='RESTRICT', onupdate='CASCADE'))
     status = db.Column(db.String)
 
     rest_location1 = db.relationship('RestLocation', primaryjoin='RestTable.rest_location == RestLocation.code', backref='rest_tables')
@@ -3537,9 +3699,10 @@ class RestTable(db.Model):
 
 class RestTableSale(db.Model):
     __tablename__ = 'rest_table_sales'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     table_code = db.Column(db.String, primary_key=True, nullable=False)
-    correlative_related = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_related = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
 
     sales_operation = db.relationship('SalesOperation', primaryjoin='RestTableSale.correlative_related == SalesOperation.correlative', backref='rest_table_sales')
@@ -3548,6 +3711,7 @@ class RestTableSale(db.Model):
 
 class RetentionIslrClient(db.Model):
     __tablename__ = 'retention_islr_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, unique=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3566,10 +3730,11 @@ class RetentionIslrClient(db.Model):
 
 class RetentionIslrClientsDetail(db.Model):
     __tablename__ = 'retention_islr_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_islr_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.retention_islr_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    code_islr = db.Column(db.ForeignKey('codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_islr = db.Column(db.ForeignKey('public.codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
     calculation_base = db.Column(db.Double(53))
     percent_retention = db.Column(db.Double(53))
     sustraendo = db.Column(db.Double(53))
@@ -3586,6 +3751,7 @@ class RetentionIslrClientsDetail(db.Model):
 
 class RetentionIslrProvider(db.Model):
     __tablename__ = 'retention_islr_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3605,10 +3771,11 @@ class RetentionIslrProvider(db.Model):
 
 class RetentionIslrProviderDetail(db.Model):
     __tablename__ = 'retention_islr_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_islr_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.retention_islr_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     line = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    code_islr = db.Column(db.ForeignKey('codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_islr = db.Column(db.ForeignKey('public.codes_islr.code', ondelete='RESTRICT', onupdate='CASCADE'))
     calculation_base = db.Column(db.Double(53))
     percent_retention = db.Column(db.Double(53))
     sustraendo = db.Column(db.Double(53))
@@ -3625,6 +3792,7 @@ class RetentionIslrProviderDetail(db.Model):
 
 class RetentionMunicipalClient(db.Model):
     __tablename__ = 'retention_municipal_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, unique=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3644,8 +3812,9 @@ class RetentionMunicipalClient(db.Model):
 
 class RetentionMunicipalClientsDetail(db.Model):
     __tablename__ = 'retention_municipal_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_municipal_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.retention_municipal_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
@@ -3658,6 +3827,7 @@ class RetentionMunicipalClientsDetail(db.Model):
 
 class RetentionMunicipalProvider(db.Model):
     __tablename__ = 'retention_municipal_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3678,8 +3848,9 @@ class RetentionMunicipalProvider(db.Model):
 
 class RetentionMunicipalProviderDetail(db.Model):
     __tablename__ = 'retention_municipal_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_municipal_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.retention_municipal_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
@@ -3692,6 +3863,7 @@ class RetentionMunicipalProviderDetail(db.Model):
 
 class RetentionTaxClient(db.Model):
     __tablename__ = 'retention_tax_clients'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, unique=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3711,8 +3883,9 @@ class RetentionTaxClient(db.Model):
 
 class RetentionTaxClientsDetail(db.Model):
     __tablename__ = 'retention_tax_clients_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_tax_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.retention_tax_clients.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
@@ -3725,6 +3898,7 @@ class RetentionTaxClientsDetail(db.Model):
 
 class RetentionTaxProvider(db.Model):
     __tablename__ = 'retention_tax_provider'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, unique=True, server_default=db.FetchedValue())
     correlative_related = db.Column(db.Integer, nullable=False)
@@ -3745,8 +3919,9 @@ class RetentionTaxProvider(db.Model):
 
 class RetentionTaxProviderDetail(db.Model):
     __tablename__ = 'retention_tax_provider_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('retention_tax_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.retention_tax_provider.correlative', ondelete='CASCADE', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     related_module = db.Column(db.String, primary_key=True, nullable=False)
     line = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
@@ -3757,28 +3932,17 @@ class RetentionTaxProviderDetail(db.Model):
 
 
 
-class RsProductsImage(db.Model):
-    __tablename__ = 'rs_products_images'
 
-    image_id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    product_code = db.Column(db.ForeignKey('products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    image_data = db.Column(db.LargeBinary, nullable=False)
-    filename = db.Column(db.String(255))
-    mime_type = db.Column(db.String(50))
-    size_bytes = db.Column(db.BigInteger)
-    is_primary = db.Column(db.Boolean, server_default=db.FetchedValue())
-    created_at = db.Column(db.DateTime, server_default=db.FetchedValue())
-
-    product = db.relationship('Product', primaryjoin='RsProductsImage.product_code == Product.code', backref='rs_products_images')
 
 
 
 class SalePoint(db.Model):
     __tablename__ = 'sale_points'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    bank_account = db.Column(db.ForeignKey('bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank_account = db.Column(db.ForeignKey('public.bank_account.code', ondelete='RESTRICT', onupdate='CASCADE'))
     biopayment = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     bank_account1 = db.relationship('BankAccount', primaryjoin='SalePoint.bank_account == BankAccount.code', backref='sale_points')
@@ -3787,10 +3951,11 @@ class SalePoint(db.Model):
 
 class SalePointsDetail(db.Model):
     __tablename__ = 'sale_points_detail'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    sale_point_code = db.Column(db.ForeignKey('sale_points.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    sale_point_code = db.Column(db.ForeignKey('public.sale_points.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False)
-    card_type_code = db.Column(db.ForeignKey('card_types.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    card_type_code = db.Column(db.ForeignKey('public.card_types.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     percent_commission = db.Column(db.Double(53))
     percent_above_commission = db.Column(db.Double(53))
     percent_islr = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -3803,9 +3968,10 @@ class SalePointsDetail(db.Model):
 
 class SalesDocumentsRel(db.Model):
     __tablename__ = 'sales_documents_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
-    main_correlative = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_related = db.Column(db.Integer, primary_key=True, nullable=False)
     module_related = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -3815,6 +3981,7 @@ class SalesDocumentsRel(db.Model):
 
 class SalesOperation(db.Model):
     __tablename__ = 'sales_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String, index=True)
@@ -3823,21 +3990,21 @@ class SalesOperation(db.Model):
     emission_date = db.Column(db.Date, index=True)
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
-    client_code = db.Column(db.ForeignKey('clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_code = db.Column(db.ForeignKey('public.clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
     client_name = db.Column(db.String)
     client_id = db.Column(db.String)
     client_address = db.Column(db.String)
     client_phone = db.Column(db.String)
     client_name_fiscal = db.Column(db.Integer)
-    seller = db.Column(db.ForeignKey('sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    seller = db.Column(db.ForeignKey('public.sellers.code', ondelete='RESTRICT', onupdate='CASCADE'))
     credit_days = db.Column(db.Integer)
     expiration_date = db.Column(db.Date)
     wait = db.Column(db.Boolean)
     description = db.Column(db.String)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_net_details = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -3860,7 +4027,7 @@ class SalesOperation(db.Model):
     total_count_details = db.Column(db.Double(53), server_default=db.FetchedValue())
     pending = db.Column(db.Boolean)
     canceled = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
-    freight_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    freight_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     freight_aliquot = db.Column(db.Double(53))
     total_retention_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_retention_municipal = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -3874,7 +4041,7 @@ class SalesOperation(db.Model):
     fiscal_printer_serial = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_z = db.Column(db.String, server_default=db.FetchedValue())
     fiscal_printer_date = db.Column(db.DateTime)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), index=True)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), index=True)
     sale_point = db.Column(db.Boolean, server_default=db.FetchedValue())
     address_send = db.Column(db.String)
     contact_send = db.Column(db.String)
@@ -3903,9 +4070,10 @@ class SalesOperation(db.Model):
 
 class SalesOperationCoin(db.Model):
     __tablename__ = 'sales_operation_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     buy_aliquot = db.Column(db.Double(53))
     sales_aliquot = db.Column(db.Double(53))
@@ -3938,22 +4106,23 @@ class SalesOperationCoin(db.Model):
 
 class SalesOperationDetail(db.Model):
     __tablename__ = 'sales_operation_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
     model = db.Column(db.String)
     amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
-    sale_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_aliquot = db.Column(db.Double(53))
     price = db.Column(db.Double(53), server_default=db.FetchedValue())
     type_price = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -3976,8 +4145,8 @@ class SalesOperationDetail(db.Model):
     amount_discharged_by_load_delivery_note = db.Column(db.Double(53), server_default=db.FetchedValue())
     product_type = db.Column(db.String)
     description = db.Column(db.String)
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     total_weight = db.Column(db.Double(53), server_default=db.FetchedValue())
 
     product = db.relationship('Product', primaryjoin='SalesOperationDetail.code_product == Product.code', backref='sales_operation_details')
@@ -3993,7 +4162,8 @@ class SalesOperationDetail(db.Model):
 class SalesOperationDetailsLot(SalesOperationDetail):
     __tablename__ = 'sales_operation_details_lots'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['sales_operation_details.main_correlative', 'sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.sales_operation_details.main_correlative', 'public.sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4010,7 +4180,8 @@ class SalesOperationDetailsLot(SalesOperationDetail):
 class SalesOperationDetailsCoin(db.Model):
     __tablename__ = 'sales_operation_details_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['sales_operation_details.main_correlative', 'sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.sales_operation_details.main_correlative', 'public.sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4027,7 +4198,7 @@ class SalesOperationDetailsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='SalesOperationDetailsCoin.coin_code == Coin.code', backref='sales_operation_details_coins')
     sales_operation_detail = db.relationship('SalesOperationDetail', primaryjoin='and_(SalesOperationDetailsCoin.main_correlative == SalesOperationDetail.main_correlative, SalesOperationDetailsCoin.main_line == SalesOperationDetail.line)', backref='sales_operation_details_coins')
@@ -4037,8 +4208,9 @@ class SalesOperationDetailsCoin(db.Model):
 class SalesOperationDetailsLoad(db.Model):
     __tablename__ = 'sales_operation_details_load'
     __table_args__ = (
-        db.ForeignKeyConstraint(['load_line', 'load_correlative'], ['sales_operation_details.line', 'sales_operation_details.main_correlative'], ondelete='RESTRICT', onupdate='CASCADE'),
-        db.ForeignKeyConstraint(['main_line', 'main_correlative'], ['sales_operation_details.line', 'sales_operation_details.main_correlative'], ondelete='CASCADE', onupdate='CASCADE')
+        db.ForeignKeyConstraint(['load_line', 'load_correlative'], ['public.sales_operation_details.line', 'public.sales_operation_details.main_correlative'], ondelete='RESTRICT', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_line', 'main_correlative'], ['public.sales_operation_details.line', 'public.sales_operation_details.main_correlative'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_line = db.Column(db.Integer, primary_key=True)
@@ -4055,13 +4227,14 @@ class SalesOperationDetailsLoad(db.Model):
 class SalesOperationDetailsPart(db.Model):
     __tablename__ = 'sales_operation_details_parts'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['sales_operation_details.main_correlative', 'sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.sales_operation_details.main_correlative', 'public.sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_line = db.Column(db.Integer, primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
@@ -4069,13 +4242,13 @@ class SalesOperationDetailsPart(db.Model):
     show_line = db.Column(db.Boolean)
     part_amount = db.Column(db.Double(53))
     total_amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
-    sale_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_aliquot = db.Column(db.Double(53))
     price = db.Column(db.Double(53), server_default=db.FetchedValue())
     type_price = db.Column(db.Integer, server_default=db.FetchedValue())
@@ -4094,8 +4267,8 @@ class SalesOperationDetailsPart(db.Model):
     buy_aliquot = db.Column(db.Double(53))
     product_type = db.Column(db.String)
     description = db.Column(db.String)
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     product = db.relationship('Product', primaryjoin='SalesOperationDetailsPart.code_product == Product.code', backref='sales_operation_details_parts')
     coin = db.relationship('Coin', primaryjoin='SalesOperationDetailsPart.coin_code == Coin.code', backref='sales_operation_details_parts')
@@ -4111,7 +4284,8 @@ class SalesOperationDetailsPart(db.Model):
 class SalesOperationDetailsPartsCoin(db.Model):
     __tablename__ = 'sales_operation_details_parts_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line', 'main_part_line'], ['sales_operation_details_parts.main_correlative', 'sales_operation_details_parts.main_line', 'sales_operation_details_parts.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line', 'main_part_line'], ['public.sales_operation_details_parts.main_correlative', 'public.sales_operation_details_parts.main_line', 'public.sales_operation_details_parts.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4129,7 +4303,7 @@ class SalesOperationDetailsPartsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='SalesOperationDetailsPartsCoin.coin_code == Coin.code', backref='sales_operation_details_parts_coins')
     sales_operation_details_part = db.relationship('SalesOperationDetailsPart', primaryjoin='and_(SalesOperationDetailsPartsCoin.main_correlative == SalesOperationDetailsPart.main_correlative, SalesOperationDetailsPartsCoin.main_line == SalesOperationDetailsPart.main_line, SalesOperationDetailsPartsCoin.main_part_line == SalesOperationDetailsPart.line)', backref='sales_operation_details_parts_coins')
@@ -4139,7 +4313,8 @@ class SalesOperationDetailsPartsCoin(db.Model):
 class SalesOperationDetailsSerial(db.Model):
     __tablename__ = 'sales_operation_details_serials'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['sales_operation_details.main_correlative', 'sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.sales_operation_details.main_correlative', 'public.sales_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4155,14 +4330,15 @@ class SalesOperationDetailsSerial(db.Model):
 
 class SalesOperationTax(db.Model):
     __tablename__ = 'sales_operation_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.sales_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
-    tax_type = db.Column(db.ForeignKey('tax_types.code', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', onupdate='CASCADE'))
 
     sales_operation = db.relationship('SalesOperation', primaryjoin='SalesOperationTax.main_correlative == SalesOperation.correlative', backref='sales_operation_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='SalesOperationTax.tax_type == TaxType.code', backref='sales_operation_taxes')
@@ -4173,14 +4349,15 @@ class SalesOperationTax(db.Model):
 class SalesOperationTaxesCoin(db.Model):
     __tablename__ = 'sales_operation_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['sales_operation_taxes.main_correlative', 'sales_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.sales_operation_taxes.main_correlative', 'public.sales_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='SalesOperationTaxesCoin.coin_code == Coin.code', backref='sales_operation_taxes_coins')
@@ -4190,10 +4367,11 @@ class SalesOperationTaxesCoin(db.Model):
 
 class Seller(db.Model):
     __tablename__ = 'sellers'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    status = db.Column(db.ForeignKey('status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     percent_sales = db.Column(db.Double(53), nullable=False, server_default=db.FetchedValue())
     percent_receivable = db.Column(db.Double(53), nullable=False, server_default=db.FetchedValue())
     inkeeper = db.Column(db.Boolean, server_default=db.FetchedValue())
@@ -4208,8 +4386,9 @@ class Seller(db.Model):
 
 class SellersRangeCommission(db.Model):
     __tablename__ = 'sellers_range_commissions'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    seller_code = db.Column(db.ForeignKey('sellers.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    seller_code = db.Column(db.ForeignKey('public.sellers.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     type_comissions = db.Column(db.String, primary_key=True, nullable=False)
     order_no = db.Column(db.Integer, primary_key=True, nullable=False)
     initial_range = db.Column(db.Double(53))
@@ -4222,9 +4401,10 @@ class SellersRangeCommission(db.Model):
 
 class ShoppingDocumentsRel(db.Model):
     __tablename__ = 'shopping_documents_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
-    main_correlative = db.Column(db.ForeignKey('shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_related = db.Column(db.Integer, primary_key=True, nullable=False)
     module_related = db.Column(db.String, primary_key=True, nullable=False)
 
@@ -4234,6 +4414,7 @@ class ShoppingDocumentsRel(db.Model):
 
 class ShoppingOperation(db.Model):
     __tablename__ = 'shopping_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     operation_type = db.Column(db.String)
@@ -4243,7 +4424,7 @@ class ShoppingOperation(db.Model):
     reception_date = db.Column(db.Date)
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
-    provider_code = db.Column(db.ForeignKey('provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    provider_code = db.Column(db.ForeignKey('public.provider.code', ondelete='RESTRICT', onupdate='CASCADE'))
     provider_name = db.Column(db.String)
     provider_id = db.Column(db.String)
     provider_address = db.Column(db.String)
@@ -4252,10 +4433,10 @@ class ShoppingOperation(db.Model):
     expiration_date = db.Column(db.Date)
     wait = db.Column(db.Boolean)
     description = db.Column(db.String)
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     begin_used = db.Column(db.Boolean, server_default=db.FetchedValue())
     total_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_net_details = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4283,10 +4464,10 @@ class ShoppingOperation(db.Model):
     retention_tax_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
     retention_islr_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
     retention_municipal_prorration = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     free_tax = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
     total_exempt = db.Column(db.Double(53), server_default=db.FetchedValue())
-    secondary_coin = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    secondary_coin = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     base_igtf = db.Column(db.Double(53), server_default=db.FetchedValue())
     percent_igtf = db.Column(db.Double(53), server_default=db.FetchedValue())
     igtf = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4303,10 +4484,11 @@ class ShoppingOperation(db.Model):
 
 class CondShoppingOperation(ShoppingOperation):
     __tablename__ = 'cond_shopping_operation'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    concept_code = db.Column(db.ForeignKey('cond_concept.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    property_code = db.Column(db.ForeignKey('clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    concept_code = db.Column(db.ForeignKey('public.cond_concept.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    property_code = db.Column(db.ForeignKey('public.clients.code', ondelete='RESTRICT', onupdate='CASCADE'))
     concept_description = db.Column(db.String, server_default=db.FetchedValue())
 
     cond_concept = db.relationship('CondConcept', primaryjoin='CondShoppingOperation.concept_code == CondConcept.code', backref='cond_shopping_operations')
@@ -4316,9 +4498,10 @@ class CondShoppingOperation(ShoppingOperation):
 
 class ShoppingOperationCoin(db.Model):
     __tablename__ = 'shopping_operation_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     buy_aliquot = db.Column(db.Double(53))
     sales_aliquot = db.Column(db.Double(53))
@@ -4348,18 +4531,19 @@ class ShoppingOperationCoin(db.Model):
 
 class ShoppingOperationDetail(db.Model):
     __tablename__ = 'shopping_operation_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
-    code_product = db.Column(db.ForeignKey('products.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    code_product = db.Column(db.ForeignKey('public.products.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description_product = db.Column(db.String)
     referenc = db.Column(db.String)
     mark = db.Column(db.String)
     model = db.Column(db.String)
     amount = db.Column(db.Double(53))
-    store = db.Column(db.ForeignKey('store.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    locations = db.Column(db.ForeignKey('locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    unit = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
+    store = db.Column(db.ForeignKey('public.store.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    locations = db.Column(db.ForeignKey('public.locations.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    unit = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'))
     conversion_factor = db.Column(db.Double(53))
     unit_type = db.Column(db.Integer)
     unitary_cost = db.Column(db.Double(53))
@@ -4372,13 +4556,13 @@ class ShoppingOperationDetail(db.Model):
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
     pending_amount = db.Column(db.Double(53), server_default=db.FetchedValue())
-    buy_tax = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    buy_tax = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'))
     buy_aliquot = db.Column(db.Double(53))
     update_inventory = db.Column(db.Boolean, server_default=db.FetchedValue())
     amount_released_by_load_order = db.Column(db.Double(53), server_default=db.FetchedValue())
     amount_charged_by_load_delivery_note = db.Column(db.Double(53), server_default=db.FetchedValue())
     product_type = db.Column(db.String)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
     change_price = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     tax = db.relationship('Tax', primaryjoin='ShoppingOperationDetail.buy_tax == Tax.code', backref='shopping_operation_details')
@@ -4393,7 +4577,8 @@ class ShoppingOperationDetail(db.Model):
 class ShoppingOperationDetailsLot(ShoppingOperationDetail):
     __tablename__ = 'shopping_operation_details_lots'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['shopping_operation_details.main_correlative', 'shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.shopping_operation_details.main_correlative', 'public.shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4410,7 +4595,8 @@ class ShoppingOperationDetailsLot(ShoppingOperationDetail):
 class ShoppingOperationDetailsCoin(db.Model):
     __tablename__ = 'shopping_operation_details_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['shopping_operation_details.main_correlative', 'shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.shopping_operation_details.main_correlative', 'public.shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4423,7 +4609,7 @@ class ShoppingOperationDetailsCoin(db.Model):
     total_net = db.Column(db.Double(53), server_default=db.FetchedValue())
     total_tax = db.Column(db.Double(53), server_default=db.FetchedValue())
     total = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
 
     coin = db.relationship('Coin', primaryjoin='ShoppingOperationDetailsCoin.coin_code == Coin.code', backref='shopping_operation_details_coins')
     shopping_operation_detail = db.relationship('ShoppingOperationDetail', primaryjoin='and_(ShoppingOperationDetailsCoin.main_correlative == ShoppingOperationDetail.main_correlative, ShoppingOperationDetailsCoin.main_line == ShoppingOperationDetail.line)', backref='shopping_operation_details_coins')
@@ -4433,8 +4619,9 @@ class ShoppingOperationDetailsCoin(db.Model):
 class ShoppingOperationDetailsLoad(db.Model):
     __tablename__ = 'shopping_operation_details_load'
     __table_args__ = (
-        db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['shopping_operation_details.main_correlative', 'shopping_operation_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['shopping_operation_details.main_correlative', 'shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE')
+        db.ForeignKeyConstraint(['load_correlative', 'load_line'], ['public.shopping_operation_details.main_correlative', 'public.shopping_operation_details.line'], ondelete='RESTRICT', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.shopping_operation_details.main_correlative', 'public.shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_line = db.Column(db.Integer, primary_key=True)
@@ -4450,9 +4637,10 @@ class ShoppingOperationDetailsLoad(db.Model):
 
 class ShoppingOperationDetailsProductsUnit(db.Model):
     __tablename__ = 'shopping_operation_details_products_units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_line = db.Column(db.ForeignKey('shopping_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    correlative_units = db.Column(db.ForeignKey('products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_line = db.Column(db.ForeignKey('public.shopping_operation_details.line', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    correlative_units = db.Column(db.ForeignKey('public.products_units.correlative', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     unitary_cost = db.Column(db.Double(53))
     calculated_cost = db.Column(db.Double(53))
     average_cost = db.Column(db.Double(53))
@@ -4479,7 +4667,8 @@ class ShoppingOperationDetailsProductsUnit(db.Model):
 class ShoppingOperationDetailsSerial(db.Model):
     __tablename__ = 'shopping_operation_details_serials'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['shopping_operation_details.main_correlative', 'shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.shopping_operation_details.main_correlative', 'public.shopping_operation_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4495,14 +4684,15 @@ class ShoppingOperationDetailsSerial(db.Model):
 
 class ShoppingOperationTax(db.Model):
     __tablename__ = 'shopping_operation_taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    taxe_code = db.Column(db.ForeignKey('taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.shopping_operation.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    taxe_code = db.Column(db.ForeignKey('public.taxes.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     aliquot = db.Column(db.Double(53))
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
-    tax_type = db.Column(db.ForeignKey('tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    tax_type = db.Column(db.ForeignKey('public.tax_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     shopping_operation = db.relationship('ShoppingOperation', primaryjoin='ShoppingOperationTax.main_correlative == ShoppingOperation.correlative', backref='shopping_operation_taxes')
     tax_type1 = db.relationship('TaxType', primaryjoin='ShoppingOperationTax.tax_type == TaxType.code', backref='shopping_operation_taxes')
@@ -4513,14 +4703,15 @@ class ShoppingOperationTax(db.Model):
 class ShoppingOperationTaxesCoin(db.Model):
     __tablename__ = 'shopping_operation_taxes_coins'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['shopping_operation_taxes.main_correlative', 'shopping_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_taxe_code'], ['public.shopping_operation_taxes.main_correlative', 'public.shopping_operation_taxes.taxe_code'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
     main_taxe_code = db.Column(db.String, primary_key=True, nullable=False)
     taxable = db.Column(db.Double(53))
     tax = db.Column(db.Double(53))
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     main_line = db.Column(db.Integer)
 
     coin = db.relationship('Coin', primaryjoin='ShoppingOperationTaxesCoin.coin_code == Coin.code', backref='shopping_operation_taxes_coins')
@@ -4530,6 +4721,7 @@ class ShoppingOperationTaxesCoin(db.Model):
 
 class Size(db.Model):
     __tablename__ = 'sizes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4538,11 +4730,12 @@ class Size(db.Model):
 
 class Station(db.Model):
     __tablename__ = 'stations'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
     numeration_sales_bill = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
-    sale_point = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_point = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
     tactile = db.Column(db.Boolean, server_default=db.FetchedValue())
     show_browser_external_mode = db.Column(db.Boolean, server_default=db.FetchedValue())
     use_sale_point_numeration = db.Column(db.Boolean, server_default=db.FetchedValue())
@@ -4550,7 +4743,7 @@ class Station(db.Model):
     fiscal_contingency = db.Column(db.Boolean, server_default=db.FetchedValue())
     use_arching_box = db.Column(db.Boolean, server_default=db.FetchedValue())
     numeration_income = db.Column(db.String, server_default=db.FetchedValue())
-    bio_sale_point = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    bio_sale_point = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     sale_document_type = db.Column(db.Integer, server_default=db.FetchedValue())
 
     sale_point1 = db.relationship('SalePoint', primaryjoin='Station.bio_sale_point == SalePoint.code', backref='salepoint_stations')
@@ -4559,9 +4752,10 @@ class Station(db.Model):
 
 class DataCollectorConfig(Station):
     __tablename__ = 'data_collector_config'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
-    station_code = db.Column(db.ForeignKey('stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    station_code = db.Column(db.ForeignKey('public.stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     model = db.Column(db.String)
     port = db.Column(db.String)
     baudrate = db.Column(db.Integer)
@@ -4569,9 +4763,10 @@ class DataCollectorConfig(Station):
 
 class ScaleConfig(Station):
     __tablename__ = 'scale_config'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, nullable=False, unique=True, server_default=db.FetchedValue())
-    station_code = db.Column(db.ForeignKey('stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    station_code = db.Column(db.ForeignKey('public.stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     scale_model = db.Column(db.String)
     port = db.Column(db.String)
 
@@ -4579,9 +4774,10 @@ class ScaleConfig(Station):
 
 class StationsCommand(db.Model):
     __tablename__ = 'stations_command'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    station = db.Column(db.ForeignKey('stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    command = db.Column(db.ForeignKey('command.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    command = db.Column(db.ForeignKey('public.command.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     printer = db.Column(db.String)
     line = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
 
@@ -4592,10 +4788,11 @@ class StationsCommand(db.Model):
 
 class StationsSalesPoint(db.Model):
     __tablename__ = 'stations_sales_point'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    station_code = db.Column(db.ForeignKey('stations.code', ondelete='CASCADE', onupdate='CASCADE'))
-    sale_point_code = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station_code = db.Column(db.ForeignKey('public.stations.code', ondelete='CASCADE', onupdate='CASCADE'))
+    sale_point_code = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     sale_point = db.relationship('SalePoint', primaryjoin='StationsSalesPoint.sale_point_code == SalePoint.code', backref='stations_sales_points')
     station = db.relationship('Station', primaryjoin='StationsSalesPoint.station_code == Station.code', backref='stations_sales_points')
@@ -4604,6 +4801,7 @@ class StationsSalesPoint(db.Model):
 
 class Status(db.Model):
     __tablename__ = 'status'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4613,6 +4811,7 @@ class Status(db.Model):
 
 class Store(db.Model):
     __tablename__ = 'store'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4621,10 +4820,11 @@ class Store(db.Model):
 
 class SystemProperty(db.Model):
     __tablename__ = 'system_properties'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.Integer, primary_key=True, nullable=False)
-    properties_group = db.Column(db.ForeignKey('properties_group.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    profile = db.Column(db.ForeignKey('profile.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    properties_group = db.Column(db.ForeignKey('public.properties_group.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    profile = db.Column(db.ForeignKey('public.profile.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     description = db.Column(db.String)
     system_value = db.Column(db.String)
     system_configuration = db.Column(db.String)
@@ -4637,6 +4837,7 @@ class SystemProperty(db.Model):
 
 class SystemVersion(db.Model):
     __tablename__ = 'system_version'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     system_version = db.Column(db.String, primary_key=True)
 
@@ -4644,6 +4845,7 @@ class SystemVersion(db.Model):
 
 class TaxType(db.Model):
     __tablename__ = 'tax_types'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String)
@@ -4654,12 +4856,13 @@ class TaxType(db.Model):
 
 class Tax(db.Model):
     __tablename__ = 'taxes'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
     aliquot = db.Column(db.Double(53))
     short_description = db.Column(db.String)
-    line = db.Column(db.ForeignKey('tax_types.code'), nullable=False)
+    line = db.Column(db.ForeignKey('public.tax_types.code'), nullable=False)
     status = db.Column(db.Boolean, server_default=db.FetchedValue())
 
     tax_type = db.relationship('TaxType', primaryjoin='Tax.line == TaxType.code', backref='taxes')
@@ -4668,10 +4871,11 @@ class Tax(db.Model):
 
 class Technician(db.Model):
     __tablename__ = 'technician'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    status = db.Column(db.ForeignKey('status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     percent_commission_maximum_price = db.Column(db.Double(53), server_default=db.FetchedValue())
     percent_commission_offer_price = db.Column(db.Double(53), server_default=db.FetchedValue())
     percent_commission_higher_price = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4684,6 +4888,7 @@ class Technician(db.Model):
 
 class Town(db.Model):
     __tablename__ = 'towns'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4692,6 +4897,7 @@ class Town(db.Model):
 
 class Unit(db.Model):
     __tablename__ = 'units'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4700,18 +4906,19 @@ class Unit(db.Model):
 
 class User(db.Model):
     __tablename__ = 'users'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    status = db.Column(db.ForeignKey('status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     email = db.Column(db.String)
-    profile = db.Column(db.ForeignKey('profile.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    profile = db.Column(db.ForeignKey('public.profile.code', ondelete='RESTRICT', onupdate='CASCADE'))
     user_password = db.Column(db.String)
     security_question = db.Column(db.String)
     answer = db.Column(db.String)
     display_screen = db.Column(db.Boolean, server_default=db.FetchedValue())
     change_password = db.Column(db.Boolean, server_default=db.FetchedValue())
-    company_email = db.Column(db.ForeignKey('emails.account', ondelete='RESTRICT', onupdate='CASCADE'), nullable=False, server_default=db.FetchedValue())
+    company_email = db.Column(db.ForeignKey('public.emails.account', ondelete='RESTRICT', onupdate='CASCADE'), nullable=False, server_default=db.FetchedValue())
     allow_change_password = db.Column(db.Boolean, server_default=db.FetchedValue())
     allow_store_password = db.Column(db.Boolean, server_default=db.FetchedValue())
     technician = db.Column(db.String, server_default=db.FetchedValue())
@@ -4727,6 +4934,7 @@ class User(db.Model):
 
 class Vehicle(db.Model):
     __tablename__ = 'vehicles'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4736,6 +4944,7 @@ class Vehicle(db.Model):
 
 class WayToPay(db.Model):
     __tablename__ = 'way_to_pay'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     type_operation = db.Column(db.String)
@@ -4759,9 +4968,9 @@ class WayToPay(db.Model):
     petty_cash = db.Column(db.Double(53), server_default=db.FetchedValue())
     correlative_advance_generated = db.Column(db.Integer, server_default=db.FetchedValue())
     change = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     arching_box_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     description = db.Column(db.String, server_default=db.FetchedValue())
     bio_payment = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4781,9 +4990,10 @@ class WayToPay(db.Model):
 
 class WayToPayCoin(db.Model):
     __tablename__ = 'way_to_pay_coins'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
     factor_type = db.Column(db.Integer)
     way_pay_aliquot = db.Column(db.Double(53))
     total_operation = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4811,30 +5021,31 @@ class WayToPayCoin(db.Model):
 
 class WayToPayDetail(db.Model):
     __tablename__ = 'way_to_pay_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.way_to_pay.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, server_default=db.FetchedValue())
     type_operation = db.Column(db.String)
     bank_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     reference_number = db.Column(db.String)
     amount = db.Column(db.Double(53), server_default=db.FetchedValue())
-    card_type = db.Column(db.ForeignKey('card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    card_type = db.Column(db.ForeignKey('public.card_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
     reference_key = db.Column(db.String)
     titular = db.Column(db.String)
     code = db.Column(db.String)
     phone = db.Column(db.String)
-    bank = db.Column(db.ForeignKey('banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    bank = db.Column(db.ForeignKey('public.banks.code', ondelete='RESTRICT', onupdate='CASCADE'))
     emission_date = db.Column(db.Date)
     cash = db.Column(db.Double(53), server_default=db.FetchedValue())
     bank_account = db.Column(db.String)
     amount_same_bank = db.Column(db.Double(53), server_default=db.FetchedValue())
     amount_other_bank = db.Column(db.Double(53), server_default=db.FetchedValue())
-    sale_point = db.Column(db.ForeignKey('sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    sale_point = db.Column(db.ForeignKey('public.sale_points.code', ondelete='RESTRICT', onupdate='CASCADE'))
     related_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     related_module = db.Column(db.String, server_default=db.FetchedValue())
     closing_sales_point_correlative = db.Column(db.Integer, server_default=db.FetchedValue())
     petty_cash = db.Column(db.Double(53), server_default=db.FetchedValue())
-    coin_code = db.Column(db.ForeignKey('coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
+    coin_code = db.Column(db.ForeignKey('public.coin.code', ondelete='RESTRICT', onupdate='CASCADE'), server_default=db.FetchedValue())
     amount_local = db.Column(db.Double(53), server_default=db.FetchedValue())
     apply_igtf = db.Column(db.Boolean, server_default=db.FetchedValue())
     igtf = db.Column(db.Double(53), server_default=db.FetchedValue())
@@ -4852,7 +5063,8 @@ class WayToPayDetail(db.Model):
 class WayToPayDetailsDet(db.Model):
     __tablename__ = 'way_to_pay_details_det'
     __table_args__ = (
-        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['way_to_pay_details.main_correlative', 'way_to_pay_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        db.ForeignKeyConstraint(['main_correlative', 'main_line'], ['public.way_to_pay_details.main_correlative', 'public.way_to_pay_details.line'], ondelete='CASCADE', onupdate='CASCADE'),
+        { 'schema': 'public', 'extend_existing': True }
     )
 
     main_correlative = db.Column(db.Integer, primary_key=True, nullable=False)
@@ -4871,23 +5083,24 @@ class WayToPayDetailsDet(db.Model):
 
 class Workshop(db.Model):
     __tablename__ = 'workshop'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
     document_no = db.Column(db.String)
-    department = db.Column(db.ForeignKey('workshop_departments.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    status = db.Column(db.ForeignKey('workshop_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    department = db.Column(db.ForeignKey('public.workshop_departments.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.workshop_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     request_approval = db.Column(db.Boolean)
     warranty_days = db.Column(db.Integer)
     exp_date_warranty = db.Column(db.Date)
     estimated_delivery_date = db.Column(db.Date)
-    user_code = db.Column(db.ForeignKey('users.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    station = db.Column(db.ForeignKey('stations.code', ondelete='CASCADE', onupdate='RESTRICT'))
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    station = db.Column(db.ForeignKey('public.stations.code', ondelete='CASCADE', onupdate='RESTRICT'))
     register_hour = db.Column(db.Time)
     register_date = db.Column(db.Date)
     warranty_conditions = db.Column(db.String)
-    warranty_status = db.Column(db.ForeignKey('workshop_warranty_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    warranty_status = db.Column(db.ForeignKey('public.workshop_warranty_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     reason_warranty_denied = db.Column(db.String)
 
     workshop_department = db.relationship('WorkshopDepartment', primaryjoin='Workshop.department == WorkshopDepartment.code', backref='workshops')
@@ -4900,11 +5113,12 @@ class Workshop(db.Model):
 
 class WorkshopEquipmentDetail(Workshop):
     __tablename__ = 'workshop_equipment_details'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    equipment_code = db.Column(db.ForeignKey('workshop_equipment.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    main_correlative = db.Column(db.ForeignKey('public.workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    equipment_code = db.Column(db.ForeignKey('public.workshop_equipment.code', ondelete='RESTRICT', onupdate='CASCADE'))
     failure = db.Column(db.String)
-    equipment_status = db.Column(db.ForeignKey('workshop_equipment_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    equipment_status = db.Column(db.ForeignKey('public.workshop_equipment_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     cf_text_workshop1 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
     cf_text_workshop2 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
     cf_text_workshop3 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
@@ -4929,10 +5143,11 @@ class WorkshopEquipmentDetail(Workshop):
 
 class WorkshopAccessory(db.Model):
     __tablename__ = 'workshop_accessories'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
-    accessories_type = db.Column(db.ForeignKey('workshop_accessories_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    accessories_type = db.Column(db.ForeignKey('public.workshop_accessories_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
     code = db.Column(db.String)
     description = db.Column(db.String)
 
@@ -4943,6 +5158,7 @@ class WorkshopAccessory(db.Model):
 
 class WorkshopAccessoriesType(db.Model):
     __tablename__ = 'workshop_accessories_types'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4951,6 +5167,7 @@ class WorkshopAccessoriesType(db.Model):
 
 class WorkshopDepartment(db.Model):
     __tablename__ = 'workshop_departments'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -4959,8 +5176,9 @@ class WorkshopDepartment(db.Model):
 
 class WorkshopDocumentsRel(db.Model):
     __tablename__ = 'workshop_documents_rel'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     correlative_related = db.Column(db.Integer, primary_key=True, nullable=False)
     module_related = db.Column(db.String)
 
@@ -4970,12 +5188,13 @@ class WorkshopDocumentsRel(db.Model):
 
 class WorkshopEquipment(db.Model):
     __tablename__ = 'workshop_equipment'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
-    equipment_type = db.Column(db.ForeignKey('workshop_equipment_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    mark = db.Column(db.ForeignKey('workshop_marks.code', ondelete='RESTRICT', onupdate='CASCADE'))
-    model = db.Column(db.ForeignKey('workshop_models.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    equipment_type = db.Column(db.ForeignKey('public.workshop_equipment_types.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    mark = db.Column(db.ForeignKey('public.workshop_marks.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    model = db.Column(db.ForeignKey('public.workshop_models.code', ondelete='RESTRICT', onupdate='CASCADE'))
     cf_text_equipment1 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
     cf_text_equipment2 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
     cf_text_equipment3 = db.Column(db.String, nullable=False, server_default=db.FetchedValue())
@@ -5000,8 +5219,9 @@ class WorkshopEquipment(db.Model):
 
 class WorkshopEquipmentImage(WorkshopEquipment):
     __tablename__ = 'workshop_equipment_image'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_code = db.Column(db.ForeignKey('workshop_equipment.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    main_code = db.Column(db.ForeignKey('public.workshop_equipment.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     image_type = db.Column(db.String)
     product_image = db.Column(db.LargeBinary)
 
@@ -5009,6 +5229,7 @@ class WorkshopEquipmentImage(WorkshopEquipment):
 
 class WorkshopEquipmentStatu(db.Model):
     __tablename__ = 'workshop_equipment_status'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5017,6 +5238,7 @@ class WorkshopEquipmentStatu(db.Model):
 
 class WorkshopEquipmentType(db.Model):
     __tablename__ = 'workshop_equipment_types'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5025,6 +5247,7 @@ class WorkshopEquipmentType(db.Model):
 
 class WorkshopMark(db.Model):
     __tablename__ = 'workshop_marks'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5033,6 +5256,7 @@ class WorkshopMark(db.Model):
 
 class WorkshopModel(db.Model):
     __tablename__ = 'workshop_models'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5041,14 +5265,15 @@ class WorkshopModel(db.Model):
 
 class WorkshopNotification(db.Model):
     __tablename__ = 'workshop_notification'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
-    notification_type = db.Column(db.ForeignKey('workshop_notification_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    notification_type = db.Column(db.ForeignKey('public.workshop_notification_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
     notified_by = db.Column(db.String)
     notified_received_by = db.Column(db.String)
-    status = db.Column(db.ForeignKey('workshop_notification_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    status = db.Column(db.ForeignKey('public.workshop_notification_status.code', ondelete='RESTRICT', onupdate='CASCADE'))
     description = db.Column(db.String)
 
     workshop = db.relationship('Workshop', primaryjoin='WorkshopNotification.main_correlative == Workshop.correlative', backref='workshop_notifications')
@@ -5059,6 +5284,7 @@ class WorkshopNotification(db.Model):
 
 class WorkshopNotificationStatu(db.Model):
     __tablename__ = 'workshop_notification_status'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5067,6 +5293,7 @@ class WorkshopNotificationStatu(db.Model):
 
 class WorkshopNotificationType(db.Model):
     __tablename__ = 'workshop_notification_type'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5075,6 +5302,7 @@ class WorkshopNotificationType(db.Model):
 
 class WorkshopStatu(db.Model):
     __tablename__ = 'workshop_status'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5085,12 +5313,13 @@ class WorkshopStatu(db.Model):
 
 class WorkshopTechnicalReport(db.Model):
     __tablename__ = 'workshop_technical_report'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
-    main_correlative = db.Column(db.ForeignKey('workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    main_correlative = db.Column(db.ForeignKey('public.workshop.correlative', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     line = db.Column(db.Integer, primary_key=True, nullable=False, server_default=db.FetchedValue())
     emission_date = db.Column(db.Date)
     description = db.Column(db.String)
-    technician = db.Column(db.ForeignKey('technician.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    technician = db.Column(db.ForeignKey('public.technician.code', ondelete='RESTRICT', onupdate='CASCADE'))
 
     workshop = db.relationship('Workshop', primaryjoin='WorkshopTechnicalReport.main_correlative == Workshop.correlative', backref='workshop_technical_reports')
     technician1 = db.relationship('Technician', primaryjoin='WorkshopTechnicalReport.technician == Technician.code', backref='workshop_technical_reports')
@@ -5099,6 +5328,7 @@ class WorkshopTechnicalReport(db.Model):
 
 class WorkshopType(db.Model):
     __tablename__ = 'workshop_types'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
@@ -5107,6 +5337,83 @@ class WorkshopType(db.Model):
 
 class WorkshopWarrantyStatu(db.Model):
     __tablename__ = 'workshop_warranty_status'
+    __table_args__ = { 'schema': 'public', 'extend_existing': True }
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
+
+
+
+
+class TxRol(db.Model):
+    """Define los roles y sus permisos en texto plano."""
+    __tablename__ = 'roles'
+    __table_args__ = {'schema': 'toolbox'} # Indica que esta tabla va en tu esquema
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    # Aquí aplicamos la SIMPLICIDAD: los permisos son un string: "dash,admin,reportes"
+    permissions = db.Column(db.Text, default="")
+
+class TxUserConfig(db.Model, UserMixin):
+    """Extiende al usuario original con configuraciones de tu Toolbox."""
+    __tablename__ = 'user_config'
+    __table_args__ = {'schema': 'toolbox'}
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # LLAVE FORÁNEA CLAVE: Conecta tu tabla con la original de la otra app
+    # Apuntamos a 'esquema.tabla.columna'
+    user_code = db.Column(db.String, db.ForeignKey('public.users.code'), unique=True)
+    
+    # Relación con tu tabla de roles
+    rol_id = db.Column(db.Integer, db.ForeignKey('toolbox.roles.id'))
+    
+    # Relaciones de SQLAlchemy para acceder fácil: user.rol.nombre
+    rol = db.relationship("TxRol")
+    # Agregamos relación al usuario original
+    user = db.relationship("User", backref=db.backref("config", uselist=False))
+
+    def get_id(self):
+        return self.user_code
+
+    # Método de conveniencia para verificar permisos rápidamente
+    def tiene_permiso(self, permiso_slug):
+        if not self.rol or not self.rol.permissions:
+            return False
+        return permiso_slug in self.rol.permissions.split(',')
+
+
+
+class RsProductsImage(db.Model):
+    __tablename__ = 'rs_products_images'
+    __table_args__ = { 'schema': 'toolbox' }
+
+    image_id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
+    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    image_data = db.Column(db.LargeBinary, nullable=False)
+    filename = db.Column(db.String(255))
+    mime_type = db.Column(db.String(50))
+    size_bytes = db.Column(db.BigInteger)
+    is_primary = db.Column(db.Boolean, server_default=db.FetchedValue())
+    created_at = db.Column(db.DateTime, server_default=db.FetchedValue())
+
+    product = db.relationship('Product', primaryjoin='RsProductsImage.product_code == Product.code', backref='rs_products_images')
+
+
+class ProductsFailure(db.Model):
+    __tablename__ = 'tx_products_failures'
+    __table_args__ = (
+        db.UniqueConstraint('product_code', 'store_code'),
+        { 'schema': 'toolbox' }
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
+    product_code = db.Column(db.ForeignKey('public.products.code'), nullable=False)
+    store_code = db.Column(db.ForeignKey('public.store.code'), nullable=False)
+    minimal_stock = db.Column(db.Integer, nullable=False)
+    maximum_stock = db.Column(db.Integer, nullable=False)
+    location = db.Column(db.String(100))
+
+    product = db.relationship('Product', primaryjoin='ProductsFailure.product_code == Product.code', backref='products_failures')
+    store = db.relationship('Store', primaryjoin='ProductsFailure.store_code == Store.code', backref='products_failures')
