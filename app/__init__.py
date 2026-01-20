@@ -1,26 +1,39 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
+from flask_login import LoginManager
 
 
 db = SQLAlchemy()
 def create_app():
-    flask_app = Flask(__name__)
+    app = Flask(__name__)
 
     # 2. Configuración de parámetros recomendados
-    flask_app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'una_clave_secreta_muy_segura_dev_123')
+
+    login_manager = LoginManager(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = "Por favor inicia sesión para acceder a esta página."
+    login_manager.login_message_category = "warning"
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        # Importación tardía para evitar ciclos, si models importa db de aquí
+        from app.models import User
+        return User.query.get(user_id)
 
 
-    flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
-    flask_app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         "pool_size": 10,          # Máximo de conexiones simultáneas abiertas
         "pool_recycle": 3600,     # Reinicia conexiones cada hora para evitar cortes
         "pool_pre_ping": True     # Verifica si la conexión está viva antes de usarla
     }
 
-    db.init_app(flask_app)
+    db.init_app(app)
 
-    with flask_app.app_context():
+    with app.app_context():
         # Importar modelos para que SQLAlchemy los reconozca al crear tablas
         try:
             from app import models
@@ -32,12 +45,13 @@ def create_app():
 
     from app.main import main_bp
     from app.auth import auth_bp
+    from app.dashboard import dashboard_bp
 
-    
-    flask_app.register_blueprint(main_bp, url_prefix='/')
-    flask_app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(main_bp, url_prefix='/')
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(dashboard_bp, url_prefix='/') # Ruta será /dashboard porque está definida así en el blueprint
 
-    return flask_app
+    return app
 
 
 

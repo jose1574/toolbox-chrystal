@@ -1,7 +1,5 @@
-from flask import Blueprint, render_template
+from flask import Blueprint
 
-dashboard_bp = Blueprint('dashboard', __name__, template_folder='templates')
+dashboard_bp = Blueprint('dashboard', __name__)
 
-@dashboard_bp.route('/dashboard')
-def dashboard():
-    return render_template('dashboard/dashboard.html')
+from app.dashboard import routes

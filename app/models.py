@@ -4904,9 +4904,12 @@ class Unit(db.Model):
 
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     __table_args__ = { 'schema': 'public', 'extend_existing': True }
+
+    def get_id(self):
+        return str(self.code)
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
