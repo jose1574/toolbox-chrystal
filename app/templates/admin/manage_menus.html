@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Menus{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Gestión de Menús</h1>
+
+<div>
+    <div>
+        <div id="notification">
+        </div>
+    </div>
+    <form hx-post="{{ url_for('admin.create_menu') }}" hx-target="#notification">
+        <label for="menu_code">
+            Código:
+            <input type="text" id="menu_code" name="menu_code" value="01">
+        </label>
+        <label for="menu_description">
+            Descripción:
+            <input type="text" id="menu_description" name="menu_description" value="Menu de Prueba">
+        </label>
+        <button type="submit">Guardar</button>
+        <button hx-post="{{ url_for('admin.delete_menu') }}" hx-target="#notification">Eliminar
+        </button>
+    </form>
+</div>
+<div id="menu-list" class="mt-6">
+</div>
+</div>
+{% endblock %}

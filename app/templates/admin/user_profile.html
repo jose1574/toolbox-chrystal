@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Perfil de Usuario{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Perfil de Usuario</h2>
+
+    <!-- Div de notificaciones -->
+    <div id="notification" class="mb-4">
+        {% if error_msg %}
+        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+            {{ error_msg|safe }}
+        </div>
+        {% endif %}
+        
+        {% if success_msg %}
+        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
+            {{ success_msg }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+        <form hx-post="{{ url_for('admin.create_user_profile') }}" 
+        hx-target="#main-content" 
+        hx-select="#main-content"
+        hx-swap="innerHTML"
+        class="space-y-4">
+            <div class="flex items-end space-x-2">
+                <div class="flex-1">
+                    <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Código de
+                        Perfil:</label>
+                    <input type="text" hx-get="{{ url_for('admin.user_profile_search') }}" hx-target="#main-content"
+                        hx-select="#main-content" id="profile_code" name="profile_code"
+                        hx-trigger="keyup[key=='Enter']" 
+                        hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
+                        value="{{ profile.code if profile else search_code|default('') }}"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        required>
+                </div>
+                <button type="button" hx-get="{{ url_for('admin.profile_user_modal') }}" hx-target="#modal-profiles"
+                    hx-trigger="click"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none">Buscar</button>
+            </div>
+
+            <div id="profile-form-fields">
+                <label for="profile_description"
+                    class="block mb-2 text-sm font-medium text-gray-900">Descripción:</label>
+                <input type="text" name="profile_description" id="profile_description"
+                    value="{{ profile.description if profile else '' }}"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    required>
+            </div>
+
+            <div class="mt-8 flex justify-end">
+                <button type="submit"
+                    class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-profiles"></div>
+
+
+
+
+
+
+
+
+<script>
+    function selectProfile(code, description) {
+        document.getElementById('profile_code').value = code;
+        document.getElementById('profile_description').value = description;
+        const modal = document.getElementById('modalProfileSearch');
+        if (modal) {
+            modal.remove();
+        }
+    }
+</script>
+{% endblock %}

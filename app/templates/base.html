@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script> 
     <title>
         {% block title %}Toolbox{% endblock %}
     </title>
@@ -132,14 +133,48 @@
                             dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Administrador de
                             documentos</a>
                     </li>
-                    <li class="md:hidden">
-                        <a href="#"
-                            class="block py-2 px-3 text-gray-900 rounded-sm 
-                            hover:bg-gray-100 md:hover:bg-transparent md:border-0 
-                            md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 
-                            dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Configuración</a>
+                    <li class="relative">
+                        <button id="dropdownConfigLink" data-dropdown-toggle="dropdownConfig"
+                            class="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0
+                             md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500
+                              dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">Configuración
+                            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2" d="m1 1 4 4 4-4" />
+                            </svg></button>
+                        <!-- Dropdown menu -->
+                        <div id="dropdownConfig"
+                            class="absolute left-0 top-full mt-2 z-50 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-56 dark:bg-gray-700 dark:divide-gray-600">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
+                                aria-labelledby="dropdownConfigLink">
+                                <li>
+                                    <button type="button"
+                                        hx-get="{{ url_for('admin.manage_users') }}"
+                                        hx-target="#main-content"
+                                        hx-select="#main-content"
+                                        hx-push-url="true"
+                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Usuarios</button>
+                                </li>
+                                <li>
+                                    <button type="button"
+                                        hx-get="{{ url_for('admin.user_profile') }}"
+                                        hx-target="#main-content"
+                                        hx-select="#main-content"
+                                        hx-push-url="true"
+                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Perfiles</button>
+                                </li>
+                                <li>
+                                    <button type="button"
+                                        hx-get="{{ url_for('admin.manage_menus') }}"
+                                        hx-target="#main-content"
+                                        hx-select="#main-content"
+                                        hx-push-url="true"
+                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Menus</button>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
-
                 </ul>
             </div>
             <!-- Desktop/logout on right -->
@@ -150,7 +185,10 @@
         </div>
     </nav>
 
-    {% block content %}{% endblock %}
+    <div id="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
 </body>
 

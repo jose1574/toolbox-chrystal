@@ -485,7 +485,7 @@ class Client(db.Model):
     credit_days = db.Column(db.Integer)
     credit_limit = db.Column(db.Double(53))
     discount = db.Column(db.Double(53))
-    client_type = db.Column(db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'), db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
+    client_type = db.Column(db.ForeignKey('public.person_type.code', ondelete='RESTRICT', onupdate='CASCADE'))
     sale_price = db.Column(db.Integer)
     status = db.Column(db.String)
     name_fiscal = db.Column(db.Integer)
@@ -504,7 +504,7 @@ class Client(db.Model):
     city1 = db.relationship('City', primaryjoin='Client.city == City.code', backref='clients')
     client_group1 = db.relationship('ClientGroup', primaryjoin='Client.client_group == ClientGroup.code', backref='clients')
     person_type = db.relationship('PersonType', primaryjoin='Client.client_type == PersonType.code', backref='persontype_clients')
-    person_type1 = db.relationship('PersonType', primaryjoin='Client.client_type == PersonType.code', backref='persontype_clients_0')
+    person_type1 = db.relationship('PersonType', primaryjoin='Client.client_type == PersonType.code', backref=db.backref('persontype_clients_0', overlaps="person_type,persontype_clients"), overlaps="person_type,persontype_clients")
     cond_floor1 = db.relationship('CondFloor', primaryjoin='Client.cond_floor == CondFloor.code', backref='clients')
     cond_property_type1 = db.relationship('CondPropertyType', primaryjoin='Client.cond_property_type == CondPropertyType.code', backref='clients')
     country1 = db.relationship('Country', primaryjoin='Client.country == Country.code', backref='clients')
@@ -4911,6 +4911,14 @@ class User(db.Model, UserMixin):
     def get_id(self):
         return str(self.code)
 
+    def has_menu_access(self, menu_code):
+        access = TxMenuActive.query.filter_by(
+            profile_code=self.profile, 
+            menu_code=menu_code, 
+            is_active=True
+        ).first()
+        return access is not None
+
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
     status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
@@ -5348,64 +5356,64 @@ class WorkshopWarrantyStatu(db.Model):
 
 
 
-class TxRol(db.Model):
-    """Define los roles y sus permisos en texto plano."""
-    __tablename__ = 'roles'
-    __table_args__ = {'schema': 'toolbox'} # Indica que esta tabla va en tu esquema
+# class TxRol(db.Model):
+#     """Define los roles y sus permisos en texto plano."""
+#     __tablename__ = 'roles'
+#     __table_args__ = {'schema': 'toolbox'} # Indica que esta tabla va en tu esquema
     
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    # Aquí aplicamos la SIMPLICIDAD: los permisos son un string: "dash,admin,reportes"
-    permissions = db.Column(db.Text, default="")
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String(50), unique=True, nullable=False)
+#     # Aquí aplicamos la SIMPLICIDAD: los permisos son un string: "dash,admin,reportes"
+#     permissions = db.Column(db.Text, default="")
 
-class TxUserConfig(db.Model, UserMixin):
-    """Extiende al usuario original con configuraciones de tu Toolbox."""
-    __tablename__ = 'user_config'
-    __table_args__ = {'schema': 'toolbox'}
+# class TxUserConfig(db.Model, UserMixin):
+#     """Extiende al usuario original con configuraciones de tu Toolbox."""
+#     __tablename__ = 'user_config'
+#     __table_args__ = {'schema': 'toolbox'}
     
-    id = db.Column(db.Integer, primary_key=True)
+#     id = db.Column(db.Integer, primary_key=True)
     
-    # LLAVE FORÁNEA CLAVE: Conecta tu tabla con la original de la otra app
-    # Apuntamos a 'esquema.tabla.columna'
-    user_code = db.Column(db.String, db.ForeignKey('public.users.code'), unique=True)
+#     # LLAVE FORÁNEA CLAVE: Conecta tu tabla con la original de la otra app
+#     # Apuntamos a 'esquema.tabla.columna'
+#     user_code = db.Column(db.String, db.ForeignKey('public.users.code'), unique=True)
     
-    # Relación con tu tabla de roles
-    rol_id = db.Column(db.Integer, db.ForeignKey('toolbox.roles.id'))
+#     # Relación con tu tabla de roles
+#     rol_id = db.Column(db.Integer, db.ForeignKey('toolbox.roles.id'))
     
-    # Relaciones de SQLAlchemy para acceder fácil: user.rol.nombre
-    rol = db.relationship("TxRol")
-    # Agregamos relación al usuario original
-    user = db.relationship("User", backref=db.backref("config", uselist=False))
+#     # Relaciones de SQLAlchemy para acceder fácil: user.rol.nombre
+#     rol = db.relationship("TxRol")
+#     # Agregamos relación al usuario original
+#     user = db.relationship("User", backref=db.backref("config", uselist=False))
 
-    def get_id(self):
-        return self.user_code
+#     def get_id(self):
+#         return self.user_code
 
-    # Método de conveniencia para verificar permisos rápidamente
-    def tiene_permiso(self, permiso_slug):
-        if not self.rol or not self.rol.permissions:
-            return False
-        return permiso_slug in self.rol.permissions.split(',')
+#     # Método de conveniencia para verificar permisos rápidamente
+#     def tiene_permiso(self, permiso_slug):
+#         if not self.rol or not self.rol.permissions:
+#             return False
+#         return permiso_slug in self.rol.permissions.split(',')
 
 
 
-class RsProductsImage(db.Model):
-    __tablename__ = 'rs_products_images'
-    __table_args__ = { 'schema': 'toolbox' }
+# class RsProductsImage(db.Model):
+#     __tablename__ = 'rs_products_images'
+#     __table_args__ = { 'schema': 'toolbox' }
 
-    image_id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-    product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    image_data = db.Column(db.LargeBinary, nullable=False)
-    filename = db.Column(db.String(255))
-    mime_type = db.Column(db.String(50))
-    size_bytes = db.Column(db.BigInteger)
-    is_primary = db.Column(db.Boolean, server_default=db.FetchedValue())
-    created_at = db.Column(db.DateTime, server_default=db.FetchedValue())
+#     image_id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
+#     product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+#     image_data = db.Column(db.LargeBinary, nullable=False)
+#     filename = db.Column(db.String(255))
+#     mime_type = db.Column(db.String(50))
+#     size_bytes = db.Column(db.BigInteger)
+#     is_primary = db.Column(db.Boolean, server_default=db.FetchedValue())
+#     created_at = db.Column(db.DateTime, server_default=db.FetchedValue())
 
-    product = db.relationship('Product', primaryjoin='RsProductsImage.product_code == Product.code', backref='rs_products_images')
+#     product = db.relationship('Product', primaryjoin='RsProductsImage.product_code == Product.code', backref='rs_products_images')
 
 
 class ProductsFailure(db.Model):
-    __tablename__ = 'tx_products_failures'
+    __tablename__ = 'products_failures'
     __table_args__ = (
         db.UniqueConstraint('product_code', 'store_code'),
         { 'schema': 'toolbox' }
@@ -5420,3 +5428,33 @@ class ProductsFailure(db.Model):
 
     product = db.relationship('Product', primaryjoin='ProductsFailure.product_code == Product.code', backref='products_failures')
     store = db.relationship('Store', primaryjoin='ProductsFailure.store_code == Store.code', backref='products_failures')
+
+
+class TxProfile(db.Model):
+    __tablename__ = 'profile'
+    __table_args__ = { 'schema': 'toolbox'}
+
+    code = db.Column(db.String, primary_key=True)
+    description = db.Column(db.String)
+
+class TxMenu(db.Model):
+    __tablename__ = 'menus'
+    __table_args__ = { 'schema': 'toolbox'}
+    code = db.Column(db.String, primary_key=True)
+    description = db.Column(db.String)
+
+class TxMenuActive(db.Model):
+    __tablename__ = 'menu_active'
+    __table_args__ = { 'schema': 'toolbox'}
+
+    profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    menu_code = db.Column(db.ForeignKey('toolbox.menus.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
+
+class UserProfile(db.Model):
+    __tablename__ = 'user_profile'
+    __table_args__ = { 'schema': 'toolbox'}
+    
+    correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue(), autoincrement=True)
+    user_code = db.Column(db.ForeignKey('public.users.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='RESTRICT', onupdate='CASCADE'), nullable=False)

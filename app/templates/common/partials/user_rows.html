@@ -1,0 +1,26 @@
+{% for user in users %}
+<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer" 
+    onclick="selectUser('{{ user.code }}', '{{ user.description }}')">
+    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+        {{ user.code }}
+    </td>
+    <td class="px-6 py-4">
+        {{ user.description }}
+    </td>
+    <td class="px-6 py-4">
+        {{ user.email }}
+    </td>
+    <td class="px-6 py-4 text-right">
+        <button type="button" class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                data-modal-hide="modalUserSearch">
+            Seleccionar
+        </button>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+        No se encontraron usuarios.
+    </td>
+</tr>
+{% endfor %}

@@ -46,10 +46,14 @@ def create_app():
     from app.main import main_bp
     from app.auth import auth_bp
     from app.dashboard import dashboard_bp
+    from app.common import common_bp
+    from app.admin import admin_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(dashboard_bp, url_prefix='/') # Ruta será /dashboard porque está definida así en el blueprint
+    app.register_blueprint(dashboard_bp, url_prefix='/')
+    app.register_blueprint(common_bp, url_prefix='/common')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
 
     return app
 
