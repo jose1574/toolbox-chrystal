@@ -2,6 +2,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy import and_
+import json
 
 
 # Cambia esto si es necesario:
@@ -4910,15 +4911,6 @@ class User(db.Model, UserMixin):
 
     def get_id(self):
         return str(self.code)
-
-    def has_menu_access(self, menu_code):
-        access = TxMenuActive.query.filter_by(
-            profile_code=self.profile, 
-            menu_code=menu_code, 
-            is_active=True
-        ).first()
-        return access is not None
-
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
     status = db.Column(db.ForeignKey('public.status.code', ondelete='RESTRICT', onupdate='CASCADE'))
@@ -5356,60 +5348,8 @@ class WorkshopWarrantyStatu(db.Model):
 
 
 
-# class TxRol(db.Model):
-#     """Define los roles y sus permisos en texto plano."""
-#     __tablename__ = 'roles'
-#     __table_args__ = {'schema': 'toolbox'} # Indica que esta tabla va en tu esquema
-    
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(50), unique=True, nullable=False)
-#     # Aquí aplicamos la SIMPLICIDAD: los permisos son un string: "dash,admin,reportes"
-#     permissions = db.Column(db.Text, default="")
-
-# class TxUserConfig(db.Model, UserMixin):
-#     """Extiende al usuario original con configuraciones de tu Toolbox."""
-#     __tablename__ = 'user_config'
-#     __table_args__ = {'schema': 'toolbox'}
-    
-#     id = db.Column(db.Integer, primary_key=True)
-    
-#     # LLAVE FORÁNEA CLAVE: Conecta tu tabla con la original de la otra app
-#     # Apuntamos a 'esquema.tabla.columna'
-#     user_code = db.Column(db.String, db.ForeignKey('public.users.code'), unique=True)
-    
-#     # Relación con tu tabla de roles
-#     rol_id = db.Column(db.Integer, db.ForeignKey('toolbox.roles.id'))
-    
-#     # Relaciones de SQLAlchemy para acceder fácil: user.rol.nombre
-#     rol = db.relationship("TxRol")
-#     # Agregamos relación al usuario original
-#     user = db.relationship("User", backref=db.backref("config", uselist=False))
-
-#     def get_id(self):
-#         return self.user_code
-
-#     # Método de conveniencia para verificar permisos rápidamente
-#     def tiene_permiso(self, permiso_slug):
-#         if not self.rol or not self.rol.permissions:
-#             return False
-#         return permiso_slug in self.rol.permissions.split(',')
 
 
-
-# class RsProductsImage(db.Model):
-#     __tablename__ = 'rs_products_images'
-#     __table_args__ = { 'schema': 'toolbox' }
-
-#     image_id = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue())
-#     product_code = db.Column(db.ForeignKey('public.products.code', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-#     image_data = db.Column(db.LargeBinary, nullable=False)
-#     filename = db.Column(db.String(255))
-#     mime_type = db.Column(db.String(50))
-#     size_bytes = db.Column(db.BigInteger)
-#     is_primary = db.Column(db.Boolean, server_default=db.FetchedValue())
-#     created_at = db.Column(db.DateTime, server_default=db.FetchedValue())
-
-#     product = db.relationship('Product', primaryjoin='RsProductsImage.product_code == Product.code', backref='rs_products_images')
 
 
 class ProductsFailure(db.Model):
@@ -5436,6 +5376,23 @@ class TxProfile(db.Model):
 
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
+    menus_config = db.Column(db.String, nullable=False, default='[]')
+
+    @property
+    def menus_list(self):
+        """Convierte el texto de la DB en una lista de Python"""
+        try:
+            return json.loads(self.menus_config) if self.menus_config else []
+        except:
+            return []
+
+    @menus_list.setter
+    def menus_list(self, value):
+        """Convierte la lista de Python en texto para la DB"""
+        self.menus_config = json.dumps(value)
+
+
+
 
 class TxMenu(db.Model):
     __tablename__ = 'menus'
@@ -5443,18 +5400,12 @@ class TxMenu(db.Model):
     code = db.Column(db.String, primary_key=True)
     description = db.Column(db.String)
 
-class TxMenuActive(db.Model):
-    __tablename__ = 'menu_active'
-    __table_args__ = { 'schema': 'toolbox'}
-
-    profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    menu_code = db.Column(db.ForeignKey('toolbox.menus.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=True, nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False, server_default=db.FetchedValue())
 
 class UserProfile(db.Model):
     __tablename__ = 'user_profile'
     __table_args__ = { 'schema': 'toolbox'}
-    
+
     correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue(), autoincrement=True)
     user_code = db.Column(db.ForeignKey('public.users.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='RESTRICT', onupdate='CASCADE'), nullable=False)
+

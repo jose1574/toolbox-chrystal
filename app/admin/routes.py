@@ -1,13 +1,8 @@
 from flask import render_template, request, flash
 from flask_login import login_required, current_user
 from app.admin import admin_bp
-from app.models import TxMenu, TxProfile, TxMenuActive, TxProfile
+from app.models import TxMenu, TxProfile
 from app import db
-
-
-
-
-
 
 @admin_bp.route('/users')
 @login_required
@@ -86,7 +81,8 @@ def delete_menu():
 def user_profile():
     search_profile = request.args.get('profile_code')
     profile = TxProfile.query.filter_by(code=search_profile).first() if search_profile else None
-    return render_template('admin/user_profile.html', profile=profile)
+    menus = TxMenu.query.all()
+    return render_template('admin/user_profile.html', profile=profile, menus=menus)
 
 
 @admin_bp.route('/profile/search')
@@ -95,6 +91,7 @@ def user_profile_search():
     code = request.args.get('profile_code', '').upper()
     profile = TxProfile.query.get(code)
     error_msg = None
+    menus = TxMenu.query.all()
     
     if code and not profile:
         error_msg = f'El perfil con código <span class="font-bold">{code}</span> no existe. Puede crearlo ingresando una descripción.'
@@ -102,7 +99,9 @@ def user_profile_search():
     return render_template('admin/user_profile.html', 
                           profile=profile, 
                           error_msg=error_msg, 
-                          search_code=code)
+                          search_code=code,
+                          menus=menus
+                          )
 
 
 @admin_bp.route('/profile/modal/profile_user')
@@ -111,27 +110,45 @@ def profile_user_modal():
     profiles = TxProfile.query.all()
     return render_template('common/modal_profile_search.html', profiles=profiles)
 
+
+
+
 @admin_bp.route('/profile/create', methods=['POST'])
 @login_required
 def create_user_profile():
     code = request.form.get('profile_code', '').upper().strip()
     description = request.form.get('profile_description', '').strip()
+    active_menus = request.form.getlist('menus')
+    print("Menus activos seleccionados: ", active_menus)
 
     if not code or not description:
-        return render_template('admin/user_profile.html', error_msg='Error: Código y descripción son obligatorios.')
+        return render_template('admin/user_profile.html', error_msg='Error: Código y descripción son obligatorios.', menus=TxMenu.query.all())
     
     try:
         profile = TxProfile.query.get(code)
+        
+        # Preparamos la lista de configuración de menús
+        menus_config_list = []
+        for menu_code in active_menus:
+            menus_config_list.append({
+                'menu_code': menu_code,
+                'is_active': True
+            })
+
         if profile:
             profile.description = description
+            profile.menus_list = menus_config_list  # Usamos el setter de models.py
             msg = f'Perfil "{code}" actualizado exitosamente.'
         else:
+            print("Configuración de menús para el perfil: ", menus_config_list)
+            # Usamos el setter menus_list en lugar de pasar el dict directo a menus_config
             new_profile = TxProfile(code=code, description=description)
+            new_profile.menus_list = menus_config_list 
             db.session.add(new_profile)
-            msg = f'Perfil "{code}" creado exitosamente.'
-        
+            msg = f'Perfil "{code}" creado exitosamente.'     
+
         db.session.commit()
-        return render_template('admin/user_profile.html', success_msg=msg)
+        return render_template('admin/user_profile.html', success_msg=msg, menus=TxMenu.query.all())
     except Exception as e:
         db.session.rollback()
-        return render_template('admin/user_profile.html', error_msg=f'Error al guardar perfil: {str(e)}')
+        return render_template('admin/user_profile.html', error_msg=f'Error al guardar perfil: {str(e)}', menus=TxMenu.query.all())

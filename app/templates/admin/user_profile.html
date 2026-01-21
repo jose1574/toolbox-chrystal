@@ -12,7 +12,7 @@
             {{ error_msg|safe }}
         </div>
         {% endif %}
-        
+
         {% if success_msg %}
         <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
             {{ success_msg }}
@@ -21,26 +21,26 @@
     </div>
 
     <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-        <form hx-post="{{ url_for('admin.create_user_profile') }}" 
-        hx-target="#main-content" 
-        hx-select="#main-content"
-        hx-swap="innerHTML"
-        class="space-y-4">
+        <form hx-post="{{ url_for('admin.create_user_profile') }}" hx-target="#main-content" hx-select="#main-content"
+            hx-swap="innerHTML" class="space-y-4">
             <div class="flex items-end space-x-2">
                 <div class="flex-1">
                     <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Código de
                         Perfil:</label>
                     <input type="text" hx-get="{{ url_for('admin.user_profile_search') }}" hx-target="#main-content"
-                        hx-select="#main-content" id="profile_code" name="profile_code"
-                        hx-trigger="keyup[key=='Enter']" 
+                        hx-select="#main-content" id="profile_code" name="profile_code" hx-trigger="keyup[key=='Enter']"
                         hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
                         value="{{ profile.code if profile else search_code|default('') }}"
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                         required>
                 </div>
-                <button type="button" hx-get="{{ url_for('admin.profile_user_modal') }}" hx-target="#modal-profiles"
-                    hx-trigger="click"
-                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none">Buscar</button>
+                <button type="button" 
+                    hx-get="{{ url_for('admin.profile_user_modal') }}" 
+                    hx-target="#modal-profiles" 
+                    hx-select="#modalProfileSearch"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                    Buscar
+                </button>
             </div>
 
             <div id="profile-form-fields">
@@ -51,6 +51,15 @@
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     required>
             </div>
+            <hr>
+            {% for menu in menus %}
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="menu_{{ menu.code }}" name="menus" value="{{ menu.code }}" {% if profile %}
+                    {% for item in profile.menus_list %} {% if item.menu_code==menu.code %} checked {% endif %} {%
+                    endfor %} {% endif %}>
+                <label for="menu_{{ menu.code }}" class="text-sm text-gray-700">{{ menu.description }}</label>
+            </div>
+            {% endfor %}
 
             <div class="mt-8 flex justify-end">
                 <button type="submit"
@@ -75,10 +84,14 @@
     function selectProfile(code, description) {
         document.getElementById('profile_code').value = code;
         document.getElementById('profile_description').value = description;
+        // Cierra el modal 
         const modal = document.getElementById('modalProfileSearch');
         if (modal) {
             modal.remove();
         }
+        // Disparar Enter para cargar los menús del perfil seleccionado
+        const input = document.getElementById('profile_code');
+        input.dispatchEvent(new KeyboardEvent('keyup', { 'key': 'Enter', bubbles: true }));
     }
 </script>
 {% endblock %}
