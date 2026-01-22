@@ -7,15 +7,15 @@
 
     <!-- Div de notificaciones -->
     <div id="notification" class="mb-4">
-        {% if error_msg %}
-        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-            {{ error_msg|safe }}
+        {% if success_msg %}
+        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200" role="alert">
+            <span class="font-medium">¡Éxito!</span> {{ success_msg }}
         </div>
         {% endif %}
 
-        {% if success_msg %}
-        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
-            {{ success_msg }}
+        {% if error_msg %}
+        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
+            <span class="font-medium">Error:</span> {{ error_msg|safe }}
         </div>
         {% endif %}
     </div>
@@ -27,8 +27,11 @@
                 <div class="flex-1">
                     <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Código de
                         Perfil:</label>
-                    <input type="text" hx-get="{{ url_for('admin.user_profile_search') }}" hx-target="#main-content"
-                        hx-select="#main-content" id="profile_code" name="profile_code" hx-trigger="keyup[key=='Enter']"
+                    <input type="text" 
+                        hx-get="{{ url_for('admin.user_profile_search') }}" 
+                        hx-target="#main-content"
+                        hx-select="#main-content" id="profile_code" name="profile_code" 
+                        hx-trigger="keyup[key=='Enter']"
                         hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
                         value="{{ profile.code if profile else search_code|default('') }}"
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"

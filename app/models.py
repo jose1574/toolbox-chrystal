@@ -5403,9 +5403,8 @@ class TxMenu(db.Model):
 
 class UserProfile(db.Model):
     __tablename__ = 'user_profile'
-    __table_args__ = { 'schema': 'toolbox'}
+    __table_args__ = ( { 'schema': 'toolbox' })
 
-    correlative = db.Column(db.Integer, primary_key=True, server_default=db.FetchedValue(), autoincrement=True)
     user_code = db.Column(db.ForeignKey('public.users.code', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='RESTRICT', onupdate='CASCADE'), nullable=False)
+    profile_code = db.Column(db.ForeignKey('toolbox.profile.code', ondelete='RESTRICT', onupdate='CASCADE'), primary_key=False, nullable=False)
 
