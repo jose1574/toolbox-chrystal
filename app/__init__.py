@@ -48,12 +48,14 @@ def create_app():
     from app.dashboard import dashboard_bp
     from app.common import common_bp
     from app.admin import admin_bp
+    from app.inventory import inventory_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/')
     app.register_blueprint(common_bp, url_prefix='/common')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
 
     return app
 
