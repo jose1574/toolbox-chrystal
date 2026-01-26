@@ -1,30 +1,35 @@
-
 <div class="p-4">
     <h1 class="text-2xl font-bold mb-4">Orden de Recolección Automática</h1>
-    
+
     <div class="mb-6 p-4 bg-gray-100 rounded-lg">
         <p><strong>Depósito Origen:</strong> {{ store_origin }}</p>
         <p><strong>Depósito Destino:</strong> {{ store_dst }}</p>
     </div>
-    <div class="mb-4 p-3 bg-gray-100 rounded-lg flex flex-wrap items-center gap-6 sticky top-0 z-10" id="filter-panel" style="position: sticky; top: 0; z-index: 10;">
+    <div class="mb-4 p-3 bg-gray-100 rounded-lg flex flex-wrap items-center gap-6 sticky top-0 z-10" id="filter-panel"
+        style="position: sticky; top: 0; z-index: 10;">
         <div class="flex items-center gap-4">
             <label for="search" class="text-sm font-bold text-gray-700 whitespace-nowrap">Buscar:</label>
-            <input type="text" id="search" placeholder="Código o nombre..." 
-                   class="filter-input block w-64 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2">
+            <input type="text" id="search" placeholder="Código o nombre..."
+                class="filter-input block w-64 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2">
         </div>
 
         <!-- Dropdown Departamentos -->
         <div class="relative flex items-center gap-4">
             <label class="text-sm font-bold text-gray-700 whitespace-nowrap">Depto:</label>
             <div class="dropdown-container relative">
-                <button type="button" class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                <button type="button"
+                    class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
                     <span class="truncate">Seleccionar...</span>
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
-                <div class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
+                <div
+                    class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
                     {% for dept in departments %}
                     <label class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer transition-colors">
-                        <input type="checkbox" value="{{ dept }}" class="dept-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <input type="checkbox" value="{{ dept }}"
+                            class="dept-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <span class="ml-2 text-xs text-gray-700 truncate">{{ dept }}</span>
                     </label>
                     {% endfor %}
@@ -36,20 +41,26 @@
         <div class="relative flex items-center gap-4">
             <label class="text-sm font-bold text-gray-700 whitespace-nowrap">Marca:</label>
             <div class="dropdown-container relative">
-                <button type="button" class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                <button type="button"
+                    class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
                     <span class="truncate">Seleccionar...</span>
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
-                <div class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
+                <div
+                    class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
                     {% for mark in marks %}
                     <label class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer transition-colors">
-                        <input type="checkbox" value="{{ mark }}" class="mark-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <input type="checkbox" value="{{ mark }}"
+                            class="mark-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <span class="ml-2 text-xs text-gray-700 truncate">{{ mark }}</span>
                     </label>
                     {% endfor %}
                 </div>
             </div>
-            <button type="button" id="clear-filters" class="ml-auto text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-4 py-2 transition-colors">
+            <button type="button" id="clear-filters"
+                class="ml-auto text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-4 py-2 transition-colors">
                 Limpiar
             </button>
         </div>
@@ -57,15 +68,27 @@
     </div>
 
     <div id="results-container" class="relative overflow-x-auto shadow-md sm:rounded-lg">
-        <form id="auto-order-form" hx-post="{{ url_for('inventory.auto_order_collection') }}" hx-target="#main-content">
+        <form id="auto-order-form" hx-post="{{ url_for('inventory.save_auto_order_collection') }}"
+            hx-target="#main-content"
+            hx-trigger="submit"
+            >
+
             <!-- Mantener depósitos seleccionados para el envío del formulario -->
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
             <table class="w-full text-sm text-left text-gray-500">
+                <div class="p-4 bg-white border-t border-gray-200 flex justify-end">
+                    <button type="submit"
+                        hx-trigger="submit"
+                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
+                        Generar Orden
+                    </button>
+                </div>
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
                         <th scope="col" class="px-6 py-3">
-                            <input type="checkbox" id="select-all" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                            <input type="checkbox" id="select-all"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                         </th>
                         <th scope="col" class="px-6 py-3">Código</th>
                         <th scope="col" class="px-6 py-3">Descripción</th>
@@ -81,14 +104,13 @@
                 </thead>
                 <tbody>
                     {% for product in products %}
-                    
-                    <tr class="product-row bg-white border-b hover:bg-gray-50" 
-                        data-code="{{ product.code|lower }}" 
+
+                    <tr class="product-row bg-white border-b hover:bg-gray-50" data-code="{{ product.code|lower }}"
                         data-description="{{ product.description|lower }}"
-                        data-dept="{{ product.department_description }}"
-                        data-mark="{{ product.mark_description }}">
+                        data-dept="{{ product.department_description }}" data-mark="{{ product.mark_description }}">
                         <td class="px-6 py-4">
-                            <input type="checkbox" name="{{ product.code }}" value="selected" class="product-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                            <input type="checkbox" name="{{ product.code }}" value="selected"
+                                class="product-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                         </td>
                         <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ product.code }}</td>
                         <td class="px-6 py-4">{{ product.description }}</td>
@@ -100,30 +122,25 @@
                         <td class="px-6 py-4">{{ product.maximum_stock }}</td>
                         <td class="px-6 py-4">{{ product.stock_destination }}</td>
                         <td class="px-6 py-4 bg-blue-50">
-                            <input type="number" 
-                                   value="{{ product.to_transfer }}" 
-                                   name="qty_{{ product.code }}" 
-                                   class="block w-20 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1">
+                            <input type="number" value="{{ product.to_transfer }}" name="qty_{{ product.code }}"
+                                class="block w-20 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1">
                         </td>
                     </tr>
                     {% else %}
                     <tr class="bg-white border-b">
-                        <td colspan="11" class="px-6 py-4 text-center text-gray-500 italic">No se encontraron productos que requieran transferencia según los niveles de stock.</td>
+                        <td colspan="11" class="px-6 py-4 text-center text-gray-500 italic">No se encontraron productos
+                            que requieran transferencia según los niveles de stock.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div class="p-4 bg-white border-t border-gray-200 flex justify-end">
-                <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
-                    Generar Orden
-                </button>
-            </div>
+
         </form>
     </div>
 </div>
 
 <script>
-    (function() {
+    (function () {
         const selectAll = document.getElementById('select-all');
         const searchInput = document.getElementById('search');
         const clearBtn = document.getElementById('clear-filters');
@@ -134,10 +151,10 @@
             trigger.addEventListener('click', (e) => {
                 const menu = trigger.nextElementSibling;
                 const isOpen = !menu.classList.contains('hidden');
-                
+
                 // Cerrar todos los demás
                 document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-                
+
                 if (!isOpen) menu.classList.remove('hidden');
                 e.stopPropagation();
             });
@@ -191,8 +208,8 @@
 
         // Event listeners
         searchInput?.addEventListener('input', applyFilters);
-        
-        document.getElementById('filter-panel').addEventListener('change', function(e) {
+
+        document.getElementById('filter-panel').addEventListener('change', function (e) {
             if (e.target.classList.contains('dept-checkbox') || e.target.classList.contains('mark-checkbox')) {
                 applyFilters();
             }
@@ -204,7 +221,7 @@
             applyFilters();
         });
 
-        selectAll?.addEventListener('change', function(e) {
+        selectAll?.addEventListener('change', function (e) {
             const visibleCheckboxes = document.querySelectorAll('.product-row:not([style*="display: none"]) .product-checkbox');
             visibleCheckboxes.forEach(cb => cb.checked = e.target.checked);
         });
