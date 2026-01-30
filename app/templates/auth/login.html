@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div
+            class="w-full max-w-md p-6 bg-white rounded-lg shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div class="space-y-6">
+                <h2 class="text-2xl font-bold text-center text-gray-900 dark:text-white">
+                    Iniciar Sesión
+                </h2>
+
+                <!-- Contenedor para mensajes de error/éxito retornados por HTMX -->
+                <div id="login-response"></div>
+
+                <form hx-post="{{ url_for('auth.login') }}" hx-target="#login-response" hx-swap="innerHTML"
+                    hx-indicator="#loading-spinner" class="space-y-4">
+
+                    <div>
+                        <label for="username"
+                            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Usuario</label>
+                        <input type="text" name="username" id="username" value="01"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                            placeholder="Ingresa tu código de usuario" required>
+                    </div>
+
+                    <div>
+                        <label for="password"
+                            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contraseña</label>
+                        <input type="password" name="password" id="password" value="24157129"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                            required>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 flex items-center justify-center">
+                        Ingresar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
+</body>
+
+</html>
+<!-- Cargar HTMX solo para esta vista si no está en base.html -->

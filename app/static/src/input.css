@@ -1,0 +1,17 @@
+/* static/src/input.css */
+@import "tailwindcss";
+@plugin "flowbite/plugin";
+
+@theme {
+  --color-neutral-primary-soft: #f9fafb;
+  --color-heading: #111827;
+  --color-body: #6b7280;
+  --color-fg-brand: #1a56db;
+  --color-default: #e5e7eb;
+  
+  --radius-base: 1rem;
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+@source "../../../node_modules/flowbite";
+@source "../../templates/**/*.html";

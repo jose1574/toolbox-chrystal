@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Gestión de Usuarios</h2>
+
+    <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+        <!-- Contenedor de Mensajes -->
+        <div id="messages-container">
+            {% if success_msg %}
+            <div class="mb-4 p-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200" role="alert">
+                <span class="font-medium">¡Éxito!</span> {{ success_msg }}
+            </div>
+            {% endif %}
+
+            {% if error_msg %}
+            <div class="mb-4 p-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
+                <span class="font-medium">Error:</span> {{ error_msg|safe }}
+            </div>
+            {% endif %}
+        </div>
+
+        <form hx-post="{{ url_for('admin.assign_profile_user') }}" hx-target="#main-content" hx-select="#main-content"
+            hx-swap="innerHTML" class="space-y-4">
+
+            <div class="flex items-end space-x-2">
+                <div class="flex-1">
+                    <label for="searchUser" class="block mb-2 text-sm font-medium text-gray-900">Código:</label>
+                    <input type="text" id="searchUser" name="searchUser"
+                        value="{{ user.code if user else search_code|default('') }}"
+                        placeholder="Ingrese código de usuario..." hx-get="{{ url_for('admin.search_user') }}"
+                        hx-target="#main-content" hx-select="#main-content" hx-trigger="keyup[key=='Enter']"
+                        hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                </div>
+                <button type="button" hx-get="{{ url_for('admin.search_users') }}" hx-target="#modal-users"
+                    hx-select="#modalUserSearch" hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
+                    type="button"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                    Buscar usuario
+                </button>
+            </div>
+            <div id="user-details" class="mt-6 pt-6 border-t border-gray-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">Descripción:</label>
+                        <input type="text" value="{{ user.description if user else '' }}"
+                            placeholder="Descripción del usuario" readonly
+                            class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Perfil:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="profile_code" name="profile_code"
+                                value="{{ user.toolbox_profile_code if user else '' }}" placeholder="Perfil del usuario" readonly
+                                class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
+                            <button hx-get="{{ url_for('admin.profile_user_modal') }}" hx-target="#modal-profiles"
+                                hx-select="#modalProfileSearch" type="button"
+                                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                                Buscar perfil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <button type="submit"
+                        class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">Asignar
+                        perfil</button>
+                </div>
+
+                {% if search_code and not user %}
+                <div class="mt-4 p-4 text-sm text-yellow-800 rounded-lg bg-yellow-50" role="alert">
+                    No se encontró ningún usuario con el código <span class="font-bold">{{ search_code }}</span>.
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-profiles"></div>
+<div id="modal-users"></div>
+
+<script>
+    function selectUser(code, description) {
+        const input = document.getElementById('searchUser');
+        input.value = code;
+
+        // Cerrar el modal de usuarios
+        const modal = document.getElementById('modalUserSearch');
+        if (modal) {
+            modal.remove();
+        }
+
+        // Disparar búsqueda automática (HTMX escuchará el evento keyup con Enter)
+        input.dispatchEvent(new KeyboardEvent('keyup', { 'key': 'Enter', bubbles: true }));
+    }
+
+    function selectProfile(code, description) {
+        document.getElementById('profile_code').value = code;
+        // La descripción o nombre del perfil no parece tener un campo específico aquí, 
+        // pero podrías añadir uno si fuera necesario.
+
+        // Cerrar el modal de perfiles (que es inyectado por HTMX)
+        const modal = document.getElementById('modalProfileSearch');
+        if (modal) {
+            modal.remove();
+        }
+    }
+</script>
+{% endblock %}
