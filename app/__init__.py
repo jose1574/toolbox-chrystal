@@ -49,6 +49,7 @@ def create_app():
     from app.common import common_bp
     from app.admin import admin_bp
     from app.inventory import inventory_bp
+    from app.reports import reports_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -56,6 +57,7 @@ def create_app():
     app.register_blueprint(common_bp, url_prefix='/common')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    app.register_blueprint(reports_bp, url_prefix='/reports')
 
     return app
 
