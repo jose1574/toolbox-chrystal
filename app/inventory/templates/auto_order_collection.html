@@ -2,8 +2,7 @@
     <h1 class="text-2xl font-bold mb-4">Orden de Recolección Automática</h1>
 
     <div class="mb-6 p-4 bg-gray-100 rounded-lg">
-        <p><strong>Depósito Origen:</strong> {{ store_origin }}</p>
-        <p><strong>Depósito Destino:</strong> {{ store_dst }}</p>
+        <p><strong>Depósito Origen:</strong> {{ store_origin }} <strong>Depósito Destino:</strong> {{ store_dst }}</p>
     </div>
     <div class="mb-4 p-3 bg-gray-100 rounded-lg flex flex-wrap items-center gap-6 sticky top-0 z-10" id="filter-panel"
         style="position: sticky; top: 0; z-index: 10;">
@@ -63,6 +62,10 @@
                 class="ml-auto text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-4 py-2 transition-colors">
                 Limpiar
             </button>
+        </div>
+        <div>
+            <p>cantidad de productos: {{ products|length }}</p>
+            <p>productos seleccionados: <span id="selected-count">0</span></p>
         </div>
 
     </div>
@@ -145,6 +148,7 @@
         const searchInput = document.getElementById('search');
         const clearBtn = document.getElementById('clear-filters');
         const rows = document.querySelectorAll('.product-row');
+        const selectedCountEl = document.getElementById('selected-count');
 
         // Lógica de Dropdowns
         document.querySelectorAll('.dropdown-trigger').forEach(trigger => {
@@ -180,6 +184,13 @@
             }
         }
 
+        function updateSelectedCount() {
+            const selected = document.querySelectorAll('.product-checkbox:checked');
+            if (selectedCountEl) {
+                selectedCountEl.textContent = selected.length.toString();
+            }
+        }
+
         function applyFilters() {
             const searchTerm = searchInput.value.toLowerCase();
             const selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(cb => cb.value);
@@ -204,6 +215,8 @@
                     row.style.display = 'none';
                 }
             });
+
+            updateSelectedCount();
         }
 
         // Event listeners
@@ -224,6 +237,15 @@
         selectAll?.addEventListener('change', function (e) {
             const visibleCheckboxes = document.querySelectorAll('.product-row:not([style*="display: none"]) .product-checkbox');
             visibleCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            updateSelectedCount();
         });
+
+        document.getElementById('results-container').addEventListener('change', function (e) {
+            if (e.target.classList.contains('product-checkbox')) {
+                updateSelectedCount();
+            }
+        });
+
+        updateSelectedCount();
     })();
 </script>
