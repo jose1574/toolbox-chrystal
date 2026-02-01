@@ -1,25 +1,71 @@
 import pdfkit
 import os
 import platform
+import base64
+from io import BytesIO
+import barcode
+from barcode.writer import ImageWriter
 from flask import render_template, current_app
 
-def render_pdf(template_src, context_dict={}):
+def generate_barcode(data, barcode_type='code128'):
+    """
+    Genera un código de barras en formato base64.
+    """
+    try:
+        BARCODE = barcode.get_barcode_class(barcode_type)
+        writer_options = {
+            'module_width': 0.2,
+            'module_height': 7.0,
+            'font_size': 8,
+            'text_distance': 3.0,
+            'quiet_zone': 1.0,
+        }
+        
+        # Buffer para guardar la imagen
+        buffer = BytesIO()
+        BARCODE(str(data), writer=ImageWriter()).write(buffer, options=writer_options)
+        
+        # Convertir a base64
+        return base64.b64encode(buffer.getvalue()).decode('utf-8')
+    except Exception as e:
+        print(f"Error generando código de barras: {e}")
+        return None
+
+def render_pdf(template_src, context_dict={}, paper_format='Letter', orientation='Portrait'):
     """
     Renderiza un template de HTML a PDF usando pdfkit.
+    Permite especificar el formato de papel (Letter, A4, HalfLetter, etc.)
+    y la orientación (Portrait, Landscape).
     """
     html = render_template(template_src, **context_dict)
     
-    # Opciones de configuración para pdfkit
+    # Mapeo de formatos personalizados o específicos
+    paper_configs = {
+        'Letter': {'page-size': 'Letter'},
+        'A4': {'page-size': 'A4'},
+        'HalfLetter': {
+            'page-width': '5.5in',
+            'page-height': '8.5in'
+        }
+    }
+
+    # Obtener la configuración de tamaño, por defecto Letter
+    size_options = paper_configs.get(paper_format, paper_configs['Letter']).copy()
+
+    # Opciones base de configuración para pdfkit
     options = {
-        'page-size': 'Letter',
-        'margin-top': '0.75in',
-        'margin-right': '0.75in',
-        'margin-bottom': '0.75in',
-        'margin-left': '0.75in',
+        'orientation': orientation,
+        'margin-top': '0.2in',
+        'margin-right': '0.2in',
+        'margin-bottom': '0.2in',
+        'margin-left': '0.2in',
         'encoding': "UTF-8",
         'no-outline': None,
-        'enable-local-file-access': None  # Importante para cargar CSS/imágenes locales
+        'enable-local-file-access': None
     }
+    
+    # Mezclar opciones de tamaño con opciones generales
+    options.update(size_options)
     
     config = None
     
