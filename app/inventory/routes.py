@@ -1,9 +1,9 @@
-from flask import render_template, request, flash, redirect, url_for
+from flask import render_template, request, flash, redirect, url_for, Response
 from flask_login import login_required, current_user
 from datetime import datetime
 from app import db
 from sqlalchemy import select, case, func, text
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from app.inventory import inventory_bp
 from app.models import (
     Store,
@@ -15,7 +15,11 @@ from app.models import (
     ProductsFailure,
     ProductsStock,
     Tax,
+    InventoryOperation,
+    InventoryOperationDetail,
 )
+
+from app.reports.utils import render_pdf, generate_barcode
 
 
 @inventory_bp.route("/")
@@ -29,6 +33,8 @@ def index():
 def select_stores():
     stores = Store.query.all()
     error = None
+    # Correlativo de la última orden guardada (si aplica)
+    new_order_id = request.args.get("new_order_id")
 
     if request.method == "POST":
         store_origin = request.form.get("store_origin")
@@ -48,8 +54,9 @@ def select_stores():
                 store_dst=store_dst,
             )
         )
-
-    return render_template("select_stores.html", stores=stores, error=error)
+    return render_template(
+        "select_stores.html", stores=stores, error=error, new_order_id=new_order_id
+    )
 
 
 @inventory_bp.route("/auto_order_collection", methods=["GET", "POST"])
@@ -89,7 +96,6 @@ def auto_order_collection():
 
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
-
     stock_orig = aliased(ProductsStock)
     stock_dst = aliased(ProductsStock)
     pf = aliased(ProductsFailure)
@@ -203,80 +209,102 @@ def save_auto_order_collection():
     try:
         # 1. Cabecera: Parámetros nombrados para compatibilidad con SQLAlchemy
         header_params = {
-            "p_correlative": None, "p_operation_type": "TRANSFER", "p_document_no": None,
-            "p_emission_date": datetime.now().date(), "p_wait": True,
+            "p_correlative": None,
+            "p_operation_type": "TRANSFER",
+            "p_document_no": None,
+            "p_emission_date": datetime.now().date(),
+            "p_wait": True,
             "p_description": f"Transferencia Auto {store_origen_obj.description} -> {store_dst_obj.description}",
-            "p_user_code": current_user.code, "p_station": "00", "p_store": store_origin, 
-            "p_locations": "00", "p_destination_store": store_dst, "p_destination_location": "00",
+            "p_user_code": current_user.code,
+            "p_station": "00",
+            "p_store": store_origin,
+            "p_locations": "00",
+            "p_destination_store": store_dst,
+            "p_destination_location": "00",
             "p_operation_comments": "Generado desde Toolbox Auto Order",
-            "p_total_amount": 0.0, "p_total_net": 0.0, "p_total_tax": 0.0, "p_total": 0.0,
-            "p_coin_code": "02", "p_internal_use": False
+            "p_total_amount": 0.0,
+            "p_total_net": 0.0,
+            "p_total_tax": 0.0,
+            "p_total": 0.0,
+            "p_coin_code": "02",
+            "p_internal_use": False,
         }
 
-        sql_header = text("""
+        sql_header = text(
+            """
             SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no, 
             :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations, 
             :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount, 
             :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
-        """)
+        """
+        )
 
         document_no = db.session.execute(sql_header, header_params).scalar()
-        if not document_no: raise Exception("La DB no devolvió ID de operación.")
-        
+        if not document_no:
+            raise Exception("La DB no devolvió ID de operación.")
+
         print(f"Nuevo ID de operación: {document_no}")
         # 2. Detalles
-        sql_detail = text("""
+        sql_detail = text(
+            """
             SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product, 
             :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations, 
             :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type, 
             :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code, 
             :p_change_price)
-        """)
+        """
+        )
 
         for item in selected_items:
             # Obtener datos: Unidad Principal, Producto, Impuesto
-            data_row = db.session.query(ProductsUnit, Product, Tax)\
-                .join(Product, ProductsUnit.product_code == Product.code)\
-                .outerjoin(Tax, Product.buy_tax == Tax.code)\
-                .filter(ProductsUnit.product_code == item["code"], ProductsUnit.main_unit == True)\
+            data_row = (
+                db.session.query(ProductsUnit, Product, Tax)
+                .join(Product, ProductsUnit.product_code == Product.code)
+                .outerjoin(Tax, Product.buy_tax == Tax.code)
+                .filter(
+                    ProductsUnit.product_code == item["code"],
+                    ProductsUnit.main_unit == True,
+                )
                 .first()
+            )
 
             if not data_row:
                 print(f"OMITIDO: {item['code']} falta info maestra.")
                 continue
-            
+
             pu, prod, tax = data_row
 
             detail_params = {
-                "p_main_correlative": document_no, 
-                "p_line": 0, # INOUT Integer (Enviar 0 para evitar error de tipos)
+                "p_main_correlative": document_no,
+                "p_line": 0,  # INOUT Integer (Enviar 0 para evitar error de tipos)
                 "p_code_product": item["code"],
                 "p_description_product": "comentario automatico, ToolBox",
-                "p_referenc": prod.referenc, 
-                "p_mark": prod.mark, 
+                "p_referenc": prod.referenc,
+                "p_mark": prod.mark,
                 "p_model": prod.model,
-                "p_amount": float(item["quantity"]), 
-                "p_store": store_origin, 
+                "p_amount": float(item["quantity"]),
+                "p_store": store_origin,
                 "p_locations": "00",
-                "p_destination_store": store_dst, 
+                "p_destination_store": store_dst,
                 "p_destination_location": "00",
-                "p_unit": int(pu.correlative), 
-                "p_conversion_factor": 0.0, 
-                "p_unit_type": 0, # Integer requerido (antes 0.0)
-                "p_unitary_cost": 0.0, 
-                "p_buy_tax": prod.buy_tax, 
+                "p_unit": int(pu.correlative),
+                "p_conversion_factor": 0.0,
+                "p_unit_type": 0,  # Integer requerido (antes 0.0)
+                "p_unitary_cost": 0.0,
+                "p_buy_tax": prod.buy_tax,
                 "p_aliquot": tax.aliquot if tax else 0.0,
-                "p_total_cost": 0.0, 
-                "p_total_tax": 0.0, 
-                "p_total": 0.0, 
-                "p_coin_code": "02", 
-                "p_change_price": False
+                "p_total_cost": 0.0,
+                "p_total_tax": 0.0,
+                "p_total": 0.0,
+                "p_coin_code": "02",
+                "p_change_price": False,
             }
             db.session.execute(sql_detail, detail_params)
 
         db.session.commit()
         flash(f"Operación #{document_no} guardada correctamente.", "success")
-        return redirect(url_for("inventory.index"))
+        # Volver a la selección de depósitos y abrir el PDF en nueva pestaña
+        return redirect(url_for("inventory.select_stores", new_order_id=document_no))
 
     except Exception as e:
         db.session.rollback()
@@ -289,3 +317,43 @@ def save_auto_order_collection():
                 store_dst=store_dst,
             )
         )
+
+
+@inventory_bp.route("/order_collection/report/<int:order_id>")
+@login_required
+def order_collection_report(order_id):
+    user = current_user
+    order = InventoryOperation.query.options(
+        joinedload(InventoryOperation.store1),
+        joinedload(InventoryOperation.store2),
+        joinedload(InventoryOperation.user),
+        joinedload(InventoryOperation.details).options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(
+                ProductsUnit.unit1
+            ),
+            # Aquí cargamos la información del esquema toolbox
+            joinedload(InventoryOperationDetail.failure_info),
+        ),
+    ).get_or_404(order_id)
+
+    barcode_base64 = generate_barcode(order.correlative)
+
+    return Response(
+        render_pdf(
+            "reports/order_collection_pdf.html",
+            {
+                "order": order,
+                "title": f"Orden de Recolección Automatica {order.correlative}",
+                "now": datetime.now(),
+                "barcode_base64": barcode_base64,
+                "user": user,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=orden_{order.correlative}.pdf"
+        },
+    )

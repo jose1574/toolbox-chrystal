@@ -67,26 +67,24 @@
             <p>cantidad de productos: {{ products|length }}</p>
             <p>productos seleccionados: <span id="selected-count">0</span></p>
         </div>
+        <div>
+            <button type="submit" hx-trigger="submit" form="auto-order-form"
+                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
+                Generar Orden
+            </button>
+        </div>
 
     </div>
 
     <div id="results-container" class="relative overflow-x-auto shadow-md sm:rounded-lg">
         <form id="auto-order-form" hx-post="{{ url_for('inventory.save_auto_order_collection') }}"
-            hx-target="#main-content"
-            hx-trigger="submit"
-            >
+            hx-target="#main-content" hx-trigger="submit">
 
             <!-- Mantener depósitos seleccionados para el envío del formulario -->
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
             <table class="w-full text-sm text-left text-gray-500">
-                <div class="p-4 bg-white border-t border-gray-200 flex justify-end">
-                    <button type="submit"
-                        hx-trigger="submit"
-                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
-                        Generar Orden
-                    </button>
-                </div>
+
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
                         <th scope="col" class="px-6 py-3">
