@@ -5,4 +5,4 @@ from app.models import User
 @common_bp.route('/search-users-modal')
 def search_users_modal():
     users = User.query.all()
-    return render_template('common/search_users_modal.html', users=users)
+    return render_template('common/modal_user_search.html', users=users)
