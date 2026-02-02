@@ -1,0 +1,43 @@
+<!-- Modal para detalle del producto -->
+<div id="product-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center {% if not item and not is_new %}hidden{% endif %}" hx-target="this" hx-swap="outerHTML">
+    <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white">
+        <div class="text-center">
+            <h3 class="text-lg font-medium text-gray-900" id="modal-title">{% if is_new %}Agregar Producto{% else %}Detalle del Producto{% endif %}</h3>
+            <div class="mt-2 px-4 py-2">
+                {% if item or is_new %}
+                <p class="text-sm text-gray-500" id="modal-description">{{ product_description }}</p>
+                <p class="text-sm text-gray-500">Código: <span id="modal-code">{% if item %}{{ item.code_product }}{% else %}{{ main_code }}{% endif %}</span></p>
+                <p class="text-sm text-gray-500">Unidad: <span id="modal-unit">{{ unit_description }}</span></p>
+                <p class="text-sm text-gray-500">Cantidad en Orden: <span id="modal-amount">{% if item %}{{ item.amount }}{% else %}0{% endif %}</span></p>
+                {% if is_new %}
+                <p class="text-sm text-gray-500">Cantidad en Depósito Origen: <span id="modal-stock">{{ stock_amount }}</span></p>
+                {% endif %}
+                <form {% if is_new %}hx-post="{{ url_for('inventory.add_product_to_order') }}" hx-target="#products-tbody" hx-swap="afterbegin" hx-on:htmx:beforeRequest="console.log('Enviando request para agregar')" hx-on:htmx:afterRequest="console.log('Request completado')"{% else %}hx-post="{{ url_for('inventory.update_counted_amount') }}" hx-target="#product-modal-container" hx-swap="innerHTML" onsubmit="return validateCountedAmount();"{% endif %}>
+                    <input type="hidden" name="order_id" value="{{ order.correlative }}">
+                    <input type="hidden" name="code_product" value="{% if item %}{{ item.code_product }}{% else %}{{ main_code }}{% endif %}">
+                    {% if not is_new %}
+                    <label for="counted-amount" class="block text-sm font-medium text-gray-700 mt-4">Cantidad Contada</label>
+                    <input type="number" step="0.01" min="0" name="counted_amount" id="counted-amount" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                    <input type="hidden" id="stock-amount" value="{{ stock_amount }}">
+                    {% endif %}
+                    <div class="flex items-center px-4 py-3 space-x-2">
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-black text-base font-medium rounded-md flex-1 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors">
+                            {% if is_new %}Agregar Producto{% else %}Guardar Conteo{% endif %}
+                        </button>
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md flex-1 shadow-sm hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-sm text-gray-500">{{ product_description }}</p>
+                <div class="flex items-center px-4 py-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cerrar
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

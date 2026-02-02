@@ -1,0 +1,24 @@
+
+<div>
+    <h1 class="text-2xl font-semibold text-gray-800 mb-6">Chequeo de Orden de Recolección</h1>
+    {% if error %}
+    <div class="mb-4 p-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
+        <span class="font-medium">Error:</span> {{ error|safe }}
+    </div>
+    {% endif %}
+    <form 
+        hx-post="{{ url_for('inventory.check_order') }}"
+        hx-target="#main-content"
+        hx-swap="innerHTML"
+        id="check-order-form"
+    >
+        <div>
+            <label for="order_id">Correlativo de la orden</label>
+            <input type="number" id="order_id" name="order_id" value="9250">
+            <input type="submit" value="Cargar Orden" class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">
+        </div>
+    </form>
+</div>
+
+
+
