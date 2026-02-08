@@ -756,3 +756,136 @@ def save_order_check():
     
     flash("Orden actualizada con las cantidades contadas.", "success")
     return redirect(url_for("inventory.index"))
+
+
+@inventory_bp.route("/check_transfer_operation", methods=["GET", "POST"])
+@login_required
+def check_transfer_operation():
+    if request.method == "POST":
+        correlative = request.form.get("correlative")
+        if not correlative:
+            return render_template("check_transfer_operation.html", show_products=False, error_message="Por favor, ingrese un correlativo válido.")
+        
+        # Buscar la operación de traslado
+        operation = InventoryOperation.query.filter_by(
+            correlative=int(correlative),
+            operation_type="TRANSFER"  # Tipo de operación para traslados
+        ).first()
+        
+        if not operation:
+            return render_template("check_transfer_operation.html", show_products=False, error_message="No se encontró una operación de traslado con ese correlativo.")
+        
+        # Obtener detalles con productos
+        details = InventoryOperationDetail.query.filter_by(
+            main_correlative=operation.correlative
+        ).options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
+        ).all()
+        
+        return render_template("check_transfer_operation.html", 
+                             operation=operation, 
+                             details=details,
+                             show_products=True)
+    
+    return render_template("check_transfer_operation.html", show_products=False)
+
+
+@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>", methods=["POST"])
+@login_required
+def search_product_in_transfer(operation_id):
+    product_code = request.form.get("product_code")
+    if not product_code:
+        error_payload = {
+            "search-error": {
+                "message": "Código de producto requerido.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response("", status=400, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
+    
+    # Buscar el producto en la operación
+    detail = InventoryOperationDetail.query.filter_by(
+        main_correlative=operation_id,
+        code_product=product_code
+    ).options(
+        joinedload(InventoryOperationDetail.product),
+        joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
+    ).first()
+    
+    if not detail:
+        error_payload = {
+            "search-error": {
+                "message": "Producto no encontrado en esta operación.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
+    
+    # Devolver el modal renderizado
+    return render_template("partials/product_modal.html", 
+                         detail=detail, 
+                         operation_id=operation_id)
+
+
+@inventory_bp.route("/check_transfer_operation/modal/<int:operation_id>/<product_code>", methods=["GET"])
+@login_required
+def product_modal(operation_id, product_code):
+    # Buscar el producto en la operación
+    detail = InventoryOperationDetail.query.filter_by(
+        main_correlative=operation_id,
+        code_product=product_code
+    ).options(
+        joinedload(InventoryOperationDetail.product),
+        joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
+    ).first()
+    
+    if not detail:
+        return "Producto no encontrado", 404
+    
+    return render_template("partials/product_modal.html", 
+                         detail=detail, 
+                         operation_id=operation_id)
+
+
+@inventory_bp.route("/check_transfer_operation/update_count/<int:operation_id>/<product_code>", methods=["POST"])
+@login_required
+def update_count(operation_id, product_code):
+    counted_amount = request.form.get("counted_amount", type=float, default=0)
+    
+    # Validaciones
+    if counted_amount < 0:
+        error_payload = {
+            "counted-error": {
+                "message": "La cantidad contada no puede ser negativa.",
+                "focus_id": "countedAmount",
+            }
+        }
+        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
+    
+    # Verificar que el producto existe en la operación
+    detail = InventoryOperationDetail.query.filter_by(
+        main_correlative=operation_id,
+        code_product=product_code
+    ).first()
+    
+    if not detail:
+        error_payload = {
+            "counted-error": {
+                "message": "Producto no encontrado en esta operación.",
+                "focus_id": "countedAmount",
+            }
+        }
+        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
+    
+    # Como es solo informativo, no guardamos en BD
+    # Si no hay diferencia, devolvemos vacío para eliminar la fila
+    if counted_amount == detail.amount:
+        return ""
+
+    # Si hay diferencia, devolvemos la fila actualizada con fondo rojo
+    return render_template(
+        "partials/table_row.html",
+        detail=detail,
+        counted_amount=counted_amount,
+    )

@@ -1,3 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
 <div class="px-4 py-6">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-200">
@@ -16,7 +18,11 @@
             </p>
         </div>
         <div class="mt-4 md:mt-0 flex space-x-3">
-            <button hx-get="{{ url_for('inventory.check_order') }}" hx-target="#main-content"
+            <button hx-get="{{ url_for('inventory.check_order') }}"
+                hx-target="#main-content"
+                hx-select="#main-content"
+                hx-swap="innerHTML"
+                hx-push-url="true"
                 class="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -61,7 +67,7 @@
             </thead>
             <tbody id="products-tbody" class="divide-y divide-gray-200 bg-white">
                 {% for item in details %}
-                <tr class="hover:bg-gray-50 transition-colors" id="row-{{ item.code_product }}" data-code="{{ item.code_product }}">
+                <tr class="hover:bg-gray-50 transition-colors" id="row-{{ item.code_product }}" data-code="{{ item.code_product }}" data-expected="{{ item.amount }}">
                     <td class="px-6 py-4 font-medium text-gray-900">{{ item.code_product }}</td>
                     <td class="px-6 py-4 text-xs font-semibold leading-relaxed">
                         {{ item.product_description }}
@@ -208,6 +214,20 @@
             if (statusCell) {
                 statusCell.innerHTML = detail.status_html || '';
             }
+            const row = document.getElementById('row-' + code);
+            if (row) {
+                const expected = parseFloat(row.dataset.expected || '0');
+                const countedText = countedCell ? countedCell.textContent : '';
+                const countedNum = parseFloat(detail.counted_amount || countedText || '0');
+                const hasDiff = !Number.isNaN(expected) && !Number.isNaN(countedNum) && countedNum !== expected;
+                if (hasDiff) {
+                    row.classList.add('bg-red-100');
+                    row.style.backgroundColor = '#fee2e2'; // fallback to ensure visibility
+                } else {
+                    row.classList.remove('bg-red-100');
+                    row.style.backgroundColor = '';
+                }
+            }
             ensureHiddenCountedInput(code, detail.counted_amount);
             closeModal();
             focusSearchInput();
@@ -258,7 +278,7 @@
         });
 
         document.body.addEventListener('htmx:afterSwap', (event) => {
-            if (!event.target || event.target.id !== 'product-modal-container') return;
+            if (!event.target || (event.target.id !== 'product-modal-container' && event.target.id !== 'product-modal')) return;
             const countedInput = document.getElementById('counted-amount');
             if (countedInput) {
                 countedInput.focus();
@@ -271,3 +291,4 @@
         checkAllCounted();
     </script>
 </div>
+{% endblock %}

@@ -833,8 +833,14 @@
   .mx-auto {
     margin-inline: auto;
   }
+  .ms-2 {
+    margin-inline-start: calc(var(--spacing) * 2);
+  }
   .ms-2\.5 {
     margin-inline-start: calc(var(--spacing) * 2.5);
+  }
+  .ms-auto {
+    margin-inline-start: auto;
   }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
@@ -1110,6 +1116,9 @@
       min-width: 4rem;
     }
   }
+  .-mr-0 {
+    margin-right: calc(var(--spacing) * -0);
+  }
   .-mr-0\.5 {
     margin-right: calc(var(--spacing) * -0.5);
   }
@@ -1183,6 +1192,9 @@
       border-width: 10px !important;
       margin-left: -10px !important;
     }
+  }
+  .ml-1 {
+    margin-left: calc(var(--spacing) * 1);
   }
   .ml-1\.5 {
     margin-left: calc(var(--spacing) * 1.5);
@@ -1265,6 +1277,9 @@
   }
   .table {
     display: table;
+  }
+  .h-2 {
+    height: calc(var(--spacing) * 2);
   }
   .h-2\.5 {
     height: calc(var(--spacing) * 2.5);
@@ -1370,8 +1385,14 @@
       text-align: center;
     }
   }
+  .w-1 {
+    width: calc(var(--spacing) * 1);
+  }
   .w-1\/2 {
     width: calc(1/2 * 100%);
+  }
+  .w-2 {
+    width: calc(var(--spacing) * 2);
   }
   .w-2\.5 {
     width: calc(var(--spacing) * 2.5);
@@ -1459,6 +1480,9 @@
     .datatable-wrapper & .datatable-input:focus {
       border-color: var(--color-brand);
     }
+  }
+  .min-w-full {
+    min-width: 100%;
   }
   .flex-1 {
     flex: 1;
@@ -1552,6 +1576,13 @@
   .gap-6 {
     gap: calc(var(--spacing) * 6);
   }
+  .space-y-3 {
+    :where(& > :not(:last-child)) {
+      --tw-space-y-reverse: 0;
+      margin-block-start: calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));
+      margin-block-end: calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)));
+    }
+  }
   .space-y-4 {
     :where(& > :not(:last-child)) {
       --tw-space-y-reverse: 0;
@@ -1641,6 +1672,9 @@
   }
   .rounded-base {
     border-radius: var(--radius-base);
+  }
+  .rounded-full {
+    border-radius: calc(infinity * 1px);
   }
   .rounded-lg {
     border-radius: var(--radius-lg);
@@ -1755,6 +1789,12 @@
   .border-indigo-100 {
     border-color: var(--color-indigo-100);
   }
+  .border-indigo-200 {
+    border-color: var(--color-indigo-200);
+  }
+  .border-indigo-600 {
+    border-color: var(--color-indigo-600);
+  }
   .border-pink-100 {
     border-color: var(--color-pink-100);
   }
@@ -1769,6 +1809,9 @@
   }
   .border-transparent {
     border-color: transparent;
+  }
+  .border-yellow-200 {
+    border-color: var(--color-yellow-200);
   }
   .apexcharts-active {
     .apexcharts-canvas .apexcharts-tooltip-series-group& .apexcharts-tooltip-y-group {
@@ -1858,6 +1901,9 @@
   .bg-indigo-100 {
     background-color: var(--color-indigo-100);
   }
+  .bg-indigo-600 {
+    background-color: var(--color-indigo-600);
+  }
   .bg-pink-50 {
     background-color: var(--color-pink-50);
   }
@@ -1867,8 +1913,11 @@
   .bg-red-50 {
     background-color: var(--color-red-50);
   }
-  .bg-red-500 {
-    background-color: var(--color-red-500);
+  .bg-red-100 {
+    background-color: var(--color-red-100);
+  }
+  .bg-red-300 {
+    background-color: var(--color-red-300);
   }
   .bg-rose-50 {
     background-color: var(--color-rose-50);
@@ -1945,6 +1994,18 @@
       fill: white !important;
     }
   }
+  .apexcharts-gridline {
+    stroke: var(--color-default) !important;
+    .dark & {
+      stroke: var(--color-default) !important;
+    }
+  }
+  .apexcharts-xcrosshairs {
+    stroke: var(--color-default) !important;
+    .dark & {
+      stroke: var(--color-default) !important;
+    }
+  }
   .apexcharts-ycrosshairs {
     stroke: var(--color-default) !important;
     .dark & {
@@ -2002,6 +2063,9 @@
   }
   .px-8 {
     padding-inline: calc(var(--spacing) * 8);
+  }
+  .py-0 {
+    padding-block: calc(var(--spacing) * 0);
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
@@ -2276,6 +2340,9 @@
   .text-indigo-600 {
     color: var(--color-indigo-600);
   }
+  .text-indigo-700 {
+    color: var(--color-indigo-700);
+  }
   .text-pink-600 {
     color: var(--color-pink-600);
   }
@@ -2284,6 +2351,9 @@
   }
   .text-red-800 {
     color: var(--color-red-800);
+  }
+  .text-red-900 {
+    color: var(--color-red-900);
   }
   .text-rose-600 {
     color: var(--color-rose-600);
@@ -2439,10 +2509,31 @@
       }
     }
   }
+  .hover\:bg-gray-700 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-gray-700);
+      }
+    }
+  }
   .hover\:bg-green-700 {
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-green-700);
+      }
+    }
+  }
+  .hover\:bg-indigo-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-indigo-100);
+      }
+    }
+  }
+  .hover\:bg-indigo-700 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-indigo-700);
       }
     }
   }
@@ -2478,6 +2569,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-heading);
+      }
+    }
+  }
+  .hover\:text-indigo-800 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-indigo-800);
       }
     }
   }
@@ -2555,9 +2653,20 @@
       --tw-ring-color: var(--color-green-300);
     }
   }
+  .focus\:ring-green-500 {
+    &:focus {
+      --tw-ring-color: var(--color-green-500);
+    }
+  }
   .focus\:ring-teal-500 {
     &:focus {
       --tw-ring-color: var(--color-teal-500);
+    }
+  }
+  .focus\:ring-offset-2 {
+    &:focus {
+      --tw-ring-offset-width: 2px;
+      --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
     }
   }
   .focus\:outline-none {
@@ -2655,6 +2764,11 @@
   .md\:p-0 {
     @media (width >= 48rem) {
       padding: calc(var(--spacing) * 0);
+    }
+  }
+  .md\:p-5 {
+    @media (width >= 48rem) {
+      padding: calc(var(--spacing) * 5);
     }
   }
   .md\:text-blue-700 {

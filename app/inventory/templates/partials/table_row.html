@@ -1,0 +1,16 @@
+{% set has_diff = counted_amount != detail.amount %}
+<tr id="row-{{ detail.code_product }}" class="bg-red-300{% if not has_diff %} hidden{% endif %}"{% if has_diff %} style="background-color:#fee2e2;"{% endif %}>
+    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} bg-red-300 text-red-900{% endif %}">{{ detail.code_product }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500{% if has_diff %} bg-red-300 text-red-900{% endif %}">{{ detail.description_product }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500{% if has_diff %} bg-red-300 text-red-900{% endif %}">{{ detail.referenc }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500{% if has_diff %} bg-red-300 text-red-900{% endif %}">{{ detail.amount }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500{% if has_diff %} bg-red-300 text-red-900{% endif %}" id="counted-{{ detail.code_product }}">
+        {{ counted_amount }}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500{% if has_diff %} bg-red-300 text-red-900{% endif %}" id="diff-{{ detail.code_product }}">
+        {{ (counted_amount - detail.amount) }}
+        {% if has_diff %}
+        <span class="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Contado con diferencia</span>
+        {% endif %}
+    </td>
+</tr>
