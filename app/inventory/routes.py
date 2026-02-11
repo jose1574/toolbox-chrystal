@@ -1,4 +1,4 @@
-from flask import render_template, request, flash, redirect, url_for, Response
+from flask import render_template, request, flash, redirect, url_for, Response, make_response
 import json
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -30,74 +30,49 @@ def index():
     return render_template("index.html")
 
 
-@inventory_bp.route("/auto_order_collection/select_stores", methods=["GET", "POST"])
-@login_required
-def select_stores():
-    stores = Store.query.all()
-    error = None
-    # Correlativo de la última orden guardada (si aplica)
-    new_order_id = request.args.get("new_order_id")
-
-    if request.method == "POST":
-        store_origin = request.form.get("store_origin")
-        store_dst = request.form.get("store_dst")
-
-        if not store_origin or not store_dst:
-            error = "Por favor, selecciona ambos depósitos."
-            return render_template("select_stores.html", stores=stores, error=error)
-        if store_origin == store_dst:
-            error = "El depósito de origen y destino no pueden ser el mismo."
-            return render_template("select_stores.html", stores=stores, error=error)
-
-        return redirect(
-            url_for(
-                "inventory.auto_order_collection",
-                store_origin=store_origin,
-                store_dst=store_dst,
-            )
-        )
-    return render_template(
-        "select_stores.html", stores=stores, error=error, new_order_id=new_order_id
-    )
-
-
-@inventory_bp.route("/auto_order_collection", methods=["GET", "POST"])
+@inventory_bp.route("/auto_order_collection", methods=["GET"])
 @login_required
 def auto_order_collection():
-    if request.method == "POST":
-        # Procesar los productos seleccionados
-        # Los productos vienen como 'codigo': 'selected' y las cantidades como 'qty_codigo'
-        store_origin = request.form.get("store_origin")
-        store_dst = request.form.get("store_dst")
-
-        selected_items = []
-        for key, value in request.form.items():
-            if value == "selected":
-                product_code = key
-                quantity = request.form.get(f"qty_{product_code}", 0, type=float)
-                if quantity > 0:
-                    selected_items.append({"code": product_code, "quantity": quantity})
-
-        if not selected_items:
-            flash("No se seleccionaron productos o cantidades válidas.", "warning")
-            return redirect(
-                url_for(
-                    "inventory.auto_order_collection",
-                    store_origin=store_origin,
-                    store_dst=store_dst,
-                )
-            )
-
-        # Aquí iría la lógica para crear el documento de transferencia
-        # Por ahora simulamos éxito
-        flash(
-            f"Se han procesado {len(selected_items)} productos para transferencia.",
-            "success",
-        )
-        return redirect(url_for("inventory.index"))
-
+    stores = Store.query.all()
+    new_order_id = request.args.get("new_order_id")
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
+
+    if store_origin and store_dst and store_origin == store_dst:
+        flash("El depósito origen y destino no pueden ser el mismo.", "warning")
+        return render_template(
+            "auto_order_collection.html",
+            store_origin=None,
+            store_dst=None,
+            store_origin_name="",
+            store_dst_name="",
+            products=[],
+            departments=[],
+            marks=[],
+            stores=stores,
+            new_order_id=new_order_id,
+        )
+
+    store_origin_obj = (
+        Store.query.filter_by(code=store_origin).first() if store_origin else None
+    )
+    store_dst_obj = Store.query.filter_by(code=store_dst).first() if store_dst else None
+
+    # Si no hay selección de depósitos, solo mostramos el formulario
+    if not store_origin or not store_dst:
+        return render_template(
+            "auto_order_collection.html",
+            store_origin=store_origin,
+            store_dst=store_dst,
+            store_origin_name=store_origin_obj.description if store_origin_obj else "",
+            store_dst_name=store_dst_obj.description if store_dst_obj else "",
+            products=[],
+            departments=[],
+            marks=[],
+            stores=stores,
+            new_order_id=new_order_id,
+        )
+
     stock_orig = aliased(ProductsStock)
     stock_dst = aliased(ProductsStock)
     pf = aliased(ProductsFailure)
@@ -106,8 +81,10 @@ def auto_order_collection():
     u = aliased(Unit)
     pu = aliased(ProductsUnit)
 
-    # Definir lógica de cálculo para evitar repetición
     needed = pf.maximum_stock - func.coalesce(stock_dst.stock, 0)
+    to_transfer = func.least(
+        func.coalesce(stock_orig.stock, 0), func.greatest(needed, 0)
+    ).label("to_transfer")
 
     stmt = (
         select(
@@ -117,14 +94,12 @@ def auto_order_collection():
             Product.department.label("department_code"),
             m.description.label("mark_description"),
             d.description.label("department_description"),
-            u.description.label("unit_description"),
-            stock_orig.stock.label("stock_origin"),
-            func.coalesce(stock_dst.stock, 0).label("stock_destination"),
+            func.coalesce(stock_orig.stock, 0).label("stock_origin"),
             pf.minimal_stock.label("minimum_stock"),
             pf.maximum_stock.label("maximum_stock"),
-            case((needed > stock_orig.stock, stock_orig.stock), else_=needed).label(
-                "to_transfer"
-            ),
+            func.coalesce(stock_dst.stock, 0).label("stock_destination"),
+            u.description.label("unit_description"),
+            to_transfer,
         )
         .join(
             stock_orig,
@@ -147,10 +122,8 @@ def auto_order_collection():
         )
     )
 
-    # Obtenemos todas las filas. No usamos .scalars() porque queremos todas las columnas.
     results = db.session.execute(stmt).all()
 
-    # Extraer departamentos y marcas únicos presentes en los resultados para los filtros
     unique_depts = sorted(
         list(
             set(
@@ -168,9 +141,13 @@ def auto_order_collection():
         "auto_order_collection.html",
         store_origin=store_origin,
         store_dst=store_dst,
+        store_origin_name=store_origin_obj.description if store_origin_obj else "",
+        store_dst_name=store_dst_obj.description if store_dst_obj else "",
         products=results,
         departments=unique_depts,
         marks=unique_marks,
+        stores=stores,
+        new_order_id=new_order_id,
     )
 
 
@@ -179,6 +156,20 @@ def auto_order_collection():
 def save_auto_order_collection():
     store_origin = request.form.get("store_origin")
     store_dst = request.form.get("store_dst")
+
+    if not store_origin or not store_dst:
+        flash("Debes seleccionar depósito origen y destino.", "warning")
+        return redirect(url_for("inventory.auto_order_collection"))
+
+    if store_origin == store_dst:
+        flash("El depósito origen y destino no pueden ser el mismo.", "warning")
+        return redirect(
+            url_for(
+                "inventory.auto_order_collection",
+                store_origin=store_origin,
+                store_dst=store_dst,
+            )
+        )
 
     store_origen_obj = Store.query.filter_by(code=store_origin).first()
     store_dst_obj = Store.query.filter_by(code=store_dst).first()
@@ -216,7 +207,7 @@ def save_auto_order_collection():
             "p_document_no": None,
             "p_emission_date": datetime.now().date(),
             "p_wait": True,
-            "p_description": f"Transferencia Auto {store_origen_obj.description} -> {store_dst_obj.description}",
+            "p_description": f"Traslado Automatico {store_origen_obj.description} -> {store_dst_obj.description}",
             "p_user_code": current_user.code,
             "p_station": "00",
             "p_store": store_origin,
@@ -305,8 +296,36 @@ def save_auto_order_collection():
 
         db.session.commit()
         flash(f"Operación #{document_no} guardada correctamente.", "success")
-        # Volver a la selección de depósitos y abrir el PDF en nueva pestaña
-        return redirect(url_for("inventory.select_stores", new_order_id=document_no))
+
+        # HTMX: devolver la vista limpia y disparar un evento para abrir el PDF en nueva pestaña
+        if request.headers.get("HX-Request"):
+            resp = make_response(
+                render_template(
+                    "auto_order_collection.html",
+                    store_origin=None,
+                    store_dst=None,
+                    store_origin_name="",
+                    store_dst_name="",
+                    products=[],
+                    departments=[],
+                    marks=[],
+                    stores=Store.query.all(),
+                    new_order_id=document_no,
+                )
+            )
+            resp.headers["HX-Trigger"] = json.dumps(
+                {
+                    "open-pdf": {
+                        "url": url_for(
+                            "inventory.order_collection_report", order_id=document_no
+                        )
+                    }
+                }
+            )
+            return resp
+
+        # Flujo normal: redirigir directamente al PDF (abre en nueva pestaña por target del navegador)
+        return redirect(url_for("inventory.order_collection_report", order_id=document_no))
 
     except Exception as e:
         db.session.rollback()
@@ -383,47 +402,63 @@ def check_order():
         if not order_id:
             error = "Debe ingresar un ID de orden válido."
             return render_template(
-                "form_select_order_check_oc.html", order=order_details, error=error
+                "check_order_collection.html", order=None, details=[], error=error
             )
-        else:
-            stmt = (
-                select(
-                    io.correlative,
-                    io.document_no,
-                    io.emission_date,
-                    io.store,
-                    io.destination_store,
-                    io.description,
-                    io.operation_comments,
-                    io.user_code,
-                    io.total_amount,
-                    iod.code_product,
-                    p.description.label("product_description"),
-                    iod.amount,
-                    u.description.label("unit_description"),
-                    store_origin.description.label("store_origin_description"),
-                    store_dst.description.label("store_dst_description"),
-                )
-                .join(iod, iod.main_correlative == io.correlative)
-                .join(p, p.code == iod.code_product)
-                .join(pu, pu.correlative == iod.unit)
-                .join(u, u.code == pu.unit)
-                .join(store_origin, store_origin.code == io.store)
-                .join(store_dst, store_dst.code == io.destination_store)
-                .where(io.correlative == order_id)
-            )
-            
-            results = db.session.execute(stmt).all()
 
-            if not results:
-                error = f"No se encontró la orden con ID {order_id} o no contiene detalles."
-                return render_template(
-                    "form_select_order_check_oc.html", order=order_details, error=error
-                )
-            else:
-                # El primer resultado contiene la información de cabecera
-                order_header = results[0]
-                order_details = results
+        # Buscar la operación y validar que sea un traslado procesado
+        order_entity = InventoryOperation.query.filter_by(
+            correlative=order_id, operation_type="TRANSFER", wait=True
+        ).first()
+
+        if not order_entity:
+            error = f"No se encontró la orden con ID {order_id}"
+            return render_template(
+                "check_order_collection.html", order=None, details=[], error=error
+            )
+
+
+        stmt = (
+            select(
+                io.correlative,
+                io.document_no,
+                io.emission_date,
+                io.store,
+                io.destination_store,
+                io.description,
+                io.operation_comments,
+                io.user_code,
+                io.total_amount,
+                iod.code_product,
+                p.description.label("product_description"),
+                iod.amount,
+                u.description.label("unit_description"),
+                store_origin.description.label("store_origin_description"),
+                store_dst.description.label("store_dst_description"),
+            )
+            .join(iod, iod.main_correlative == io.correlative)
+            .join(p, p.code == iod.code_product)
+            .join(pu, pu.correlative == iod.unit)
+            .join(u, u.code == pu.unit)
+            .join(store_origin, store_origin.code == io.store)
+            .join(store_dst, store_dst.code == io.destination_store)
+            .where(
+                io.correlative == order_id,
+                io.operation_type == "TRANSFER",
+                io.wait.is_(True),
+            )
+        )
+
+        results = db.session.execute(stmt).all()
+
+        if not results:
+            error = f"No se encontró la orden con ID {order_id} o no contiene detalles."
+            return render_template(
+                "check_order_collection.html", order=None, details=[], error=error
+            )
+
+        # El primer resultado contiene la información de cabecera
+        order_header = results[0]
+        order_details = results
 
         return render_template(
             "check_order_collection.html", 
@@ -431,7 +466,8 @@ def check_order():
             details=order_details, 
             error=error
         )
-    return render_template("form_select_order_check_oc.html")
+
+    return render_template("check_order_collection.html", order=None, details=[], error=None)
 
 
 @inventory_bp.route("/search_product", methods=["GET"])
@@ -733,9 +769,14 @@ def delete_product_from_order():
 @login_required
 def save_order_check():
     order_id = request.form.get("order_id", type=int)
-    
+    # Validar orden
     if not order_id:
         flash("ID de orden inválido.", "error")
+        return redirect(url_for("inventory.check_order"))
+    
+    order = InventoryOperation.query.get(order_id)
+    if not order:
+        flash("Orden no encontrada.", "error")
         return redirect(url_for("inventory.check_order"))
     
     # Actualizar las cantidades contadas en la BD para los productos restantes
@@ -751,11 +792,37 @@ def save_order_check():
             if detail:
                 # Actualizar amount con la cantidad contada
                 detail.amount = counted_amount
+
+    # Actualizar descripción de cabecera para reflejar el chequeo
+    order.description = "orden de recoleccion chequeada"
     
     db.session.commit()
-    
-    flash("Orden actualizada con las cantidades contadas.", "success")
-    return redirect(url_for("inventory.index"))
+
+    flash("Orden de recolección chequeada correctamente.", "success")
+
+    # Respuesta HTMX: limpiar la vista y disparar evento para abrir el PDF en nueva pestaña
+    if request.headers.get("HX-Request"):
+        trigger_payload = {
+            "open-pdf": {
+                "url": url_for("inventory.order_collection_report", order_id=order_id)
+            }
+        }
+
+        resp = make_response(
+            render_template(
+                "check_order_collection.html",
+                order=None,
+                details=[],
+                error=None,
+            )
+        )
+
+        resp.headers["HX-Trigger"] = json.dumps(trigger_payload)
+
+        return resp
+
+    # Fallback no HTMX
+    return order_collection_report(order_id)
 
 
 @inventory_bp.route("/check_transfer_operation", methods=["GET", "POST"])
@@ -764,16 +831,17 @@ def check_transfer_operation():
     if request.method == "POST":
         correlative = request.form.get("correlative")
         if not correlative:
-            return render_template("check_transfer_operation.html", show_products=False, error_message="Por favor, ingrese un correlativo válido.")
+            return render_template("check_transfer_operation.html", error_message="Por favor, ingrese un correlativo válido.")
         
-        # Buscar la operación de traslado
+        # Buscar la operación de traslado procesada
         operation = InventoryOperation.query.filter_by(
             correlative=int(correlative),
-            operation_type="TRANSFER"  # Tipo de operación para traslados
+            operation_type="TRANSFER",  # Tipo de operación para traslados
+            wait=False,
         ).first()
         
         if not operation:
-            return render_template("check_transfer_operation.html", show_products=False, error_message="No se encontró una operación de traslado con ese correlativo.")
+            return render_template("check_transfer_operation.html", show_products=False, error_message="No se encontró una operación de traslado procesado con ese correlativo.")
         
         # Obtener detalles con productos
         details = InventoryOperationDetail.query.filter_by(
@@ -791,10 +859,10 @@ def check_transfer_operation():
     return render_template("check_transfer_operation.html", show_products=False)
 
 
-@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>", methods=["POST"])
+@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>")
 @login_required
 def search_product_in_transfer(operation_id):
-    product_code = request.form.get("product_code")
+    product_code = request.args.get("product_code")
     if not product_code:
         error_payload = {
             "search-error": {

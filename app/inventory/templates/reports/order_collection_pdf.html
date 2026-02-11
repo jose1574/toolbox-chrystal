@@ -56,6 +56,12 @@
             background-color: #eee;
         }
 
+        .checked-title {
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
         .header-details {
             width: 35%;
         }
@@ -121,6 +127,7 @@
             <tr>
                 <td colspan="3" class="header-title">
                     Orden de Recolección #{{ order.correlative }}
+                    <div class="checked-title">Orden de traslado fue chequeada</div>
                 </td>
             </tr>
             <tr>
@@ -135,8 +142,17 @@
                         order.store }})
                     </div>
                     <div class="detail-item">
+                        <span class="detail-label">- Documento:</span> {{ order.document_no or '-' }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Descripción:</span> {{ order.description or '-' }}
+                    </div>
+                    <div class="detail-item">
                         <span class="detail-label">- Depósito Destino:</span> {{ order.store1.description }} ({{
                         order.destination_store }})
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Chequeado por:</span> {{ user.description if user else 'Sistema' }}
                     </div>
                 </td>
                 <td class="header-barcode">

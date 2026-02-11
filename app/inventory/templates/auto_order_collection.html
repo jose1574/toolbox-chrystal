@@ -1,8 +1,90 @@
 <div class="p-4">
-    <h1 class="text-2xl font-bold mb-4">Orden de Recolección Automática</h1>
+    <div class="flex items-center justify-between mb-4">
+        {% if store_origin and store_dst %}
+        <button type="button"
+                hx-get="{{ url_for('inventory.auto_order_collection') }}"
+                hx-target="#main-content"
+                hx-push-url="true"
+                class="text-sm text-blue-700 hover:underline">
+            Cambiar depósitos
+        </button>
+        {% endif %}
+    </div>
 
-    <div class="mb-6 p-4 bg-gray-100 rounded-lg">
-        <p><strong>Depósito Origen:</strong> {{ store_origin }} <strong>Depósito Destino:</strong> {{ store_dst }}</p>
+ 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-4 py-3 rounded border text-sm {% if category == 'success' %}bg-green-50 text-green-800 border-green-200{% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border-yellow-200{% elif category == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-gray-50 text-gray-800 border-gray-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    
+
+    {% if not store_origin or not store_dst %}
+    <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-md w-full mx-auto">
+        <h1 class="text-2xl font-bold">Orden de Traslado Automático</h1>
+
+        <h2 class="text-lg font-semibold text-heading mb-4">Seleccionar Depósitos</h2>
+        <form method="get" action="{{ url_for('inventory.auto_order_collection') }}"
+              hx-get="{{ url_for('inventory.auto_order_collection') }}"
+              hx-target="#main-content"
+              hx-push-url="true"
+              class="space-y-4">
+            <div>
+                <label for="store_origin" class="block text-sm font-medium text-gray-700 mb-1">Depósito origen</label>
+                <select id="store_origin" name="store_origin"
+                        class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">-- Seleccionar depósito origen --</option>
+                    {% for store in stores %}
+                    <option value="{{ store.code }}" {% if store.code == store_origin %}selected{% endif %}>{{ store.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="store_dst" class="block text-sm font-medium text-gray-700 mb-1">Depósito destino</label>
+                <select id="store_dst" name="store_dst"
+                        class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">-- Seleccionar depósito destino --</option>
+                    {% for s in stores %}
+                    <option value="{{ s.code }}" {% if s.code == store_dst %}selected{% endif %}>{{ s.description}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button type="submit"
+                        class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    Aplicar
+                </button>
+                <button type="button"
+                        hx-get="{{ url_for('inventory.index') }}"
+                        hx-target="#main-content"
+                        hx-select="#main-content"
+                        hx-push-url="true"
+                        class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
+                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Regresar
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if store_origin and store_dst %}
+    <div class="mb-6 mt-6 p-4 bg-gray-100 rounded-lg space-y-1">
+        <p>
+            <strong>Depósito Origen:</strong> {{ store_origin }} <span class="text-sm text-gray-600">{{ store_origin_name }}</span>
+        </p>
+        <p>
+            <strong>Depósito Destino:</strong> {{ store_dst }} <span class="text-sm text-gray-600">{{ store_dst_name }}</span>
+        </p>
     </div>
     <div class="mb-4 p-3 bg-gray-100 rounded-lg flex flex-wrap items-center gap-6 sticky top-0 z-10" id="filter-panel"
         style="position: sticky; top: 0; z-index: 10;">
@@ -96,10 +178,10 @@
                         <th scope="col" class="px-6 py-3">Unidad</th>
                         <th scope="col" class="px-6 py-3">Marca</th>
                         <th scope="col" class="px-6 py-3">Departamento</th>
-                        <th scope="col" class="px-6 py-3">Stock Orig. {{ store_origin }}</th>
+                        <th scope="col" class="px-6 py-3">Stock Orig. {{ store_origin_name or store_origin }}</th>
                         <th scope="col" class="px-6 py-3">Exist. Min</th>
                         <th scope="col" class="px-6 py-3">Exist. Max</th>
-                        <th scope="col" class="px-6 py-3">Stock Dest. {{ store_dst }}</th>
+                        <th scope="col" class="px-6 py-3">Stock Dest. {{ store_dst_name or store_dst }}</th>
                         <th scope="col" class="px-6 py-3 bg-blue-50">A Transferir</th>
                     </tr>
                 </thead>
@@ -138,10 +220,21 @@
 
         </form>
     </div>
+    {% endif %}
 </div>
 
 <script>
     (function () {
+        // Abrir PDF en nueva pestaña cuando el backend dispare open-pdf (se adjunta una sola vez)
+        if (!window.__openPdfListenerAttached) {
+            window.addEventListener('open-pdf', function (e) {
+                if (e.detail && e.detail.url) {
+                    window.open(e.detail.url, '_blank');
+                }
+            });
+            window.__openPdfListenerAttached = true;
+        }
+
         const selectAll = document.getElementById('select-all');
         const searchInput = document.getElementById('search');
         const clearBtn = document.getElementById('clear-filters');
