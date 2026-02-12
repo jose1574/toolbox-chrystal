@@ -966,7 +966,136 @@ def product_params():
     stores = Store.query.all()
     
     if request.method == 'POST':
-        selected_store_code = request.form.get('store_code')
-        return render_template("product_params.html", stores=stores, selected_store=selected_store_code)
+        store_code = request.form.get('store_code')
+        code_product = request.form.get('code-product')
+
+        if store_code and not code_product:
+            selected_store = Store.query.filter_by(code=store_code).first()
+            return render_template("product_params.html", stores=stores, selected_store=selected_store)
+        
+
+        if code_product and store_code:
+            # Buscar código principal si es código alterno
+            products_code = ProductsCode.query.filter_by(other_code=code_product).first()
+            main_code = products_code.main_code if products_code else code_product
+            
+            product = Product.query.filter_by(code=main_code).first()
+            if not product:
+                flash("Producto no encontrado.", "error")
+                selected_store = Store.query.filter_by(code=store_code).first()
+                return render_template("product_params.html", stores=stores, selected_store=selected_store)
+            
+            product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+            product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+
+            product_params = {
+                "code": main_code,
+                "description": product.description,
+                "referenc": product.referenc,
+                "mark": product.mark,
+                "model": product.model,
+                "stock": product_stock.stock if product_stock else 0,
+                "minimal_stock": product_failure.minimal_stock if product_failure and product_failure.minimal_stock is not None else 0,
+                "maximum_stock": product_failure.maximum_stock if product_failure and product_failure.maximum_stock is not None else 0,
+                "location": product_failure.location if product_failure and product_failure.location and product_failure.location else "",
+            }
+            selected_store = Store.query.filter_by(code=store_code).first()
+            return render_template("product_params.html", product_params=product_params, selected_store=selected_store, stores=stores)
 
     return render_template("product_params.html", stores=stores, selected_store=None)
+
+
+@inventory_bp.route("/product_params/save", methods=["POST"])
+@login_required
+def save_product_params():
+    store_code = request.form.get('store_code')
+    code_product = request.form.get('code-product')
+    
+    if not store_code or not code_product:
+        flash("Datos incompletos.", "error")
+        return redirect(url_for('inventory.product_params'))
+    
+    # Buscar código principal si es código alterno
+    products_code = ProductsCode.query.filter_by(other_code=code_product).first()
+    main_code = products_code.main_code if products_code else code_product
+    
+    # Guardar parámetros para el producto específico
+    min_stock = request.form.get('minimal_stock', '0').strip()
+    max_stock = request.form.get('maximum_stock', '0').strip()
+    location = request.form.get('location', '').strip()
+    
+    try:
+        min_stock = int(min_stock) if min_stock else 0
+        max_stock = int(max_stock) if max_stock else 0
+    except ValueError:
+        min_stock = 0
+        max_stock = 0
+    
+    # Validaciones
+    if min_stock < 0 or max_stock < 0:
+        flash("Los valores de stock deben ser números positivos.", "error")
+        # Recargar la página con los datos actuales
+        product = Product.query.filter_by(code=main_code).first()
+        product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+        product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+        
+        product_params = {
+            "code": main_code,
+            "description": product.description if product else "",
+            "referenc": product.referenc if product else "",
+            "mark": product.mark if product else "",
+            "model": product.model if product else "",
+            "stock": product_stock.stock if product_stock else 0,
+            "minimal_stock": min_stock,  # Usar los valores enviados para mostrar errores
+            "maximum_stock": max_stock,
+            "location": location,
+        }
+        selected_store = Store.query.filter_by(code=store_code).first()
+        stores = Store.query.all()
+        return render_template("product_params.html", stores=stores, selected_store=selected_store, product_params=product_params)
+    
+    if min_stock > max_stock:
+        flash("El stock mínimo no puede ser mayor que el máximo.", "error")
+        # Recargar la página con los datos actuales
+        product = Product.query.filter_by(code=main_code).first()
+        product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+        product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+        
+        product_params = {
+            "code": main_code,
+            "description": product.description if product else "",
+            "referenc": product.referenc if product else "",
+            "mark": product.mark if product else "",
+            "model": product.model if product else "",
+            "stock": product_stock.stock if product_stock else 0,
+            "minimal_stock": min_stock,
+            "maximum_stock": max_stock,
+            "location": location,
+        }
+        selected_store = Store.query.filter_by(code=store_code).first()
+        stores = Store.query.all()
+        return render_template("product_params.html", stores=stores, selected_store=selected_store, product_params=product_params)
+    
+    pf = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+    
+    if pf:
+        pf.minimal_stock = min_stock
+        pf.maximum_stock = max_stock
+        pf.location = location
+    else:
+        pf = ProductsFailure(
+            product_code=main_code,
+            store_code=store_code,
+            minimal_stock=min_stock,
+            maximum_stock=max_stock,
+            location=location
+        )
+        db.session.add(pf)
+    
+    db.session.commit()
+    flash("Parámetros del producto guardados correctamente.", "success")
+    
+    # Limpiar la búsqueda y mostrar solo el input para buscar otro producto
+    selected_store = Store.query.filter_by(code=store_code).first()
+    stores = Store.query.all()
+    return render_template("product_params.html", stores=stores, selected_store=selected_store)

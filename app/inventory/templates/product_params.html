@@ -1,24 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Parámetros de Producto{% endblock %}
 
 
-<div id="main-content" class="p-6 space-y-4">
-    <h1>Parámetros de Producto</h1>
+
+{% block content %}
+<div class="p-4">
+    {# Messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4 space-y-2 max-w-4xl mx-auto">
+        {% for category, message in messages %}
+        <div class="px-4 py-3 rounded border text-sm {% if category == 'success' %}bg-green-50 text-green-800 border-green-200{% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border-yellow-200{% elif category == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-gray-50 text-gray-800 border-gray-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
     {% if not selected_store %}
-    <h2>Selecciona un depósito</h2>
-    <form
-        hx-post="{{ url_for('inventory.product_params') }}"
-        hx-target="#main-content"
-        hx-push-url="true"
-        class="space-y-2"
-    >
-        <select name="store_code" class="form-control">
-            {% for store in stores %}
-            <option value="{{ store.code }}">{{ store.description }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary mt-2">Seleccionar</button>
-    </form>
-    {% else %}
-    <h2>resto de logica</h2>
+    <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-md w-full mx-auto mt-6">
+        <h1 class="text-2xl font-bold mb-6 text-gray-900">Parámetros de Producto</h1>
+        <form
+            hx-post="{{ url_for('inventory.product_params') }}"
+            hx-target="#main-content"
+            hx-select="#main-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            class="space-y-4">
+            
+            <div>
+                <label for="store_code" class="block text-sm font-medium text-gray-700 mb-1">Selecciona el Depósito</label>
+                <select name="store_code" id="store_code" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    {% for s in stores %}
+                    <option value="{{ s.code }}">{{ s.description}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex justify-end gap-4">
+                <input type="submit" value="Seleccionar" class="cursor-pointer inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                <button type="button"
+                        hx-get="{{ url_for('inventory.index') }}"
+                        hx-target="#main-content"
+                        hx-select="#main-content"
+                        hx-push-url="true"
+                        class="cursor-pointer inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
+                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Regresar
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if selected_store %}
+    <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-4xl w-full mx-auto mt-6">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Parámetros de Producto</h1>
+            <a href="{{ url_for('inventory.product_params') }}" 
+               hx-get="{{ url_for('inventory.product_params') }}"
+               hx-target="#main-content"
+               hx-select="#main-content"
+               hx-push-url="true"
+               class="text-sm text-blue-700 hover:underline">Cambiar Depósito</a>
+        </div>
+        
+        <div class="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <p class="text-sm text-gray-700">
+                <span class="font-semibold">Depósito seleccionado:</span> {{ selected_store.description }}
+            </p>
+        </div>
+
+        <!-- SEARCH FORM -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Buscar Producto</h2>
+            <form
+                hx-post="{{ url_for('inventory.product_params') }}"
+                hx-target="#main-content"
+                hx-select="#main-content"
+                hx-swap="innerHTML"
+                hx-push-url="true"
+                class="flex gap-4 items-end">
+                <input type="hidden" name="store_code" value="{{ selected_store.code }}">
+                
+                <div class="grow">
+                    <label for="code-product" class="block text-sm font-medium text-gray-700 mb-1">Código de Producto</label>
+                    <input type="text" id="code-product" name="code-product" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Ingrese código...">
+                </div>
+                
+                <button type="submit" class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    Buscar
+                </button>
+            </form>
+        </div>
+
+        {% if product_params %}
+        <div class="border-t border-gray-200 pt-6 mt-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">
+                {{ product_params.description }}
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm text-gray-600">
+                <p><span class="font-semibold text-gray-800">Código:</span> {{ product_params.code }}</p>
+                <p><span class="font-semibold text-gray-800">Referencia:</span> {{ product_params.referenc }}</p>
+                <p><span class="font-semibold text-gray-800">Marca:</span> {{ product_params.mark }}</p>
+                <p><span class="font-semibold text-gray-800">Modelo:</span> {{ product_params.model }}</p>
+                <p><span class="font-semibold text-gray-800">Stock actual:</span> {{ product_params.stock }}</p>
+            </div>
+
+            <form 
+                hx-post="{{ url_for('inventory.save_product_params') }}"
+                hx-target="#main-content"
+                hx-select="#main-content"
+                hx-swap="innerHTML"
+                class="space-y-4">
+                <input type="hidden" name="store_code" value="{{ selected_store.code }}">
+                <input type="hidden" name="code-product" value="{{ product_params.code }}">
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="minimal_stock" class="block text-sm font-medium text-gray-700 mb-1">Existencia Mínima</label>
+                        <input type="number" id="minimal_stock" name="minimal_stock" value="{{ product_params.minimal_stock }}" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="maximum_stock" class="block text-sm font-medium text-gray-700 mb-1">Existencia Máxima</label>
+                        <input type="number" id="maximum_stock" name="maximum_stock" value="{{ product_params.maximum_stock }}" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <input type="text" id="location" name="location" value="{{ product_params.location }}" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end pt-4">
+                    <input type="submit" value="Guardar Parámetros" class="cursor-pointer inline-flex items-center justify-center text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-base text-sm px-6 py-2.5 shadow-xs transition-colors">
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
-
+{% endblock %}
