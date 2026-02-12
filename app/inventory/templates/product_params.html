@@ -1,0 +1,24 @@
+
+
+<div id="main-content" class="p-6 space-y-4">
+    <h1>Parámetros de Producto</h1>
+    {% if not selected_store %}
+    <h2>Selecciona un depósito</h2>
+    <form
+        hx-post="{{ url_for('inventory.product_params') }}"
+        hx-target="#main-content"
+        hx-push-url="true"
+        class="space-y-2"
+    >
+        <select name="store_code" class="form-control">
+            {% for store in stores %}
+            <option value="{{ store.code }}">{{ store.description }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary mt-2">Seleccionar</button>
+    </form>
+    {% else %}
+    <h2>resto de logica</h2>
+    {% endif %}
+</div>
+

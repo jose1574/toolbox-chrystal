@@ -957,3 +957,16 @@ def update_count(operation_id, product_code):
         detail=detail,
         counted_amount=counted_amount,
     )
+
+
+
+@inventory_bp.route("/product_params", methods=["GET", "POST"])
+@login_required
+def product_params():
+    stores = Store.query.all()
+    
+    if request.method == 'POST':
+        selected_store_code = request.form.get('store_code')
+        return render_template("product_params.html", stores=stores, selected_store=selected_store_code)
+
+    return render_template("product_params.html", stores=stores, selected_store=None)
