@@ -1,0 +1,36 @@
+<tr class="hover:bg-gray-50 transition-colors" id="row-{{ item.code_product }}" data-code="{{ item.code_product }}">
+    <td class="px-6 py-4 font-medium text-gray-900">{{ item.code_product }}</td>
+    <td class="px-6 py-4 text-xs font-semibold leading-relaxed">
+        {{ product_description }}
+    </td>
+    <td class="px-6 py-4 text-center text-gray-600">
+        {{ unit_description }}
+    </td>
+    <td class="px-6 py-4 text-center font-bold text-blue-700 bg-blue-50/30">
+        {{ item.amount }}
+    </td>
+    <td class="px-6 py-4 text-center" id="counted-{{ item.code_product }}">
+        --
+    </td>
+    <td class="px-6 py-4 text-center" id="status-{{ item.code_product }}">
+        <span
+            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+            Pendiente
+        </span>
+    </td>
+    <td class="px-6 py-4 text-center">
+        <button type="button" 
+            hx-post="{{ url_for('inventory.delete_product_from_order') }}" 
+            hx-target="#row-{{ item.code_product }}"
+            hx-swap="delete"
+            hx-include="[name='order_id'],[name='code_product']"
+            hx-confirm="¿Estás seguro de que quieres eliminar este producto de la orden?"
+            hx-on:htmx:afterRequest="document.getElementById('hidden-counted-{{ item.code_product }}').remove(); checkAllCounted()"
+            class="bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white font-bold py-1 px-2 rounded text-xs shadow-sm transition-colors"
+            >
+            Quitar
+        </button>
+        <input type="hidden" name="order_id" value="{{ order.correlative }}">
+        <input type="hidden" name="code_product" value="{{ item.code_product }}">
+    </td>
+</tr>

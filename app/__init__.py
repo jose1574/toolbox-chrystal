@@ -1,7 +1,7 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
-from flask_login import LoginManager
+from flask import Flask, request, redirect, url_for
+from flask_login import LoginManager, current_user
 
 
 db = SQLAlchemy()
@@ -22,6 +22,21 @@ def create_app():
         # Importación tardía para evitar ciclos, si models importa db de aquí
         from app.models import User
         return User.query.get(user_id)
+
+    @app.before_request
+    def enforce_authentication():
+        """Redirige a login cuando un usuario anónimo accede a rutas protegidas."""
+        # Permitir rutas públicas (login, assets) sin autenticación previa
+        public_endpoints = {"auth.login", "static"}
+
+        if request.endpoint is None:
+            return
+
+        if request.endpoint in public_endpoints or request.blueprint == "auth":
+            return
+
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login", next=request.url))
 
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 

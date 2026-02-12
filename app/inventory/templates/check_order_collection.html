@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="px-4 py-6 space-y-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+        {% for category, message in messages %}
+        <div class="p-3 rounded-lg border text-sm {% if category == 'success' %}bg-green-50 border-green-200 text-green-800{% elif category == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if not order or not details %}
+    <div class="p-6 bg-white border border-default-medium rounded-lg shadow-sm mx-auto mt-8"
+        style="width:30%;min-width:280px;">
+        <h2 class="text-xl font-semibold text-heading mb-4">Chequeo de Orden de Recolección</h2>
+        {% if error %}
+        <div class="mb-3 p-3 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
+            <span class="font-medium">Error:</span> {{ error|safe }}
+        </div>
+        {% endif %}
+        <form hx-post="{{ url_for('inventory.check_order') }}" hx-target="#main-content" hx-select="#main-content"
+            hx-swap="innerHTML" id="check-order-form" class="space-y-6">
+            <div>
+                <label for="order_id" class="block mb-2 text-sm font-medium text-heading">Ingrese Correlativo de la
+                    orden</label>
+                <input type="number" id="order_id" name="order_id"
+                    value=""
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+                    placeholder="Ingresa el correlativo">
+            </div>
+            <div class="mt-2">
+                <button type="submit" class="inline-flex items-center justify-center text-white
+                     bg-blue-700 hover:bg-blue-800 focus:ring-4
+                      focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs 
+                      transition-colors">
+                    Cargar Orden
+                </button>
+                <a href="{{ url_for('inventory.index') }}"
+                   class="inline-flex items-center justify-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors ml-2">
+                    Regresar
+                </a>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if order and details %}
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-200">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 leading-tight">
+                Chequeo de Orden #{{ order.correlative if order else '---' }}
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">
+                Depósito: <span class="font-semibold text-gray-700">{{ order.store_origin_description }}</span>
+                <span class="mx-2 text-blue-400">→</span>
+                Destino: <span class="font-semibold text-gray-700">{{ order.store_dst_description }}</span>
+            </p>
+        </div>
+        <div class="mt-4 md:mt-0 flex space-x-3">
+            <button hx-get="{{ url_for('inventory.check_order') }}" hx-target="#main-content" hx-select="#main-content"
+                hx-swap="innerHTML" hx-push-url="true"
+                class="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Nueva búsqueda
+            </button>
+        </div>
+    </div>
+    
+
+    <div class="max-w-xl">
+        <form class="space-y-2.5">
+            <label for="code-product" class="block mb-1.5 text-sm font-medium text-heading">Buscar código de
+                producto</label>
+            <input type="text" id="code-product" name="code-product"
+                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body uppercase"
+                placeholder="Ingrese código de producto" 
+                hx-get="{{ url_for('inventory.search_product') }}"
+                hx-target="#product-modal-container" 
+                hx-include="[name='order_id']" 
+                hx-trigger="keydown[key=='Enter']"
+                hx-on:htmx:afterRequest="if (event.detail && event.detail.elt === this) { this.value=''; this.focus(); }"
+                oninput="this.value = this.value.toUpperCase();"
+                onkeydown="if(event.key==='Enter') event.preventDefault();">
+            <input type="hidden" name="order_id" value="{{ order.correlative }}">
+        </form>
+    </div>
+
+    <div class="overflow-x-auto shadow-xl rounded-xl border border-gray-200 bg-white">
+        <table class="w-full text-sm text-left text-gray-500">
+            <thead
+                class="text-xs text-gray-700 uppercase bg-gray-100 font-black tracking-wider border-b border-gray-200">
+                <tr>
+                    <th scope="col" class="px-6 py-4 font-bold">CÓDIGO</th>
+                    <th scope="col" class="px-6 py-4 font-bold">DESCRIPCIÓN</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">UNIDAD</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">CANT. ORDEN</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">CANT. CONTADA</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">ESTADO</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">OPCIONES</th>
+                </tr>
+            </thead>
+            <tbody id="products-tbody" class="divide-y divide-gray-200 bg-white">
+                {% for item in details %}
+                <tr class="hover:bg-gray-50 transition-colors" id="row-{{ item.code_product }}"
+                    data-code="{{ item.code_product }}" data-expected="{{ item.amount }}">
+                    <td class="px-6 py-4 font-medium text-gray-900">{{ item.code_product }}</td>
+                    <td class="px-6 py-4 text-xs font-semibold leading-relaxed">
+                        {{ item.product_description }}
+                    </td>
+                    <td class="px-6 py-4 text-center text-gray-600">
+                        {{ item.unit_description }}
+                    </td>
+                    <td class="px-6 py-4 text-center font-bold text-blue-700 bg-blue-50/30">
+                        {{ item.amount }}
+                    </td>
+                    <td class="px-6 py-4 text-center" id="counted-{{ item.code_product }}">
+                        --
+                    </td>
+                    <td class="px-6 py-4 text-center" id="status-{{ item.code_product }}">
+                        <span
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                            Pendiente
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <button type="button" hx-post="{{ url_for('inventory.delete_product_from_order') }}"
+                            hx-target="#row-{{ item.code_product }}" hx-swap="delete"
+                            hx-include="[name='order_id'],[name='code_product']"
+                            hx-confirm="¿Estás seguro de que quieres eliminar este producto de la orden?"
+                            hx-on:htmx:afterRequest="document.getElementById('hidden-counted-{{ item.code_product }}').remove(); checkAllCounted()"
+                            class="bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white font-bold py-1 px-2 rounded text-xs shadow-sm transition-colors">
+                            Quitar
+                        </button>
+                        <input type="hidden" name="order_id" value="{{ order.correlative }}">
+                        <input type="hidden" name="code_product" value="{{ item.code_product }}">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-6 flex justify-center">
+        <form id="save-form" method="POST" action="{{ url_for('inventory.save_order_check') }}"
+            hx-post="{{ url_for('inventory.save_order_check') }}" hx-target="#main-content" hx-select="#main-content"
+            hx-swap="innerHTML">
+            <input type="hidden" name="order_id" value="{{ order.correlative }}">
+            {% for item in details %}
+            <input type="hidden" name="counted_{{ item.code_product }}" id="hidden-counted-{{ item.code_product }}"
+                value="">
+            {% endfor %}
+            <button id="save-button" type="button" onclick="generateOrder()"
+                class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                Generar Orden
+            </button>
+        </form>
+    </div>
+
+    <div id="product-modal-container">
+        {% include 'partials/check_order_product_modal.html' %}
+    </div>
+
+    {% endif %}
+
+    <script>
+        let autoSubmitted = false;
+
+        function submitCheckOrder() {
+            const saveForm = document.getElementById('save-form');
+            if (!saveForm) return;
+
+            // Enviar formulario standard para abrir PDF en nueva pestaña
+            saveForm.target = '_blank';
+            saveForm.submit();
+
+            // Regresar al menú en la pestaña actual
+            setTimeout(() => {
+                window.location.href = "{{ url_for('inventory.check_order') }}";
+            }, 500);
+        }
+
+        function checkAllCounted() {
+            const rows = document.querySelectorAll('tbody tr');
+            if (!rows.length) return;
+
+            const allCounted = Array.from(rows).every((row) => {
+                const status = row.querySelector('[id^="status-"]');
+                return status && status.textContent.trim().includes('Contado');
+            });
+
+            if (allCounted && !autoSubmitted) {
+                const confirmed = confirm('Se contaron todos los productos. ¿Desea generar el reporte y finalizar?');
+                if (!confirmed) return;
+                autoSubmitted = true;
+                submitCheckOrder();
+            }
+        }
+
+        function generateOrder() {
+            const rows = document.querySelectorAll('tbody tr');
+            let allCounted = true;
+            rows.forEach((row) => {
+                const status = row.querySelector('[id^="status-"]');
+                if (status && !status.textContent.trim().includes('Contado')) {
+                    allCounted = false;
+                }
+            });
+            if (allCounted) {
+                const confirmed = confirm('¿Confirmar generación de orden?');
+                if (confirmed) {
+                    submitCheckOrder();
+                }
+            } else {
+                alert('Debe contar todos los productos antes de generar la orden.');
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('product-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function focusSearchInput() {
+            const searchInput = document.getElementById('code-product');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+
+        function validateCountedAmount() {
+            const countedInput = document.getElementById('counted-amount');
+            const stockInput = document.getElementById('stock-amount');
+            if (!countedInput || !stockInput) {
+                return true;
+            }
+            const counted = parseFloat(countedInput.value || '0');
+            const stock = parseFloat(stockInput.value || '0');
+            if (counted > stock) {
+                alert(
+                    'La cantidad contada no puede ser mayor que el stock en el depósito de origen (' +
+                    stock.toFixed(2) +
+                    ').'
+                );
+                countedInput.focus();
+                countedInput.select();
+                return false;
+            }
+            return true;
+        }
+
+        function ensureHiddenCountedInput(codeProduct, value) {
+            const saveForm = document.getElementById('save-form');
+            if (!saveForm) return;
+            let input = document.getElementById('hidden-counted-' + codeProduct);
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'counted_' + codeProduct;
+                input.id = 'hidden-counted-' + codeProduct;
+                saveForm.appendChild(input);
+            }
+            if (typeof value !== 'undefined') {
+                input.value = value;
+            }
+        }
+
+        document.body.addEventListener('counted-updated', (event) => {
+            const detail = event.detail || {};
+            const code = detail.code_product;
+            if (!code) return;
+            const countedCell = document.getElementById('counted-' + code);
+            if (countedCell) {
+                countedCell.textContent = detail.counted_amount;
+            }
+            const statusCell = document.getElementById('status-' + code);
+            if (statusCell) {
+                statusCell.innerHTML = detail.status_html || '';
+            }
+            const row = document.getElementById('row-' + code);
+            if (row) {
+                const expected = parseFloat(row.dataset.expected || '0');
+                const countedText = countedCell ? countedCell.textContent : '';
+                const countedNum = parseFloat(detail.counted_amount || countedText || '0');
+                const hasDiff = !Number.isNaN(expected) && !Number.isNaN(countedNum) && countedNum !== expected;
+                if (hasDiff) {
+                    row.classList.add('bg-red-100');
+                    row.style.backgroundColor = '#fee2e2';
+                } else {
+                    row.classList.remove('bg-red-100');
+                    row.style.backgroundColor = '';
+                }
+            }
+            ensureHiddenCountedInput(code, detail.counted_amount);
+            closeModal();
+            focusSearchInput();
+            checkAllCounted();
+        });
+
+        document.body.addEventListener('counted-error', (event) => {
+            const detail = event.detail || {};
+            if (detail.message) {
+                alert(detail.message);
+            }
+            const focusId = detail.focus_id;
+            if (focusId) {
+                const el = document.getElementById(focusId);
+                if (el) {
+                    el.focus();
+                    if (el.select) {
+                        el.select();
+                    }
+                }
+            }
+        });
+
+        document.body.addEventListener('product-added', (event) => {
+            const code = event.detail && event.detail.code_product;
+            if (code) {
+                ensureHiddenCountedInput(code, '');
+            }
+            closeModal();
+            focusSearchInput();
+        });
+
+        document.body.addEventListener('product-error', (event) => {
+            const detail = event.detail || {};
+            if (detail.message) {
+                alert(detail.message);
+            }
+            const focusId = detail.focus_id;
+            if (focusId) {
+                const el = document.getElementById(focusId);
+                if (el) {
+                    el.focus();
+                    if (el.select) {
+                        el.select();
+                    }
+                }
+            }
+        });
+
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            if (!event.target || (event.target.id !== 'product-modal-container' && event.target.id !== 'product-modal')) return;
+            const countedInput = document.getElementById('counted-amount');
+            if (countedInput) {
+                countedInput.focus();
+                countedInput.select();
+                return;
+            }
+            focusSearchInput();
+        });
+
+        if (!window.__checkOrderPdfHandlerAdded) {
+            window.__checkOrderPdfHandlerAdded = true;
+            document.addEventListener('open-pdf', (event) => {
+                const detail = event.detail || {};
+                if (detail.url) {
+                    window.open(detail.url, '_blank');
+                }
+            });
+        }
+
+        checkAllCounted();
+    </script>
+</div>
+{% endblock %}
