@@ -65,14 +65,16 @@ def create_app():
     from app.admin import admin_bp
     from app.inventory import inventory_bp
     from app.reports import reports_bp
+    from app.document_manager import document_manager_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(dashboard_bp, url_prefix='/')
+    app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(common_bp, url_prefix='/common')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(reports_bp, url_prefix='/reports')
+    app.register_blueprint(document_manager_bp, url_prefix='/documents')
 
     return app
 
