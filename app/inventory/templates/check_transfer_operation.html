@@ -17,8 +17,7 @@
 				<label for="correlative" class="block mb-2 text-sm font-medium text-heading">Correlativo del
 					traslado</label>
 				<input type="number" id="correlative" name="correlative" required
-					class="bg-neutral-secondary-medium border 
-					border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+					class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
 					placeholder="Ingresa el correlativo">
 			</div>
 			<div class="mt-2">
@@ -62,68 +61,102 @@
 			cantidades contadas no se guardan y se reinician al recargar la página.
 		</div>
 
-		<div class="max-w-xl">
-			<label for="product_code" class="block mb-1.5 text-sm font-medium text-heading">Buscar producto por
-				código</label>
-			<form class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 items-start">
-				<input
-					hx-get="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative) }}"
-					hx-target="#modal-container" 
-					hx-swap="innerHTML" 
-					hx-trigger="keydown[key=='Enter']"
-					oninput="this.value = this.value.toUpperCase()"
-					onkeydown="if(event.key==='Enter') event.preventDefault();"
-					type="text" id="product_code" 
-					name="product_code"
-					required
-                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body uppercase"
-					placeholder="Ingrese código de producto" oninput="this.value = this.value.toUpperCase();">
+		<!-- Mensaje de completado y formulario para nuevo traslado -->
+		<div id="completion-message" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+			<div class="flex items-center">
+				<svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+				</svg>
+				<span class="text-green-800 font-medium">¡Todos los productos fueron chequeados correctamente!</span>
+			</div>
+			<p class="text-green-700 text-sm mt-1">Selecciona otro traslado para continuar.</p>
+		</div>
+
+		<div id="transfer-form" class="hidden mt-4 p-6 bg-white shadow-sm mx-auto" style="width:30%;min-width:280px;">
+			<h2 class="text-xl font-bold text-heading mb-4">Seleccionar Nuevo Traslado</h2>
+			<form hx-post="{{ url_for('inventory.check_transfer_operation') }}" hx-target="#main-content"
+				hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
+				<div>
+					<label for="correlative-new" class="block mb-2 text-sm font-medium text-heading">Correlativo del
+						traslado</label>
+					<input type="number" id="correlative-new" name="correlative" required
+						class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+						placeholder="Ingresa el correlativo">
+				</div>
+				<div class="mt-2">
+					<button type="submit"
+						class="inline-flex items-center justify-center text-white
+						 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+						Buscar traslado
+					</button>
+				</div>
 			</form>
 		</div>
 
-		<div id="modal-container"></div>
+		<div id="checking-section">
+			<div class="max-w-xl">
+				<label for="product_code" class="block mb-1.5 text-sm font-medium text-heading">Buscar producto por
+					código</label>
+				<form class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 items-start">
+					<input
+						hx-get="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative) }}"
+						hx-target="#modal-container" 
+						hx-swap="innerHTML" 
+						hx-trigger="keydown[key=='Enter']"
+						oninput="this.value = this.value.toUpperCase()"
+						onkeydown="if(event.key==='Enter') event.preventDefault();"
+						type="text" id="product_code" 
+						name="product_code"
+						required
+	                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body uppercase"
+						placeholder="Ingrese código de producto" oninput="this.value = this.value.toUpperCase();">
+				</form>
+			</div>
 
-		<div class="overflow-x-auto bg-white mt-4">
-			<table class="w-full text-sm text-left text-gray-500">
-				<thead class="text-xs text-gray-700 uppercase bg-gray-50 font-black tracking-wider">
-					<tr>
-						<th class="px-6 py-4 font-bold">Código</th>
-						<th class="px-6 py-4 font-bold">Descripción</th>
-						<th class="px-6 py-4 font-bold">Referencia</th>
-						<th class="px-6 py-4 font-bold text-center">Cant. Esperada</th>
-						<th class="px-6 py-4 font-bold text-center">Cant. Contada</th>
-						<th class="px-6 py-4 font-bold text-center">Diferencia</th>
-					</tr>
-				</thead>
-				<tbody class="bg-white" id="products-table">
-					{% for detail in details %}
-					{% set has_diff = (0 != detail.amount) %}
-					<tr id="row-{{ detail.code_product }}" {% if has_diff %} class="bg-red-100"
-						style="background-color:#fee2e2;" {% endif %}>
-						<td
-							class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">
-							{{ detail.code_product }}</td>
-						<td
-							class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
-							{{ detail.description_product }}</td>
-						<td
-							class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
-							{{ detail.referenc }}</td>
-						<td
-							class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">
-							{{ detail.amount }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
-							id="counted-{{ detail.code_product }}">
-							0
-						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
-							id="diff-{{ detail.code_product }}">
-							{{ -detail.amount }}
-						</td>
-					</tr>
-					{% endfor %}
-				</tbody>
-			</table>
+			<div id="modal-container"></div>
+
+			<div class="overflow-x-auto bg-white mt-4">
+				<table class="w-full text-sm text-left text-gray-500">
+					<thead class="text-xs text-gray-700 uppercase bg-gray-50 font-black tracking-wider">
+						<tr>
+							<th class="px-6 py-4 font-bold">Código</th>
+							<th class="px-6 py-4 font-bold">Descripción</th>
+							<th class="px-6 py-4 font-bold">Referencia</th>
+							<th class="px-6 py-4 font-bold text-center">Cant. Esperada</th>
+							<th class="px-6 py-4 font-bold text-center">Cant. Contada</th>
+							<th class="px-6 py-4 font-bold text-center">Diferencia</th>
+						</tr>
+					</thead>
+					<tbody class="bg-white" id="products-table">
+						{% for detail in details %}
+						{% set has_diff = (0 != detail.amount) %}
+						<tr id="row-{{ detail.code_product }}" {% if has_diff %} class="bg-red-100"
+							style="background-color:#fee2e2;" {% endif %}>
+							<td
+								class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">
+								{{ detail.code_product }}</td>
+							<td
+								class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
+								{{ detail.description_product }}</td>
+							<td
+								class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
+								{{ detail.referenc }}</td>
+							<td
+								class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">
+								{{ detail.amount }}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
+								id="counted-{{ detail.code_product }}">
+								0
+							</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
+								id="diff-{{ detail.code_product }}">
+								{{ -detail.amount }}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
 		</div>
 		{% endif %}
 	</div>
@@ -151,6 +184,24 @@
 				console.error('Error parsing HX-Trigger:', e);
 			}
 		}
+
+		// Verificar si el chequeo está completo (tabla vacía)
+		checkCompletion();
 	});
+
+	// Función para verificar si todos los productos han sido chequeados
+	function checkCompletion() {
+		const productsTable = document.getElementById('products-table');
+		if (productsTable && productsTable.children.length === 0) {
+			// Mostrar mensaje de completado y formulario
+			document.getElementById('completion-message').classList.remove('hidden');
+			document.getElementById('transfer-form').classList.remove('hidden');
+			// Ocultar la sección de chequeo
+			document.getElementById('checking-section').classList.add('hidden');
+		}
+	}
+
+	// Verificar al cargar la página
+	document.addEventListener('DOMContentLoaded', checkCompletion);
 </script>
 {% endblock %}

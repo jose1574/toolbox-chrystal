@@ -4,126 +4,67 @@
 {% block title %}Administrador de documentos{% endblock %}       
 
 {% block content %} 
-<h1>Document Manager Dashboard</h1>
-<p>Welcome, {{ user.username }}!</p>
-<h2>Transfer Operations</h2>
-<div class="mb-4">
-    <button id="delete-btn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" disabled>
-        Eliminar seleccionados
-    </button>
+<div id="document-manager-page" class="p-4">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Administrador de Documentos</h2>
+        <p class="mt-1 text-sm text-gray-500">Gestiona las operaciones de traslado del sistema.</p>
+    </div>
+
+    <div class="mb-4 p-3 bg-gray-100 rounded-lg flex justify-between items-center sticky top-0 z-10" style="position: sticky; top: 0; z-index: 20;">
+        <div class="text-sm font-medium text-gray-700">
+            Operaciones seleccionadas: <span id="selected-count" class="font-bold">0</span>
+        </div>
+        <div>
+             <button id="delete-btn" type="button" data-delete-url="{{ url_for('document_manager.delete_transfers') }}" class="flex items-center text-red-500 bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none disabled:bg-red-60 disabled:opacity-40 disabled:hover:bg-red-600 disabled:cursor-not-allowed transition-colors duration-200" >
+                <svg class="w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar seleccionados
+            </button>
+        </div>
+    </div>
+
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+        <table class="w-full text-sm text-left text-gray-500">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <tr>
+                    <th scope="col" class="p-4">
+                        <div class="flex items-center">
+                            <input id="select-all-operations" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="select-all-operations" class="sr-only">Seleccionar todo</label>
+                        </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3">ID</th>
+                    <th scope="col" class="px-6 py-3">Documento</th>
+                    <th scope="col" class="px-6 py-3">Descripción</th>
+                    <th scope="col" class="px-6 py-3">Fecha Creación</th>
+                    <th scope="col" class="px-6 py-3">Origen</th>
+                    <th scope="col" class="px-6 py-3">Destino</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for operation in transfer_operations %}
+                <tr class="bg-white border-b hover:bg-gray-50">
+                    <td class="w-4 p-4">
+                        <div class="flex items-center">
+                            <input type="checkbox"
+                                   class="operation-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                value="{{ operation.correlative }}"
+                                   id="operation-{{ loop.index0 }}"
+                                   aria-label="Seleccionar operación {{ operation.correlative }}">
+                            <label for="operation-{{ loop.index0 }}" class="sr-only">checkbox</label>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ operation.correlative }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ operation.document_no }}</td>
+                    <td class="px-6 py-4">{{ operation.description }}</td>
+                    <td class="px-6 py-4">{{ operation.emission_date }}</td>
+                    <td class="px-6 py-4">{{ operation.store }}</td>
+                    <td class="px-6 py-4">{{ operation.destination_store }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
-<table>
-    <thead>
-        <tr>
-            <th>
-                <input type="checkbox" id="select-all-operations" aria-label="Seleccionar todas las operaciones">
-            </th>
-            <th>ID</th>
-            <th>Description</th>
-            <th>Created At</th>
-            <th>Dep. Origen</th>
-            <th>Dep. dst</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for operation in transfer_operations %}
-        <tr>
-            <td>
-                <input type="checkbox"
-                       class="operation-checkbox"
-                       value="{{ operation.id or operation.correlative }}"
-                       id="operation-{{ loop.index0 }}"
-                       aria-label="Seleccionar operación {{ operation.correlative }}">
-            </td>
-            <td>{{ operation.correlative }}</td>
-            <td>{{ operation.description }}</td>
-            <td>{{ operation.emission_date }}</td>
-            <td>{{ operation.store }}</td>
-            <td>{{ operation.destination_store }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const selectAllCheckbox = document.getElementById('select-all-operations');
-    const rowCheckboxes = document.querySelectorAll('.operation-checkbox');
-    const deleteBtn = document.getElementById('delete-btn');
-
-    if (!selectAllCheckbox) {
-        return;
-    }
-
-    const updateDeleteButtonState = () => {
-        const checkedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
-        if (deleteBtn) {
-            deleteBtn.disabled = checkedCount === 0;
-        }
-    };
-
-    const syncSelectAll = () => {
-        const total = rowCheckboxes.length;
-        const checked = Array.from(rowCheckboxes).filter((checkbox) => checkbox.checked).length;
-        selectAllCheckbox.indeterminate = checked > 0 && checked < total;
-        selectAllCheckbox.checked = total > 0 && checked === total;
-        updateDeleteButtonState();
-    };
-
-    selectAllCheckbox.addEventListener('change', () => {
-        rowCheckboxes.forEach((checkbox) => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        updateDeleteButtonState();
-    });
-
-    rowCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', syncSelectAll);
-    });
-    
-    // Initial state check
-    updateDeleteButtonState();
-
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', function() {
-            const selectedIds = Array.from(rowCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-
-            if (selectedIds.length === 0) return;
-
-            if (!confirm('¿Estás seguro de que quieres eliminar las operaciones seleccionadas?')) {
-                return;
-            }
-
-            const data = { correlatives: selectedIds };
-            fetch("{{ url_for('document_manager.delete_transfers') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.json().then(err => { throw new Error(err.message || 'Error en la solicitud'); });
-                }
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Ocurrió un error al intentar eliminar las operaciones.');
-            });
-        });
-    }
-});
-</script>
 {% endblock %}
