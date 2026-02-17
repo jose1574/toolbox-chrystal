@@ -890,10 +890,17 @@ def search_product_in_transfer(operation_id):
         }
         return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
     
+    ##busca parametros de existencia minimia y maxima en el deposito de destino 
+    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=detail.destination_store).first()
+
+    
     # Devolver el modal renderizado
-    return render_template("partials/product_modal.html", 
-                         detail=detail, 
-                         operation_id=operation_id)
+    # return render_template("partials/product_modal.html", 
+    #                      detail=detail, 
+    #                      operation_id=operation_id,
+    #                      destination_store=detail.destination_store,
+    #                      product_failure=failure_info)
+    return redirect(url_for("inventory.product_modal", operation_id=operation_id, product_code=product_code))
 
 
 @inventory_bp.route("/check_transfer_operation/modal/<int:operation_id>/<product_code>", methods=["GET"])
@@ -911,15 +918,22 @@ def product_modal(operation_id, product_code):
     if not detail:
         return "Producto no encontrado", 404
     
+    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=detail.destination_store).first()
+    
     return render_template("partials/product_modal.html", 
                          detail=detail, 
-                         operation_id=operation_id)
+                         operation_id=operation_id,
+                         product_failure=failure_info,
+                         destination_store=detail.destination_store
+                         )
 
 
-@inventory_bp.route("/check_transfer_operation/update_count/<int:operation_id>/<product_code>", methods=["POST"])
+@inventory_bp.route("/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<destination_store>", methods=["POST"])
 @login_required
-def update_count(operation_id, product_code):
+def update_count(operation_id, product_code, destination_store):
     counted_amount = request.form.get("counted_amount", type=float, default=0)
+    minimal_stock = request.form.get("minimal_stock", type=float, default=0)
+    maximum_stock = request.form.get("maximum_stock", type=float, default=0)
     
     # Validaciones
     if counted_amount < 0:
@@ -946,6 +960,24 @@ def update_count(operation_id, product_code):
         }
         return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
     
+    ##actualiza products_failures 
+    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=destination_store).first()
+
+    if not failure_info:
+        failure_info = ProductsFailure(
+            product_code=product_code,
+            store_code=destination_store,
+            minimal_stock=minimal_stock or 0,
+            maximum_stock=maximum_stock or 0,
+            location=""
+        )
+        db.session.add(failure_info)
+    else:
+        failure_info.minimal_stock = minimal_stock or 0
+        failure_info.maximum_stock = maximum_stock or 0
+
+    db.session.commit()
+
     # Como es solo informativo, no guardamos en BD
     # Si no hay diferencia, devolvemos vacío para eliminar la fila
     if counted_amount == detail.amount:

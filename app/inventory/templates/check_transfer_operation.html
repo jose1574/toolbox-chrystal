@@ -99,7 +99,7 @@
 					código</label>
 				<form class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 items-start">
 					<input
-						hx-get="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative) }}"
+						hx-get="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative ) }}"
 						hx-target="#modal-container" 
 						hx-swap="innerHTML" 
 						hx-trigger="keydown[key=='Enter']"
