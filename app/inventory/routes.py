@@ -828,10 +828,15 @@ def save_order_check():
 @inventory_bp.route("/check_transfer_operation", methods=["GET", "POST"])
 @login_required
 def check_transfer_operation():
+    message = request.args.get("message")
     if request.method == "POST":
         correlative = request.form.get("correlative")
         if not correlative:
-            return render_template("check_transfer_operation.html", error_message="Por favor, ingrese un correlativo válido.")
+            return render_template(
+                "check_transfer_operation.html",
+                error_message="Por favor, ingrese un correlativo válido.",
+                message=message,
+            )
         
         # Buscar la operación de traslado procesada
         operation = InventoryOperation.query.filter_by(
@@ -851,12 +856,19 @@ def check_transfer_operation():
             joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
         ).all()
         
-        return render_template("check_transfer_operation.html", 
-                             operation=operation, 
-                             details=details,
-                             show_products=True)
+        return render_template(
+            "check_transfer_operation.html",
+            operation=operation,
+            details=details,
+            show_products=True,
+            message=message,
+        )
     
-    return render_template("check_transfer_operation.html", show_products=False)
+    return render_template(
+        "check_transfer_operation.html",
+        show_products=False,
+        message=message,
+    )
 
 
 @inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>")
@@ -1131,3 +1143,45 @@ def save_product_params():
     selected_store = Store.query.filter_by(code=store_code).first()
     stores = Store.query.all()
     return render_template("product_params.html", stores=stores, selected_store=selected_store)
+
+
+## reporte de traslado PDF
+@inventory_bp.route("/transfer_operation/report/<int:order_id>")
+@login_required
+def transfer_operation_report(order_id):
+    user = current_user
+    order = InventoryOperation.query.options(
+        joinedload(InventoryOperation.store1),
+        joinedload(InventoryOperation.store2),
+        joinedload(InventoryOperation.user),
+        joinedload(InventoryOperation.details).options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(
+                ProductsUnit.unit1
+            ),
+            # Aquí cargamos la información del esquema toolbox
+            joinedload(InventoryOperationDetail.failure_info),
+        ),
+    ).get_or_404(order_id)
+
+    barcode_base64 = generate_barcode(order.correlative)
+
+    return Response(
+        render_pdf(
+            "reports/transfer_operation_pdf.html",
+            {
+                "order": order,
+                "title": f"chequeo de recepción de traslado {order.correlative}",
+                "now": datetime.now(),
+                "barcode_base64": barcode_base64,
+                "user": user,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=chequeo_traslado_{order.correlative}.pdf"
+        },
+    )
+    

@@ -11,6 +11,11 @@
 			{{ error_message }}
 		</div>
 		{% endif %}
+		{% if message %}
+		<div class="mb-3 p-3 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200">
+			{{ message }}
+		</div>
+		{% endif %}
 		<form hx-post="{{ url_for('inventory.check_transfer_operation') }}" hx-target="#main-content"
 			hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
 			<div>
@@ -69,6 +74,13 @@
 				</svg>
 				<span class="text-green-800 font-medium">¡Todos los productos fueron chequeados correctamente!</span>
 			</div>
+			{% if operation %}
+			<div class="mt-2">
+				<a href="{{ url_for('inventory.transfer_operation_report', order_id=operation.correlative) }}" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-sm">
+					Ver reporte PDF
+				</a>
+			</div>
+			{% endif %}
 			<p class="text-green-700 text-sm mt-1">Selecciona otro traslado para continuar.</p>
 		</div>
 
@@ -189,19 +201,27 @@
 		checkCompletion();
 	});
 
+	// Verificar al cargar la página
+	document.addEventListener('DOMContentLoaded', checkCompletion);
+
+	// Variables pasadas desde el backend
+	var operationCorrelative = "{{ operation.correlative if operation else '' }}";
+	var reportUrl = "{{ url_for('inventory.transfer_operation_report', order_id=operation.correlative) if operation else '' }}";
+	var urlCheckTransfer = "{{ url_for('inventory.check_transfer_operation', message='Chequeo de traslado completado') }}";
+	var actionExecuted = false; // evita repetir apertura/redirección en recargas via htmx
+
 	// Función para verificar si todos los productos han sido chequeados
 	function checkCompletion() {
 		const productsTable = document.getElementById('products-table');
-		if (productsTable && productsTable.children.length === 0) {
-			// Mostrar mensaje de completado y formulario
-			document.getElementById('completion-message').classList.remove('hidden');
-			document.getElementById('transfer-form').classList.remove('hidden');
-			// Ocultar la sección de chequeo
-			document.getElementById('checking-section').classList.add('hidden');
+		if (productsTable && productsTable.children.length === 0 && !actionExecuted) {
+			if (operationCorrelative && reportUrl) {
+				// Primero abrir el PDF en nueva pestaña
+				window.open(reportUrl, '_blank');
+			}
+			// Luego redirigir al formulario inicial
+			window.location.href = urlCheckTransfer;
+			actionExecuted = true;
 		}
 	}
-
-	// Verificar al cargar la página
-	document.addEventListener('DOMContentLoaded', checkCompletion);
 </script>
 {% endblock %}

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chequeo de Traslado #{{ order.correlative }}</title>
+    <style>
+        :root {
+            --text: #000;
+            --muted: #333;
+            --border: #000;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: var(--text);
+            padding: 10px;
+        }
+
+        .main-container {
+            border: 2px solid var(--border);
+            padding: 10px;
+            min-height: 98%;
+        }
+
+        /* Tabla de Cabecera Estilo Diagrama */
+        .order-header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .order-header-table td {
+            border: 1.5px solid var(--border) !important;
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background-color: #eee;
+        }
+
+        .checked-title {
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .header-details {
+            width: 35%;
+        }
+
+        .header-barcode {
+            width: 30%;
+            text-align: center;
+            vertical-align: middle !important;
+        }
+
+        .header-responsible {
+            width: 35%;
+        }
+
+        .detail-item {
+            margin-bottom: 4px;
+        }
+
+        .detail-label {
+            font-weight: 700;
+        }
+
+        /* Tabla de Productos */
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .products-table th {
+            background-color: #f0f0f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            border: 1.5px solid var(--border) !important;
+            padding: 8px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #333;
+            /* Borde sólido para celdas */
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .footer {
+            margin-top: 15px;
+            font-size: 9px;
+            color: var(--muted);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <!-- Cabecera según diagrama -->
+        <table class="order-header-table">
+            <tr>
+                <td colspan="3" class="header-title">
+                    Chequeo de Traslado #{{ order.correlative }}
+                </td>
+            </tr>
+            <tr>
+                <td class="header-details">
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Detalles Orden:
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Fecha:</span> {{ order.emission_date.strftime('%d/%m/%Y') }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Depósito Origen:</span> {{ order.store2.description }} ({{
+                        order.store }})
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Documento:</span> {{ order.document_no or '-' }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Descripción:</span> {{ order.description or '-' }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Depósito Destino:</span> {{ order.store1.description }} ({{
+                        order.destination_store }})
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Chequeado por:</span> {{ user.description if user else 'Sistema' }}
+                    </div>
+                </td>
+                <td class="header-barcode">
+                    {% if barcode_base64 %}
+                    <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode"
+                        style="height: 70px; max-width: 100%;">
+                    {% else %}
+                    <span style="color: #ccc;">[Código de Barras]</span>
+                    {% endif %}
+                </td>
+                <td class="header-responsible">
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Responsable Recolección:</div>
+                    <div style="margin-top: 50px; text-align: center;">
+                        <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto; "></div>
+                        <span style="font-size: 9px; text-transform: uppercase; ">Firma</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Tabla de productos -->
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Unidad</th>
+                    <th>Ubicación</th>
+                    <th class="text-right">Cant.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in order.inventory_operation_details %}
+                <tr>
+                    <td>{{ detail.code_product }}</td>
+                    <td style="width: 40%;">{{ detail.product.description if detail.product else
+                        detail.description_product }}</td>
+                    <td>{{ detail.products_unit.unit1.description if detail.products_unit and detail.products_unit.unit1
+                        else '-' }}</td>
+                    <td>{{ detail.failure_info.location if detail.failure_info else '-' }}</td>
+                    <td class="text-right">{{ detail.amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>Generado por: {{ user.description if user else 'Sistema' }} — {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+        </div>
+    </div>
+</body>
+
+</html>
