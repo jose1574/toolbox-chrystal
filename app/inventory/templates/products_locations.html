@@ -1,0 +1,199 @@
+<div id="main-content" class="px-4 py-6 space-y-6">
+    <h1 class="text-2xl font-bold text-heading">Ubicación de Productos</h1>
+
+    {% if not store %}
+    <div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
+        <h2 class="text-lg font-semibold text-heading">Seleccionar Depósito</h2>
+        <form hx-post="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
+            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+            <div>
+                <label for="store_code" class="block text-sm font-medium text-gray-700 mb-1">Depósito</label>
+                <select id="store_code" name="store_code"
+                    class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">-- Seleccionar depósito --</option>
+                    {% for s in stores %}
+                    <option value="{{ s.code }}" {% if s.code==store_code %}selected{% endif %}>{{ s.description }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="submit"
+                    class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    Aplicar
+                </button>
+                <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content"
+                    hx-select="#main-content" hx-push-url="true"
+                    class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
+                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Regresar
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if store and not location %}
+    <div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
+        <h2 class="text-lg font-semibold text-heading">Asignar ubicación</h2>
+        <form hx-post="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
+            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+            <input type="hidden" name="store_code" value="{{ store.code }}">
+            <div>
+                <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                <input type="text" name="location" id="location" placeholder="A-1"
+                    oninput="this.value = this.value.toUpperCase().replace(/\s/g, '')"
+                    class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="submit"
+                    class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    Guardar
+                </button>
+                <button type="button" hx-get="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
+                    hx-select="#main-content" hx-push-url="true"
+                    class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
+                    Regresar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% endif %}
+
+    {% if store and location %}
+
+    <div>
+        <p>Depósito: {{ store.description }}</p>
+        <p>Nueva Ubicación: {{ location }}</p>
+    </div>
+
+    <div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
+        <h2 class="text-lg font-semibold text-heading">Buscar y Seleccionar Productos</h2>
+        <div id="search-error" class="hidden text-red-600 text-sm mb-4"></div>
+
+        <form hx-get="{{ url_for('inventory.search_products_for_location') }}" hx-target="#products_codes"
+            hx-swap="beforeend" class="flex flex-wrap items-end gap-4 mb-4">
+           
+            <input type="hidden" name="store_code" value="{{ store.code }}">
+            <div class="flex-1 min-w-220px">
+                <label for="product_code" class="block text-sm font-medium text-gray-700 mb-1">Código del
+                    Producto</label>
+                <input type="text" id="product_code" name="product_code" placeholder="Ingrese código del producto"
+                    class="inline-flex items-center justify-center w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+            </div>
+            <div class="flex justify-end shrink-0">
+                <button type="submit"
+                    class="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-base shadow-xs transition-colors hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 border border-gray-300">
+                    Buscar
+                </button>
+            </div>
+        </form>
+
+
+        <input type="hidden" name="store_code" value="{{ store.code }}">
+        <input type="hidden" name="location" value="{{ location }}">
+        <form hx-post="{{ url_for('inventory.update_product_location') }}" hx-target="#main-content"
+            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+                     <button type="submit" 
+                class="inline-flex items-center justify-center text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                Guardar Ubicaciones
+            </button>
+            <input type="hidden" name="store_code" value="{{ store.code }}">
+            <input type="hidden" name="location" value="{{ location }}">
+
+            <div class="overflow-x-auto">
+                <table class="w-full table-fixed divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col"
+                                class="w-2/12 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Código
+                            </th>
+                            <th scope="col"
+                                class="w-8/12 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Descripción
+                            </th>
+                            <th scope="col"
+                                class="w-2/12 px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Ubicación Actual
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="products_codes" class="bg-white divide-y divide-gray-200">
+                        <!-- Filas de productos agregadas aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end mt-4">
+
+            </div>
+        </form>
+    </div>
+
+    {% endif %}
+
+</div>
+
+<script>
+    document.body.addEventListener('search-error', function (evt) {
+        const errorDiv = document.getElementById('search-error');
+        if (errorDiv) {
+            errorDiv.textContent = evt.detail.message;
+            errorDiv.classList.remove('hidden');
+            // Limpiar después de 5 segundos
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+                errorDiv.textContent = '';
+            }, 5000);
+        }
+        // Hacer focus al input si hay focus_id
+        if (evt.detail.focus_id) {
+            const input = document.getElementById(evt.detail.focus_id);
+            if (input) input.focus();
+        }
+    });
+
+    document.addEventListener('htmx:beforeSwap', function (evt) {
+        const target = evt.detail && evt.detail.target;
+        if (!target || target.id !== 'products_codes') return;
+
+        const xhr = evt.detail.xhr;
+        const incomingHtml = xhr ? (xhr.responseText || xhr.response) : '';
+        if (!incomingHtml) return;
+
+        const tempWrapper = document.createElement('tbody');
+        tempWrapper.innerHTML = incomingHtml;
+
+        const newCodes = Array.from(tempWrapper.querySelectorAll('input[name="products_codes"]'))
+            .map(input => input.value.trim())
+            .filter(Boolean);
+        if (!newCodes.length) return;
+
+        const existingCodes = new Set(
+            Array.from(document.querySelectorAll('#products_codes input[name="products_codes"]'))
+                .map(input => input.value.trim())
+                .filter(Boolean)
+        );
+
+        const duplicateCode = newCodes.find(code => existingCodes.has(code));
+        if (!duplicateCode) return;
+
+        evt.preventDefault();
+        evt.detail.shouldSwap = false;
+        alert('El producto ' + duplicateCode + ' ya está en la lista.');
+
+        const searchInput = document.getElementById('product_code');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+    });
+
+    // selecciona todos los productos para ser actualizados a la ubicación asignada
+
+</script>

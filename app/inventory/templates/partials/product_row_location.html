@@ -1,0 +1,10 @@
+
+
+    <tr class="hover:bg-gray-50">
+        <td class="w-2/12 px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+            <input type="hidden" name="products_codes" value="{{ product.code }}">
+            {{ product.code }}
+        </td>
+        <td class="w-8/12 px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ product.description }}</td>
+        <td class="w-2/12 px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{{ pf.location if pf else 'Sin ubicación' }}</td>
+    </tr>

@@ -190,7 +190,7 @@ def save_auto_order_collection():
                 continue
 
     if not selected_items:
-        flash("No se han seleccionado productos válidos.", "warning")
+        flash("No se han seleccionado productos", "warning")
         return redirect(
             url_for(
                 "inventory.auto_order_collection",
@@ -1184,4 +1184,130 @@ def transfer_operation_report(order_id):
             "Content-Disposition": f"inline; filename=chequeo_traslado_{order.correlative}.pdf"
         },
     )
+
+
+@inventory_bp.route("/products_locations", methods=["GET", "POST"])
+@login_required
+def products_locations():
+
+    stores = Store.query.all()
+    
+    store_code = request.values.get("store_code")
+    location = request.values.get("location")
+
+    if store_code:
+        store_obj = Store.query.filter_by(code=store_code).first()
+        
+        if not store_obj:
+             flash("Depósito no válido.", "error")
+             return render_template("products_locations.html", stores=stores)
+
+        if location:
+             return render_template(
+                "products_locations.html",
+                stores=stores,
+                store=store_obj,
+                location=location,
+            )
+        
+        return render_template(
+            "products_locations.html",
+            stores=stores,
+            store=store_obj,
+        )
+
+    return render_template("products_locations.html", stores=stores)
+
+
+
+@inventory_bp.route("/update_product_location", methods=["POST"])
+@login_required 
+def update_product_location():
+    store_code = request.form.get("store_code")
+    location = request.form.get("location")
+
+    products = request.form.getlist("products_codes")
+
+    #validaciones 
+    if not store_code:
+        flash("Depósito no válido.", "error")
+        return redirect(url_for("inventory.products_locations"))
+    
+    if not location:
+        flash("Ubicación no válida.", "error")
+        return redirect(url_for("inventory.products_locations"))
+
+    
+    if not products:
+        flash("No se seleccionaron productos para actualizar.", "error")
+        return redirect(url_for("inventory.products_locations"))
+
+    products_count = 0
+    try:
+        for code in products:
+            pf = ProductsFailure.query.filter_by(product_code=code, store_code=store_code).first()
+            
+            #actualiza la ubicación del producto en products_failure    
+            if pf:
+                pf.location = location
+            else:
+                pf = ProductsFailure(
+                    product_code=code,
+                    store_code=store_code,
+                    minimal_stock=0,
+                    maximum_stock=0,
+                    location=location
+                )
+                db.session.add(pf)
+            products_count += 1
+
+        db.session.commit()        
+        # Redirigir con los parámetros de GET para mantener el estado
+        return redirect(url_for("inventory.products_locations", store_code=store_code, location=location))
+    except Exception as e:
+        db.session.rollback()
+        flash("Error al actualizar ubicaciones. Intente nuevamente.", "error")
+        print(f"Error updating product locations: {e}")
+        return redirect(url_for("inventory.products_locations", store_code=store_code, location=location))
+    
+
+
+## buscador de productos para asignar ubicación en masa
+@inventory_bp.route("/search_products_for_location", methods=["GET"])
+@login_required
+def search_products_for_location():
+    product_code = request.args.get("product_code", "").strip()
+
+    if not product_code:
+        error_payload = {
+            "search-error": {
+                "message": "Por favor, ingrese un código de producto.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response("", status=400, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
+
+    # Resolver código alterno a código principal
+    products_code = ProductsCode.query.filter_by(other_code=product_code).first()
+    main_code = products_code.main_code if products_code else product_code
+
+    product = Product.query.filter_by(code=main_code).first()
+
+    if not product:
+        error_payload = {
+            "search-error": {
+                "message": "Producto no encontrado. Verifique el código e intente nuevamente.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
+    
+    # Obtener ubicación actual si existe
+    store_code = request.args.get("store_code")
+    
+    pf = None
+    if store_code:
+        pf = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+
+    return render_template("partials/product_row_location.html", product=product, pf=pf)
     

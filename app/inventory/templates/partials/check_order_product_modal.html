@@ -21,10 +21,10 @@
                     <input type="hidden" id="stock-amount" value="{{ stock_amount }}">
                     {% endif %}
                     <div class="flex items-center px-4 py-3 space-x-2">
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-black text-base font-medium rounded-md flex-1 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors">
+                        <button type="submit" class="flex-1 inline-flex items-center justify-center px-4 py-2 text-base font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1">
                             {% if is_new %}Agregar Producto{% else %}Guardar Conteo{% endif %}
                         </button>
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md flex-1 shadow-sm hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors">
+                        <button type="button" onclick="closeModal()" class="flex-1 inline-flex items-center justify-center px-4 py-2 text-base font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg shadow-sm transition-all hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1">
                             Cancelar
                         </button>
                     </div>
@@ -32,7 +32,7 @@
                 {% else %}
                 <p class="text-sm text-gray-500">{{ product_description }}</p>
                 <div class="flex items-center px-4 py-3">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    <button type="button" onclick="closeModal()" class="inline-flex items-center justify-center w-full px-4 py-2 text-base font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg shadow-sm transition-all hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1">
                         Cerrar
                     </button>
                 </div>
