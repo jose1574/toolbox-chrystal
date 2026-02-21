@@ -9115,25 +9115,30 @@ class ProductsCounterHistory(db.Model):
     __tablename__ = "products_counter_history"
     __table_args__ = {"schema": "toolbox"}
 
-    correlative = db.Column(
-        db.Integer, primary_key=True, server_default=db.FetchedValue()
-    )
+    # PK autonumérica: SQLAlchemy creará la identidad/serial
+    correlative = db.Column(db.Integer, primary_key=True)
 
     # Documentos de inventario asociados (carga / descarga generados por el conteo)
-    load_operation_correlative = db.Column(
+    # Nombres de columna en BD: load_operation_correlative / down_operation_correlative
+    # Nombres de atributo en Python: operation_correlative_up / operation_correlative_down
+    operation_correlative_up = db.Column(
+        "load_operation_correlative",
         db.ForeignKey(
             "public.inventory_operation.correlative",
             ondelete="CASCADE",
             onupdate="CASCADE",
-        )
+        ),
+        nullable=True,
     )
 
-    down_operation_correlative = db.Column(
+    operation_correlative_down = db.Column(
+        "down_operation_correlative",
         db.ForeignKey(
             "public.inventory_operation.correlative",
             ondelete="CASCADE",
             onupdate="CASCADE",
-        )
+        ),
+        nullable=True,
     )
 
     product_code = db.Column(
@@ -9161,15 +9166,15 @@ class ProductsCounterHistory(db.Model):
     # Relaciones de conveniencia
     load_operation = db.relationship(
         "InventoryOperation",
-        primaryjoin="ProductsCounterHistory.load_operation_correlative == InventoryOperation.correlative",
-        foreign_keys=[load_operation_correlative],
+        primaryjoin="ProductsCounterHistory.operation_correlative_up == InventoryOperation.correlative",
+        foreign_keys=[operation_correlative_up],
         backref="products_counter_history_load",
     )
 
     download_operation = db.relationship(
         "InventoryOperation",
-        primaryjoin="ProductsCounterHistory.down_operation_correlative == InventoryOperation.correlative",
-        foreign_keys=[down_operation_correlative],
+        primaryjoin="ProductsCounterHistory.operation_correlative_down == InventoryOperation.correlative",
+        foreign_keys=[operation_correlative_down],
         backref="products_counter_history_download",
     )
 

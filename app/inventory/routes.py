@@ -28,6 +28,7 @@ from app.models import (
     InventoryOperation,
     InventoryOperationDetail,
     ProductsCode,
+    ProductsCounterHistory,
 )
 
 from app.reports.utils import render_pdf, generate_barcode
@@ -1725,6 +1726,9 @@ def save_products_counter(store_code):
                 "counted": counted,
                 "difference": difference,
             }
+
+
+
         elif difference < 0:
             negative_diffs[code] = {
                 "system_qty": system_qty,
@@ -1742,24 +1746,226 @@ def save_products_counter(store_code):
             f" - Producto {code}: inventario={system_qty}, contada={counted}, diferencia={difference}"
         )
 
-    # Resumen por tipo de diferencia (para depuración y próximas operaciones)
-    print("\nProductos con diferencia POSITIVA (sobrante):")
-    for code, data in positive_diffs.items():
-        print(
-            f"   + {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
-        )
+    # Si no hay diferencias, no generamos operaciones
+    if not positive_diffs and not negative_diffs:
+        flash("No hay diferencias de inventario para procesar.", "info")
+        return redirect(url_for("inventory.product_counter"))
 
-    print("\nProductos con diferencia NEGATIVA (faltante):")
-    for code, data in negative_diffs.items():
-        print(
-            f"   - {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
-        )
+    store = Store.query.filter_by(code=store_code).first()
 
-    print("\nProductos SIN diferencia (sin ajuste):")
-    for code, data in zero_diffs.items():
-        print(
-            f"   = {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
-        )
+    # Preparar SQL para cabecera y detalle (mismo patrón que auto_order_collection)
+    sql_header = text(
+        """
+        SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no, 
+        :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations, 
+        :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount, 
+        :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
+        """
+    )
+
+    sql_detail = text(
+        """
+        SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product, 
+        :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations, 
+        :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type, 
+        :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code, 
+        :p_change_price)
+        """
+    )
+
+    load_correlative = None
+    download_correlative = None
+
+    try:
+        # Operación de CARGA (sobrantes)
+        if positive_diffs:
+            header_params_load = {
+                "p_correlative": None,
+                "p_operation_type": "LOAD",  # tipo lógico para ajustes de carga
+                "p_document_no": None,
+                "p_emission_date": datetime.now().date(),
+                "p_wait": True,
+                "p_description": f"Ajuste de inventario (Sobrantes) {store.description if store else store_code}",
+                "p_user_code": user_code,
+                "p_station": "00",
+                "p_store": store_code,
+                "p_locations": "00",
+                "p_destination_store": store_code,
+                "p_destination_location": "00",
+                "p_operation_comments": "Generado desde conteo físico Toolbox (sobrantes)",
+                "p_total_amount": 0.0,
+                "p_total_net": 0.0,
+                "p_total_tax": 0.0,
+                "p_total": 0.0,
+                "p_coin_code": "02",
+                "p_internal_use": False,
+            }
+
+            load_correlative = db.session.execute(sql_header, header_params_load).scalar()
+            if not load_correlative:
+                raise Exception("La DB no devolvió ID de operación de carga.")
+
+            for code, data in positive_diffs.items():
+                # Obtener datos maestros del producto
+                data_row = (
+                    db.session.query(ProductsUnit, Product, Tax)
+                    .join(Product, ProductsUnit.product_code == Product.code)
+                    .outerjoin(Tax, Product.buy_tax == Tax.code)
+                    .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
+                    .first()
+                )
+
+                if not data_row:
+                    print(f"OMITIDO (carga): {code} falta info maestra.")
+                    continue
+
+                pu, prod, tax = data_row
+
+                detail_params = {
+                    "p_main_correlative": load_correlative,
+                    "p_line": 0,
+                    "p_code_product": code,
+                    "p_description_product": prod.description,
+                    "p_referenc": prod.referenc,
+                    "p_mark": prod.mark,
+                    "p_model": prod.model,
+                    "p_amount": float(data["difference"]),  # sobrante > 0
+                    "p_store": store_code,
+                    "p_locations": "00",
+                    "p_destination_store": store_code,
+                    "p_destination_location": "00",
+                    "p_unit": int(pu.correlative),
+                    "p_conversion_factor": 0.0,
+                    "p_unit_type": 0,
+                    "p_unitary_cost": 0.0,
+                    "p_buy_tax": prod.buy_tax,
+                    "p_aliquot": tax.aliquot if tax else 0.0,
+                    "p_total_cost": 0.0,
+                    "p_total_tax": 0.0,
+                    "p_total": 0.0,
+                    "p_coin_code": "02",
+                    "p_change_price": False,
+                }
+                db.session.execute(sql_detail, detail_params)
+
+        # Operación de DESCARGA (faltantes)
+        if negative_diffs:
+            header_params_down = {
+                "p_correlative": None,
+                "p_operation_type": "DOWNLOAD",  # tipo lógico para ajustes de descarga
+                "p_document_no": None,
+                "p_emission_date": datetime.now().date(),
+                "p_wait": True,
+                "p_description": f"Ajuste de inventario (Faltantes) {store.description if store else store_code}",
+                "p_user_code": user_code,
+                "p_station": "00",
+                "p_store": store_code,
+                "p_locations": "00",
+                "p_destination_store": store_code,
+                "p_destination_location": "00",
+                "p_operation_comments": "Generado desde conteo físico Toolbox (faltantes)",
+                "p_total_amount": 0.0,
+                "p_total_net": 0.0,
+                "p_total_tax": 0.0,
+                "p_total": 0.0,
+                "p_coin_code": "02",
+                "p_internal_use": False,
+            }
+
+            download_correlative = db.session.execute(sql_header, header_params_down).scalar()
+            if not download_correlative:
+                raise Exception("La DB no devolvió ID de operación de descarga.")
+
+            for code, data in negative_diffs.items():
+                data_row = (
+                    db.session.query(ProductsUnit, Product, Tax)
+                    .join(Product, ProductsUnit.product_code == Product.code)
+                    .outerjoin(Tax, Product.buy_tax == Tax.code)
+                    .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
+                    .first()
+                )
+
+                if not data_row:
+                    print(f"OMITIDO (descarga): {code} falta info maestra.")
+                    continue
+
+                pu, prod, tax = data_row
+
+                detail_params = {
+                    "p_main_correlative": download_correlative,
+                    "p_line": 0,
+                    "p_code_product": code,
+                    "p_description_product": prod.description,
+                    "p_referenc": prod.referenc,
+                    "p_mark": prod.mark,
+                    "p_model": prod.model,
+                    "p_amount": abs(float(data["difference"])),  # usar valor absoluto de la diferencia negativa
+                    "p_store": store_code,
+                    "p_locations": "00",
+                    "p_destination_store": store_code,
+                    "p_destination_location": "00",
+                    "p_unit": int(pu.correlative),
+                    "p_conversion_factor": 0.0,
+                    "p_unit_type": 0,
+                    "p_unitary_cost": 0.0,
+                    "p_buy_tax": prod.buy_tax,
+                    "p_aliquot": tax.aliquot if tax else 0.0,
+                    "p_total_cost": 0.0,
+                    "p_total_tax": 0.0,
+                    "p_total": 0.0,
+                    "p_coin_code": "02",
+                    "p_change_price": False,
+                }
+                db.session.execute(sql_detail, detail_params)
+
+        # Registrar / actualizar historial de conteo por producto
+        today = datetime.now().date()
+        for code, item in store_counters.items():
+            if isinstance(item, dict):
+                system_qty = float(item.get("system_qty", 0) or 0)
+                counted = float(item.get("counted", 0) or 0)
+                difference = float(item.get("difference", counted - system_qty) or 0)
+            else:
+                counted = float(item or 0)
+                system_qty = 0.0
+                difference = counted - system_qty
+
+            history = ProductsCounterHistory.query.filter_by(
+                product_code=code, store_code=store_code
+            ).first()
+            if not history:
+                history = ProductsCounterHistory(
+                    product_code=code,
+                    store_code=store_code,
+                    user_code=user_code,
+                )
+                db.session.add(history)
+
+            history.user_code = user_code
+            history.count_date = today
+            history.system_qty = system_qty
+            history.counted_qty = counted
+            history.difference = difference
+
+            # Asociar operaciones de carga/descarga según el signo de la diferencia
+            if difference > 0 and load_correlative:
+                history.operation_correlative_up = load_correlative
+                history.operation_correlative_down = None
+            elif difference < 0 and download_correlative:
+                history.operation_correlative_down = download_correlative
+                history.operation_correlative_up = None
+            else:
+                # Sin ajuste
+                history.operation_correlative_up = None
+                history.operation_correlative_down = None
+
+        db.session.commit()
+        flash("Operaciones de ajuste de inventario generadas correctamente.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al generar operaciones de ajuste: {e}")
+        flash("Error al generar las operaciones de ajuste de inventario.", "error")
 
     return redirect(url_for("inventory.product_counter"))
 
