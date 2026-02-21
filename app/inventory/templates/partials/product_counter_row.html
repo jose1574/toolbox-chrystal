@@ -1,0 +1,25 @@
+<tr>
+    <!-- datos ocultos para que HTMX pueda enviarlos al borrar -->
+    <input type="hidden" name="product_code" value="{{ product.code }}">
+    <input type="hidden" name="store_code" value="{{ store_code }}">
+
+    <td>{{ product.code }}</td>
+    <td>{{ product.description }}</td>
+    <td>{{ product.referenc }}</td>
+    <td>{{ unit.description }}</td>
+    <td>{{ system_qty }}</td>
+    <td>{{ counted_amount }}</td>
+    <td>{{ difference }}</td>
+    <td>
+        <button
+            type="button"
+            hx-post="{{ url_for('inventory.remove_product_counter_row') }}"
+            hx-target="closest tr"
+            hx-include="closest tr"
+            hx-swap="outerHTML"
+            class="text-red-600 hover:text-red-800 text-xs font-medium"
+        >
+            Quitar
+        </button>
+    </td>
+</tr>

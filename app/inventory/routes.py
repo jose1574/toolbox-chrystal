@@ -1,4 +1,13 @@
-from flask import render_template, request, flash, redirect, url_for, Response, make_response
+from flask import (
+    render_template,
+    request,
+    flash,
+    redirect,
+    url_for,
+    Response,
+    make_response,
+    session,
+)
 import json
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -325,7 +334,9 @@ def save_auto_order_collection():
             return resp
 
         # Flujo normal: redirigir directamente al PDF (abre en nueva pestaña por target del navegador)
-        return redirect(url_for("inventory.order_collection_report", order_id=document_no))
+        return redirect(
+            url_for("inventory.order_collection_report", order_id=document_no)
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -380,8 +391,6 @@ def order_collection_report(order_id):
     )
 
 
-
-
 @inventory_bp.route("/check_order", methods=["GET", "POST"])
 @login_required
 def check_order():
@@ -392,10 +401,9 @@ def check_order():
     iod = aliased(InventoryOperationDetail)
     pu = aliased(ProductsUnit)
     p = aliased(Product)
-    u = aliased(Unit) 
+    u = aliased(Unit)
     store_dst = aliased(Store)
     store_origin = aliased(Store)
-
 
     if request.method == "POST":
         order_id = request.form.get("order_id", type=int)
@@ -415,7 +423,6 @@ def check_order():
             return render_template(
                 "check_order_collection.html", order=None, details=[], error=error
             )
-
 
         stmt = (
             select(
@@ -461,13 +468,15 @@ def check_order():
         order_details = results
 
         return render_template(
-            "check_order_collection.html", 
-            order=order_header, 
-            details=order_details, 
-            error=error
+            "check_order_collection.html",
+            order=order_header,
+            details=order_details,
+            error=error,
         )
 
-    return render_template("check_order_collection.html", order=None, details=[], error=None)
+    return render_template(
+        "check_order_collection.html", order=None, details=[], error=None
+    )
 
 
 @inventory_bp.route("/search_product", methods=["GET"])
@@ -475,19 +484,25 @@ def check_order():
 def search_product():
     code_product = request.args.get("code-product")
     order_id = request.args.get("order_id", type=int)
-    
+
     if not code_product or not order_id:
-        return render_template("partials/check_order_product_modal.html", item=None, product_description="", unit_description="", order=None)
-    
+        return render_template(
+            "partials/check_order_product_modal.html",
+            item=None,
+            product_description="",
+            unit_description="",
+            order=None,
+        )
+
     # Buscar el código principal del producto usando products_codes
     products_code = ProductsCode.query.filter_by(other_code=code_product).first()
     main_code = products_code.main_code if products_code else code_product
-    
+
     # Buscar el producto en los detalles de la orden usando el código principal
     detail = InventoryOperationDetail.query.filter_by(
         main_correlative=order_id, code_product=main_code
     ).first()
-    
+
     if not detail:
         # Producto no encontrado en la orden, validar existencia en catálogo
         product = Product.query.filter_by(code=main_code).first()
@@ -498,49 +513,81 @@ def search_product():
                     "focus_id": "code-product",
                 }
             }
-            return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
-        
+            return Response(
+                "",
+                status=404,
+                headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+            )
+
         # Obtener la orden
         order = InventoryOperation.query.get(order_id)
         if not order:
-            return render_template("partials/check_order_product_modal.html", item=None, product_description="Orden no encontrada.", unit_description="", order=None, is_new=False)
-        
+            return render_template(
+                "partials/check_order_product_modal.html",
+                item=None,
+                product_description="Orden no encontrada.",
+                unit_description="",
+                order=None,
+                is_new=False,
+            )
+
         # Obtener unidad principal
-        pu = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
+        pu = ProductsUnit.query.filter_by(
+            product_code=main_code, main_unit=True
+        ).first()
         if not pu:
-            return render_template("partials/check_order_product_modal.html", item=None, product_description="Unidad principal no encontrada para el producto.", unit_description="", order=None, is_new=False)
-        
+            return render_template(
+                "partials/check_order_product_modal.html",
+                item=None,
+                product_description="Unidad principal no encontrada para el producto.",
+                unit_description="",
+                order=None,
+                is_new=False,
+            )
+
         unit = Unit.query.filter_by(code=pu.unit).first()
-        
+
         # Obtener cantidad en depósito origen
-        stock = ProductsStock.query.filter_by(product_code=main_code, store=order.store).first()
+        stock = ProductsStock.query.filter_by(
+            product_code=main_code, store=order.store
+        ).first()
         stock_amount = stock.stock if stock else 0.0
-        
+
         # Renderizar modal para agregar
-        return render_template("partials/check_order_product_modal.html", 
-                               item=None, 
-                               product_description=product.description,
-                               unit_description=unit.description if unit else "Desconocida",
-                               order=order,
-                               is_new=True,
-                               main_code=main_code,
-                               stock_amount=stock_amount)
-    
+        return render_template(
+            "partials/check_order_product_modal.html",
+            item=None,
+            product_description=product.description,
+            unit_description=unit.description if unit else "Desconocida",
+            order=order,
+            is_new=True,
+            main_code=main_code,
+            stock_amount=stock_amount,
+        )
+
     # Obtener descripción del producto y unidad
     product = Product.query.filter_by(code=main_code).first()
-    unit = Unit.query.join(ProductsUnit).filter(ProductsUnit.correlative == detail.unit).first()
+    unit = (
+        Unit.query.join(ProductsUnit)
+        .filter(ProductsUnit.correlative == detail.unit)
+        .first()
+    )
 
     # Obtener cantidad en depósito origen para validación de conteo
-    stock = ProductsStock.query.filter_by(product_code=main_code, store=detail.store).first()
+    stock = ProductsStock.query.filter_by(
+        product_code=main_code, store=detail.store
+    ).first()
     stock_amount = stock.stock if stock else 0.0
-    
+
     # Renderizar el modal con datos
-    return render_template("partials/check_order_product_modal.html", 
-                           item=detail, 
-                           product_description=product.description if product else "Desconocido",
-                           unit_description=unit.description if unit else "Desconocida",
-                           order=InventoryOperation.query.get(order_id),
-                           stock_amount=stock_amount)
+    return render_template(
+        "partials/check_order_product_modal.html",
+        item=detail,
+        product_description=product.description if product else "Desconocido",
+        unit_description=unit.description if unit else "Desconocida",
+        order=InventoryOperation.query.get(order_id),
+        stock_amount=stock_amount,
+    )
 
 
 @inventory_bp.route("/add_product_to_order", methods=["POST"])
@@ -548,9 +595,9 @@ def search_product():
 def add_product_to_order():
     order_id = request.form.get("order_id", type=int)
     code_product = request.form.get("code_product")
-    
+
     print(f"Agregando producto: order_id={order_id}, code_product={code_product}")
-    
+
     if not order_id or not code_product:
         print("Datos incompletos")
         error_payload = {
@@ -559,19 +606,21 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
-    
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     # Buscar el código principal
     products_code = ProductsCode.query.filter_by(other_code=code_product).first()
     main_code = products_code.main_code if products_code else code_product
-    
+
     print(f"Main code: {main_code}")
-    
+
     # Verificar si ya existe
     detail = InventoryOperationDetail.query.filter_by(
         main_correlative=order_id, code_product=main_code
     ).first()
-    
+
     if detail:
         print("Producto ya agregado")
         error_payload = {
@@ -580,13 +629,15 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=409, headers={"HX-Trigger": json.dumps(error_payload)})
-    
+        return Response(
+            "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     # Obtener datos
     product = Product.query.filter_by(code=main_code).first()
     order = InventoryOperation.query.get(order_id)
     pu = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
-    
+
     if not product:
         error_payload = {
             "product-error": {
@@ -594,7 +645,9 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload)})
+        return Response(
+            "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     if not order:
         error_payload = {
@@ -603,7 +656,9 @@ def add_product_to_order():
                 "focus_id": "order_id",
             }
         }
-        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload)})
+        return Response(
+            "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     if not pu:
         error_payload = {
@@ -612,14 +667,18 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     tax = Tax.query.filter_by(code=product.buy_tax).first() if product.buy_tax else None
-    
+
     print(f"Product: {product}, Order: {order}, PU: {pu}, Tax: {tax}")
 
     # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter_by(product_code=main_code, store=order.store).first()
+    stock = ProductsStock.query.filter_by(
+        product_code=main_code, store=order.store
+    ).first()
     stock_amount = stock.stock if stock else 0.0
     if stock_amount <= 0:
         error_payload = {
@@ -628,13 +687,17 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
-    
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     try:
         # Calcular siguiente línea respetando la restricción unique de la columna line (es global, no por orden)
-        max_line_global = db.session.query(func.max(InventoryOperationDetail.line)).scalar()
+        max_line_global = db.session.query(
+            func.max(InventoryOperationDetail.line)
+        ).scalar()
         next_line = (max_line_global or 0) + 1
-        
+
         # Crear detalle
         new_detail = InventoryOperationDetail(
             main_correlative=order_id,
@@ -646,9 +709,9 @@ def add_product_to_order():
             model=product.model,
             amount=0.0,
             store=order.store,
-            locations='00',
+            locations="00",
             destination_store=order.destination_store,
-            destination_location='00',
+            destination_location="00",
             unit=pu.correlative,
             conversion_factor=0.0,
             unit_type=0,
@@ -658,18 +721,18 @@ def add_product_to_order():
             total_cost=0.0,
             total_tax=0.0,
             total=0.0,
-            coin_code='02',
-            change_price=False
+            coin_code="02",
+            change_price=False,
         )
-        
+
         db.session.add(new_detail)
         db.session.commit()
-        
+
         print("Producto agregado exitosamente")
-        
+
         # Obtener unidad para descripción
         unit = Unit.query.filter_by(code=pu.unit).first()
-        
+
         # Renderizar la fila y devolver, notificando al cliente vía HX-Trigger
         trigger_payload = {"product-added": {"code_product": main_code}}
         return Response(
@@ -682,7 +745,7 @@ def add_product_to_order():
             ),
             headers={"HX-Trigger": json.dumps(trigger_payload)},
         )
-    
+
     except Exception as e:
         db.session.rollback()
         print(f"Error al agregar producto: {e}")
@@ -692,7 +755,9 @@ def add_product_to_order():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=500, headers={"HX-Trigger": json.dumps(error_payload)})
+        return Response(
+            "", status=500, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
 
 @inventory_bp.route("/update_counted_amount", methods=["POST"])
@@ -701,21 +766,23 @@ def update_counted_amount():
     order_id = request.form.get("order_id", type=int)
     code_product = request.form.get("code_product")
     counted_amount = request.form.get("counted_amount", type=float)
-    
+
     if not order_id or not code_product or counted_amount is None:
         return "Error: Datos incompletos."
-    
+
     # Actualizar el detalle (por ahora, solo en memoria, pero luego en BD)
     # Para simplificar, devolver HTML actualizado para la fila
     detail = InventoryOperationDetail.query.filter_by(
         main_correlative=order_id, code_product=code_product
     ).first()
-    
+
     if not detail:
         return "Producto no encontrado."
 
     # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter_by(product_code=code_product, store=detail.store).first()
+    stock = ProductsStock.query.filter_by(
+        product_code=code_product, store=detail.store
+    ).first()
     stock_amount = stock.stock if stock else 0.0
     if counted_amount > stock_amount:
         error_payload = {
@@ -724,13 +791,15 @@ def update_counted_amount():
                 "focus_id": "counted-amount",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
-    
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     expected = detail.amount
     diff = counted_amount - expected
-    
+
     status_html = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">Contado</span>'
-    
+
     trigger_payload = {
         "counted-updated": {
             "code_product": code_product,
@@ -748,19 +817,19 @@ def update_counted_amount():
 def delete_product_from_order():
     order_id = request.form.get("order_id", type=int)
     code_product = request.form.get("code_product")
-    
+
     if not order_id or not code_product:
         return "Error: Datos incompletos.", 400
-    
+
     # Eliminar de la BD
     detail = InventoryOperationDetail.query.filter_by(
         main_correlative=order_id, code_product=code_product
     ).first()
-    
+
     if detail:
         db.session.delete(detail)
         db.session.commit()
-    
+
     # Responder vacío para hx-swap=delete
     return ""
 
@@ -773,29 +842,29 @@ def save_order_check():
     if not order_id:
         flash("ID de orden inválido.", "error")
         return redirect(url_for("inventory.check_order"))
-    
+
     order = InventoryOperation.query.get(order_id)
     if not order:
         flash("Orden no encontrada.", "error")
         return redirect(url_for("inventory.check_order"))
-    
+
     # Actualizar las cantidades contadas en la BD para los productos restantes
     for key, value in request.form.items():
         if key.startswith("counted_"):
             code_product = key[8:]  # Remove "counted_"
             counted_amount = float(value) if value else 0
-            
+
             detail = InventoryOperationDetail.query.filter_by(
                 main_correlative=order_id, code_product=code_product
             ).first()
-            
+
             if detail:
                 # Actualizar amount con la cantidad contada
                 detail.amount = counted_amount
 
     # Actualizar descripción de cabecera para reflejar el chequeo
     order.description = "orden de recoleccion chequeada"
-    
+
     db.session.commit()
 
     flash("Orden de recolección chequeada correctamente.", "success")
@@ -837,25 +906,35 @@ def check_transfer_operation():
                 error_message="Por favor, ingrese un correlativo válido.",
                 message=message,
             )
-        
+
         # Buscar la operación de traslado procesada
         operation = InventoryOperation.query.filter_by(
             correlative=int(correlative),
             operation_type="TRANSFER",  # Tipo de operación para traslados
             wait=False,
         ).first()
-        
+
         if not operation:
-            return render_template("check_transfer_operation.html", show_products=False, error_message="No se encontró una operación de traslado procesado con ese correlativo.")
-        
+            return render_template(
+                "check_transfer_operation.html",
+                show_products=False,
+                error_message="No se encontró una operación de traslado procesado con ese correlativo.",
+            )
+
         # Obtener detalles con productos
-        details = InventoryOperationDetail.query.filter_by(
-            main_correlative=operation.correlative
-        ).options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
-        ).all()
-        
+        details = (
+            InventoryOperationDetail.query.filter_by(
+                main_correlative=operation.correlative
+            )
+            .options(
+                joinedload(InventoryOperationDetail.product),
+                joinedload(InventoryOperationDetail.products_unit).joinedload(
+                    ProductsUnit.unit1
+                ),
+            )
+            .all()
+        )
+
         return render_template(
             "check_transfer_operation.html",
             operation=operation,
@@ -863,7 +942,7 @@ def check_transfer_operation():
             show_products=True,
             message=message,
         )
-    
+
     return render_template(
         "check_transfer_operation.html",
         show_products=False,
@@ -882,17 +961,26 @@ def search_product_in_transfer(operation_id):
                 "focus_id": "product_code",
             }
         }
-        return Response("", status=400, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
-    
+        return Response(
+            "",
+            status=400,
+            headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+        )
+
     # Buscar el producto en la operación
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=operation_id,
-        code_product=product_code
-    ).options(
-        joinedload(InventoryOperationDetail.product),
-        joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
-    ).first()
-    
+    detail = (
+        InventoryOperationDetail.query.filter_by(
+            main_correlative=operation_id, code_product=product_code
+        )
+        .options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(
+                ProductsUnit.unit1
+            ),
+        )
+        .first()
+    )
+
     if not detail:
         error_payload = {
             "search-error": {
@@ -900,53 +988,77 @@ def search_product_in_transfer(operation_id):
                 "focus_id": "product_code",
             }
         }
-        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
-    
-    ##busca parametros de existencia minimia y maxima en el deposito de destino 
-    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=detail.destination_store).first()
+        return Response(
+            "",
+            status=404,
+            headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+        )
 
-    
+    ##busca parametros de existencia minimia y maxima en el deposito de destino
+    failure_info = ProductsFailure.query.filter_by(
+        product_code=product_code, store_code=detail.destination_store
+    ).first()
+
     # Devolver el modal renderizado
-    # return render_template("partials/product_modal.html", 
-    #                      detail=detail, 
+    # return render_template("partials/product_modal.html",
+    #                      detail=detail,
     #                      operation_id=operation_id,
     #                      destination_store=detail.destination_store,
     #                      product_failure=failure_info)
-    return redirect(url_for("inventory.product_modal", operation_id=operation_id, product_code=product_code))
+    return redirect(
+        url_for(
+            "inventory.product_modal",
+            operation_id=operation_id,
+            product_code=product_code,
+        )
+    )
 
 
-@inventory_bp.route("/check_transfer_operation/modal/<int:operation_id>/<product_code>", methods=["GET"])
+@inventory_bp.route(
+    "/check_transfer_operation/modal/<int:operation_id>/<product_code>", methods=["GET"]
+)
 @login_required
 def product_modal(operation_id, product_code):
     # Buscar el producto en la operación
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=operation_id,
-        code_product=product_code
-    ).options(
-        joinedload(InventoryOperationDetail.product),
-        joinedload(InventoryOperationDetail.products_unit).joinedload(ProductsUnit.unit1)
-    ).first()
-    
+    detail = (
+        InventoryOperationDetail.query.filter_by(
+            main_correlative=operation_id, code_product=product_code
+        )
+        .options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(
+                ProductsUnit.unit1
+            ),
+        )
+        .first()
+    )
+
     if not detail:
         return "Producto no encontrado", 404
-    
-    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=detail.destination_store).first()
-    
-    return render_template("partials/product_modal.html", 
-                         detail=detail, 
-                         operation_id=operation_id,
-                         product_failure=failure_info,
-                         destination_store=detail.destination_store
-                         )
+
+    failure_info = ProductsFailure.query.filter_by(
+        product_code=product_code, store_code=detail.destination_store
+    ).first()
+
+    return render_template(
+        "partials/product_modal.html",
+        detail=detail,
+        operation_id=operation_id,
+        product_failure=failure_info,
+        destination_store=detail.destination_store,
+    )
 
 
-@inventory_bp.route("/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<destination_store>", methods=["POST"])
+@inventory_bp.route(
+    "/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<destination_store>",
+    methods=["POST"],
+)
 @login_required
 def update_count(operation_id, product_code, destination_store):
     counted_amount = request.form.get("counted_amount", type=float, default=0)
     minimal_stock = request.form.get("minimal_stock", type=float, default=0)
     maximum_stock = request.form.get("maximum_stock", type=float, default=0)
-    
+
     # Validaciones
     if counted_amount < 0:
         error_payload = {
@@ -955,14 +1067,15 @@ def update_count(operation_id, product_code, destination_store):
                 "focus_id": "countedAmount",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
-    
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     # Verificar que el producto existe en la operación
     detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=operation_id,
-        code_product=product_code
+        main_correlative=operation_id, code_product=product_code
     ).first()
-    
+
     if not detail:
         error_payload = {
             "counted-error": {
@@ -970,10 +1083,14 @@ def update_count(operation_id, product_code, destination_store):
                 "focus_id": "countedAmount",
             }
         }
-        return Response("", status=422, headers={"HX-Trigger": json.dumps(error_payload)})
-    
-    ##actualiza products_failures 
-    failure_info = ProductsFailure.query.filter_by(product_code=product_code, store_code=destination_store).first()
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    ##actualiza products_failures
+    failure_info = ProductsFailure.query.filter_by(
+        product_code=product_code, store_code=destination_store
+    ).first()
 
     if not failure_info:
         failure_info = ProductsFailure(
@@ -981,7 +1098,7 @@ def update_count(operation_id, product_code, destination_store):
             store_code=destination_store,
             minimal_stock=minimal_stock or 0,
             maximum_stock=maximum_stock or 0,
-            location=""
+            location="",
         )
         db.session.add(failure_info)
     else:
@@ -1003,34 +1120,42 @@ def update_count(operation_id, product_code, destination_store):
     )
 
 
-
 @inventory_bp.route("/product_params", methods=["GET", "POST"])
 @login_required
 def product_params():
     stores = Store.query.all()
-    
-    if request.method == 'POST':
-        store_code = request.form.get('store_code')
-        code_product = request.form.get('code-product')
+
+    if request.method == "POST":
+        store_code = request.form.get("store_code")
+        code_product = request.form.get("code-product")
 
         if store_code and not code_product:
             selected_store = Store.query.filter_by(code=store_code).first()
-            return render_template("product_params.html", stores=stores, selected_store=selected_store)
-        
+            return render_template(
+                "product_params.html", stores=stores, selected_store=selected_store
+            )
 
         if code_product and store_code:
             # Buscar código principal si es código alterno
-            products_code = ProductsCode.query.filter_by(other_code=code_product).first()
+            products_code = ProductsCode.query.filter_by(
+                other_code=code_product
+            ).first()
             main_code = products_code.main_code if products_code else code_product
-            
+
             product = Product.query.filter_by(code=main_code).first()
             if not product:
                 flash("Producto no encontrado.", "error")
                 selected_store = Store.query.filter_by(code=store_code).first()
-                return render_template("product_params.html", stores=stores, selected_store=selected_store)
-            
-            product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
-            product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+                return render_template(
+                    "product_params.html", stores=stores, selected_store=selected_store
+                )
+
+            product_failure = ProductsFailure.query.filter_by(
+                product_code=main_code, store_code=store_code
+            ).first()
+            product_stock = ProductsStock.query.filter_by(
+                product_code=main_code, store=store_code
+            ).first()
 
             product_params = {
                 "code": main_code,
@@ -1039,12 +1164,31 @@ def product_params():
                 "mark": product.mark,
                 "model": product.model,
                 "stock": product_stock.stock if product_stock else 0,
-                "minimal_stock": product_failure.minimal_stock if product_failure and product_failure.minimal_stock is not None else 0,
-                "maximum_stock": product_failure.maximum_stock if product_failure and product_failure.maximum_stock is not None else 0,
-                "location": product_failure.location if product_failure and product_failure.location and product_failure.location else "",
+                "minimal_stock": (
+                    product_failure.minimal_stock
+                    if product_failure and product_failure.minimal_stock is not None
+                    else 0
+                ),
+                "maximum_stock": (
+                    product_failure.maximum_stock
+                    if product_failure and product_failure.maximum_stock is not None
+                    else 0
+                ),
+                "location": (
+                    product_failure.location
+                    if product_failure
+                    and product_failure.location
+                    and product_failure.location
+                    else ""
+                ),
             }
             selected_store = Store.query.filter_by(code=store_code).first()
-            return render_template("product_params.html", product_params=product_params, selected_store=selected_store, stores=stores)
+            return render_template(
+                "product_params.html",
+                product_params=product_params,
+                selected_store=selected_store,
+                stores=stores,
+            )
 
     return render_template("product_params.html", stores=stores, selected_store=None)
 
@@ -1052,37 +1196,41 @@ def product_params():
 @inventory_bp.route("/product_params/save", methods=["POST"])
 @login_required
 def save_product_params():
-    store_code = request.form.get('store_code')
-    code_product = request.form.get('code-product')
-    
+    store_code = request.form.get("store_code")
+    code_product = request.form.get("code-product")
+
     if not store_code or not code_product:
         flash("Datos incompletos.", "error")
-        return redirect(url_for('inventory.product_params'))
-    
+        return redirect(url_for("inventory.product_params"))
+
     # Buscar código principal si es código alterno
     products_code = ProductsCode.query.filter_by(other_code=code_product).first()
     main_code = products_code.main_code if products_code else code_product
-    
+
     # Guardar parámetros para el producto específico
-    min_stock = request.form.get('minimal_stock', '0').strip()
-    max_stock = request.form.get('maximum_stock', '0').strip()
-    location = request.form.get('location', '').strip()
-    
+    min_stock = request.form.get("minimal_stock", "0").strip()
+    max_stock = request.form.get("maximum_stock", "0").strip()
+    location = request.form.get("location", "").strip()
+
     try:
         min_stock = int(min_stock) if min_stock else 0
         max_stock = int(max_stock) if max_stock else 0
     except ValueError:
         min_stock = 0
         max_stock = 0
-    
+
     # Validaciones
     if min_stock < 0 or max_stock < 0:
         flash("Los valores de stock deben ser números positivos.", "error")
         # Recargar la página con los datos actuales
         product = Product.query.filter_by(code=main_code).first()
-        product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
-        product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
-        
+        product_failure = ProductsFailure.query.filter_by(
+            product_code=main_code, store_code=store_code
+        ).first()
+        product_stock = ProductsStock.query.filter_by(
+            product_code=main_code, store=store_code
+        ).first()
+
         product_params = {
             "code": main_code,
             "description": product.description if product else "",
@@ -1096,15 +1244,24 @@ def save_product_params():
         }
         selected_store = Store.query.filter_by(code=store_code).first()
         stores = Store.query.all()
-        return render_template("product_params.html", stores=stores, selected_store=selected_store, product_params=product_params)
-    
+        return render_template(
+            "product_params.html",
+            stores=stores,
+            selected_store=selected_store,
+            product_params=product_params,
+        )
+
     if min_stock > max_stock:
         flash("El stock mínimo no puede ser mayor que el máximo.", "error")
         # Recargar la página con los datos actuales
         product = Product.query.filter_by(code=main_code).first()
-        product_failure = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
-        product_stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
-        
+        product_failure = ProductsFailure.query.filter_by(
+            product_code=main_code, store_code=store_code
+        ).first()
+        product_stock = ProductsStock.query.filter_by(
+            product_code=main_code, store=store_code
+        ).first()
+
         product_params = {
             "code": main_code,
             "description": product.description if product else "",
@@ -1118,10 +1275,17 @@ def save_product_params():
         }
         selected_store = Store.query.filter_by(code=store_code).first()
         stores = Store.query.all()
-        return render_template("product_params.html", stores=stores, selected_store=selected_store, product_params=product_params)
-    
-    pf = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
-    
+        return render_template(
+            "product_params.html",
+            stores=stores,
+            selected_store=selected_store,
+            product_params=product_params,
+        )
+
+    pf = ProductsFailure.query.filter_by(
+        product_code=main_code, store_code=store_code
+    ).first()
+
     if pf:
         pf.minimal_stock = min_stock
         pf.maximum_stock = max_stock
@@ -1132,17 +1296,19 @@ def save_product_params():
             store_code=store_code,
             minimal_stock=min_stock,
             maximum_stock=max_stock,
-            location=location
+            location=location,
         )
         db.session.add(pf)
-    
+
     db.session.commit()
     flash("Parámetros del producto guardados correctamente.", "success")
-    
+
     # Limpiar la búsqueda y mostrar solo el input para buscar otro producto
     selected_store = Store.query.filter_by(code=store_code).first()
     stores = Store.query.all()
-    return render_template("product_params.html", stores=stores, selected_store=selected_store)
+    return render_template(
+        "product_params.html", stores=stores, selected_store=selected_store
+    )
 
 
 ## reporte de traslado PDF
@@ -1191,25 +1357,25 @@ def transfer_operation_report(order_id):
 def products_locations():
 
     stores = Store.query.all()
-    
+
     store_code = request.values.get("store_code")
     location = request.values.get("location")
 
     if store_code:
         store_obj = Store.query.filter_by(code=store_code).first()
-        
+
         if not store_obj:
-             flash("Depósito no válido.", "error")
-             return render_template("products_locations.html", stores=stores)
+            flash("Depósito no válido.", "error")
+            return render_template("products_locations.html", stores=stores)
 
         if location:
-             return render_template(
+            return render_template(
                 "products_locations.html",
                 stores=stores,
                 store=store_obj,
                 location=location,
             )
-        
+
         return render_template(
             "products_locations.html",
             stores=stores,
@@ -1219,25 +1385,23 @@ def products_locations():
     return render_template("products_locations.html", stores=stores)
 
 
-
 @inventory_bp.route("/update_product_location", methods=["POST"])
-@login_required 
+@login_required
 def update_product_location():
     store_code = request.form.get("store_code")
     location = request.form.get("location")
 
     products = request.form.getlist("products_codes")
 
-    #validaciones 
+    # validaciones
     if not store_code:
         flash("Depósito no válido.", "error")
         return redirect(url_for("inventory.products_locations"))
-    
+
     if not location:
         flash("Ubicación no válida.", "error")
         return redirect(url_for("inventory.products_locations"))
 
-    
     if not products:
         flash("No se seleccionaron productos para actualizar.", "error")
         return redirect(url_for("inventory.products_locations"))
@@ -1245,9 +1409,11 @@ def update_product_location():
     products_count = 0
     try:
         for code in products:
-            pf = ProductsFailure.query.filter_by(product_code=code, store_code=store_code).first()
-            
-            #actualiza la ubicación del producto en products_failure    
+            pf = ProductsFailure.query.filter_by(
+                product_code=code, store_code=store_code
+            ).first()
+
+            # actualiza la ubicación del producto en products_failure
             if pf:
                 pf.location = location
             else:
@@ -1256,20 +1422,27 @@ def update_product_location():
                     store_code=store_code,
                     minimal_stock=0,
                     maximum_stock=0,
-                    location=location
+                    location=location,
                 )
                 db.session.add(pf)
             products_count += 1
 
-        db.session.commit()        
+        db.session.commit()
         # Redirigir con los parámetros de GET para mantener el estado
-        return redirect(url_for("inventory.products_locations", store_code=store_code, location=location))
+        return redirect(
+            url_for(
+                "inventory.products_locations", store_code=store_code, location=location
+            )
+        )
     except Exception as e:
         db.session.rollback()
         flash("Error al actualizar ubicaciones. Intente nuevamente.", "error")
         print(f"Error updating product locations: {e}")
-        return redirect(url_for("inventory.products_locations", store_code=store_code, location=location))
-    
+        return redirect(
+            url_for(
+                "inventory.products_locations", store_code=store_code, location=location
+            )
+        )
 
 
 ## buscador de productos para asignar ubicación en masa
@@ -1285,7 +1458,11 @@ def search_products_for_location():
                 "focus_id": "product_code",
             }
         }
-        return Response("", status=400, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
+        return Response(
+            "",
+            status=400,
+            headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+        )
 
     # Resolver código alterno a código principal
     products_code = ProductsCode.query.filter_by(other_code=product_code).first()
@@ -1300,14 +1477,289 @@ def search_products_for_location():
                 "focus_id": "product_code",
             }
         }
-        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"})
-    
+        return Response(
+            "",
+            status=404,
+            headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+        )
+
     # Obtener ubicación actual si existe
     store_code = request.args.get("store_code")
-    
+
     pf = None
     if store_code:
-        pf = ProductsFailure.query.filter_by(product_code=main_code, store_code=store_code).first()
+        pf = ProductsFailure.query.filter_by(
+            product_code=main_code, store_code=store_code
+        ).first()
 
     return render_template("partials/product_row_location.html", product=product, pf=pf)
+
+
+@inventory_bp.route("/product_counter", methods=["GET", "POST"])
+@login_required
+def product_counter():
+    stores = Store.query.all()
+    store_code = request.values.get("store_code")
+    store = Store.query.filter_by(code=store_code).first() if store_code else None
+
+    # Reconstruir filas desde sesión para el usuario actual y el depósito seleccionado
+    counter_rows_html = ""
+    if store:
+        user_code = current_user.code
+        all_counters = session.get("product_counter", {}) or {}
+        user_counters = all_counters.get(user_code, {}) or {}
+        store_counters = user_counters.get(store.code, {}) or {}
+
+        rows = []
+        for code, item in store_counters.items():
+            product_row = Product.query.filter_by(code=code).first()
+            if not product_row:
+                continue
+
+            unit_rel = ProductsUnit.query.filter_by(product_code=code, main_unit=True).first()
+
+            if isinstance(item, dict):
+                qty = float(item.get("counted", 0))
+                sys_q = float(item.get("system_qty", 0))
+                diff = float(item.get("difference", qty - sys_q))
+            else:
+                qty = float(item)
+                sys_q = 0.0
+                diff = qty - sys_q
+
+            rows.append(
+                render_template(
+                    "partials/product_counter_row.html",
+                    product=product_row,
+                    system_qty=sys_q,
+                    unit=unit_rel.unit1 if unit_rel else None,
+                    counted_amount=qty,
+                    difference=diff,
+                    store_code=store.code,
+                )
+            )
+
+        counter_rows_html = "".join(rows)
+
+    return render_template(
+        "product_counter.html",
+        stores=stores,
+        store=store,
+        store_code=store_code,
+        counter_rows_html=counter_rows_html,
+    )
+
+
+@inventory_bp.route("/product_counter/search_product_counter/<store_code>")
+@login_required
+def search_product_counter(store_code):
+    product_code = request.args.get("product_code", "").strip()
+
+    # Resolver código alterno a código principal    
+    products_code = ProductsCode.query.filter_by(other_code=product_code).first()
+    main_code = products_code.main_code if products_code else product_code  
+
+    product_info = Product.query.filter_by(code=main_code).first() 
     
+    store = Store.query.filter_by(code=store_code).first()
+
+    stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+    unit = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
+
+    return render_template("partials/product_counter_modal.html", product=product_info, stock=stock, unit=unit.unit1, store=store)
+
+    
+    
+@inventory_bp.route("/product_counter/update_count", methods=["POST"])
+@login_required
+def update_product_counter():
+
+    product_code = request.form.get("product_code")
+    store_code = request.form.get("store_code")
+    counted_amount = request.form.get("counted_amount", type=float)
+    # existencia al momento en que se abrió el modal (snapshot)
+    system_qty = request.form.get("system_qty", type=float)
+
+    if not product_code or not store_code or counted_amount is None:
+        return "Datos incompletos", 400
+
+    # Si por alguna razón no vino system_qty, usamos 0.0 como base
+    if system_qty is None:
+        system_qty = 0.0
+
+    # Obtener datos de producto (no necesitamos volver a leer el stock)
+    product_info = Product.query.filter_by(code=product_code).first()
+    difference = float(counted_amount) - float(system_qty)
+
+    # Guardar/actualizar el conteo en sesión por usuario, depósito y producto
+    # Estructura:
+    #   product_counter[user_code][store_code][product_code] = {
+    #       "system_qty": <existencia en inventario>,
+    #       "counted": <cantidad contada>,
+    #       "difference": <counted - system_qty>,
+    #   }
+    user_code = current_user.code
+    all_counters = session.get("product_counter", {}) or {}
+    user_counters = all_counters.get(user_code, {}) or {}
+    store_counters = user_counters.get(store_code, {}) or {}
+
+    store_counters[product_code] = {
+        "system_qty": float(system_qty),
+        "counted": float(counted_amount),
+        "difference": float(difference),
+    }
+    user_counters[store_code] = store_counters
+    all_counters[user_code] = user_counters
+    session["product_counter"] = all_counters
+
+    # Reconstruir todas las filas para ese depósito a partir de la sesión
+    rows = []
+    for code, item in store_counters.items():
+        product_row = Product.query.filter_by(code=code).first()
+        if not product_row:
+            continue
+
+        unit_rel = ProductsUnit.query.filter_by(product_code=code, main_unit=True).first()
+
+        # Compatibilidad: si todavía hay datos antiguos (solo cantidad), recalcular
+        if isinstance(item, dict):
+            qty = float(item.get("counted", 0))
+            sys_q = float(item.get("system_qty", 0))
+            diff = float(item.get("difference", qty - sys_q))
+        else:
+            qty = float(item)
+            sys_q = 0.0
+            diff = qty - sys_q
+
+        rows.append(
+            render_template(
+                "partials/product_counter_row.html",
+                product=product_row,
+                system_qty=sys_q,
+                unit=unit_rel.unit1 if unit_rel else None,
+                counted_amount=qty,
+                difference=diff,
+                store_code=store_code,
+            )
+        )
+
+    return "".join(rows)
+
+
+@inventory_bp.route("/product_counter/remove_row", methods=["POST"])
+@login_required
+def remove_product_counter_row():
+    """Quita la fila del contador y actualiza el estado en sesión para el usuario actual."""
+    product_code = request.form.get("product_code")
+    store_code = request.form.get("store_code")
+
+    if not product_code or not store_code:
+        return "", 400
+
+    user_code = current_user.code
+    all_counters = session.get("product_counter", {}) or {}
+    user_counters = all_counters.get(user_code, {}) or {}
+    store_counters = user_counters.get(store_code, {}) or {}
+
+    if product_code in store_counters:
+        store_counters.pop(product_code, None)
+
+    if store_counters:
+        user_counters[store_code] = store_counters
+    else:
+        user_counters.pop(store_code, None)
+
+    if user_counters:
+        all_counters[user_code] = user_counters
+    else:
+        all_counters.pop(user_code, None)
+
+    session["product_counter"] = all_counters
+
+    # La fila se elimina en el cliente vía hx-swap="outerHTML" con respuesta vacía
+    return ""
+
+
+@inventory_bp.route("/product_counter/clear_counter", methods=["POST"])
+@login_required
+def clear_product_counter():
+    """Limpia todos los contadores de productos en sesión."""
+    user_code = current_user.code
+    all_counters = session.get("product_counter", {}) or {}
+    if user_code in all_counters:
+        all_counters.pop(user_code, None)
+        session["product_counter"] = all_counters
+    return ""
+
+
+@inventory_bp.route("/product_counter/save_counter/<store_code>", methods=["POST"])
+@login_required 
+def save_products_counter(store_code):
+    """Guarda el conteo de productos en la base de datos o lo procesa según la lógica de negocio."""
+    user_code = current_user.code
+    all_counters = session.get("product_counter", {}) or {}
+    user_counters = all_counters.get(user_code, {}) or {}
+    store_counters = user_counters.get(store_code, {}) or {}
+
+    # Agrupar por tipo de diferencia para el usuario actual en este depósito
+    positive_diffs = {}  # diferencia > 0 (sobrante)
+    negative_diffs = {}  # diferencia < 0 (faltante)
+    zero_diffs = {}      # diferencia == 0 (sin ajuste)
+
+    print(f"Guardando conteo para depósito {store_code} (usuario {user_code}):")
+    for code, item in store_counters.items():
+        if isinstance(item, dict):
+            system_qty = float(item.get("system_qty", 0) or 0)
+            counted = float(item.get("counted", 0) or 0)
+            difference = float(item.get("difference", counted - system_qty) or 0)
+        else:
+            # Compatibilidad con datos antiguos: solo cantidad contada
+            counted = float(item or 0)
+            system_qty = 0.0
+            difference = counted - system_qty
+
+        # Clasificar por signo de la diferencia
+        if difference > 0:
+            positive_diffs[code] = {
+                "system_qty": system_qty,
+                "counted": counted,
+                "difference": difference,
+            }
+        elif difference < 0:
+            negative_diffs[code] = {
+                "system_qty": system_qty,
+                "counted": counted,
+                "difference": difference,
+            }
+        else:
+            zero_diffs[code] = {
+                "system_qty": system_qty,
+                "counted": counted,
+                "difference": difference,
+            }
+
+        print(
+            f" - Producto {code}: inventario={system_qty}, contada={counted}, diferencia={difference}"
+        )
+
+    # Resumen por tipo de diferencia (para depuración y próximas operaciones)
+    print("\nProductos con diferencia POSITIVA (sobrante):")
+    for code, data in positive_diffs.items():
+        print(
+            f"   + {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
+        )
+
+    print("\nProductos con diferencia NEGATIVA (faltante):")
+    for code, data in negative_diffs.items():
+        print(
+            f"   - {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
+        )
+
+    print("\nProductos SIN diferencia (sin ajuste):")
+    for code, data in zero_diffs.items():
+        print(
+            f"   = {code}: inventario={data['system_qty']}, contada={data['counted']}, diferencia={data['difference']}"
+        )
+
+    return redirect(url_for("inventory.product_counter"))
+

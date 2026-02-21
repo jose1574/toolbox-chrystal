@@ -9109,3 +9109,82 @@ class UserProfile(db.Model):
         primary_key=False,
         nullable=False,
     )
+
+
+class ProductsCounterHistory(db.Model):
+    __tablename__ = "products_counter_history"
+    __table_args__ = {"schema": "toolbox"}
+
+    correlative = db.Column(
+        db.Integer, primary_key=True, server_default=db.FetchedValue()
+    )
+
+    # Documentos de inventario asociados (carga / descarga generados por el conteo)
+    load_operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        )
+    )
+
+    down_operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        )
+    )
+
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+
+    store_code = db.Column(
+        db.ForeignKey("public.store.code", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+
+    count_date = db.Column(db.Date, nullable=False)
+
+    system_qty = db.Column(db.Double(53), nullable=False)
+    counted_qty = db.Column(db.Double(53), nullable=False)
+    difference = db.Column(db.Double(53), nullable=False)
+    observation = db.Column(db.String)
+
+    # Relaciones de conveniencia
+    load_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="ProductsCounterHistory.load_operation_correlative == InventoryOperation.correlative",
+        foreign_keys=[load_operation_correlative],
+        backref="products_counter_history_load",
+    )
+
+    download_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="ProductsCounterHistory.down_operation_correlative == InventoryOperation.correlative",
+        foreign_keys=[down_operation_correlative],
+        backref="products_counter_history_download",
+    )
+
+    product = db.relationship(
+        "Product",
+        primaryjoin="ProductsCounterHistory.product_code == Product.code",
+        backref="products_counter_history",
+    )
+    store = db.relationship(
+        "Store",
+        primaryjoin="ProductsCounterHistory.store_code == Store.code",
+        backref="products_counter_history",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="ProductsCounterHistory.user_code == User.code",
+        backref="products_counter_history",
+    )

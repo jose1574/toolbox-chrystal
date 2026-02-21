@@ -1,0 +1,54 @@
+<!-- Modal para detalles del producto -->
+<div id="productModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white">
+        <div class="flex items-start justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Detalles del Producto</h3>
+            <button type="button" onclick="document.getElementById('productModal').remove()"
+                class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 14 14">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                </svg>
+                <span class="sr-only">Cerrar modal</span>
+            </button>
+        </div>
+        <div class="mt-2 px-1 space-y-2 text-sm text-gray-700">
+            <p><span class="font-medium">Código:</span> {{ product.code }}</p>
+            <p><span class="font-medium">Descripción:</span> {{ product.description }}</p>
+            <p><span class="font-medium">Referencia:</span> {{ product.referenc }}</p>
+            <p><span class="font-medium">Cantidad Esperada:</span> {{ stock.stock }}</p>
+            <p><span class="font-medium">Unidad:</span> {{ unit.description }}</p>
+        </div>
+        <form
+            hx-post="{{ url_for('inventory.update_product_counter') }}"
+            hx-target="#counter-results"
+            hx-swap="innerHTML"
+            hx-on:htmx:after-request="if(event.detail.successful){document.getElementById('productModal')?.remove();}"
+        >
+            <input type="text" name="product_code" value="{{ product.code }}" hidden>
+            <input type="text" name="store_code" value="{{ store.code }}" hidden>
+            <!-- snapshot de existencia al momento del conteo -->
+            <input type="hidden" name="system_qty" value="{{ stock.stock if stock else 0 }}">
+            <label for="counted_amount">Cantidad Contada</label>
+            <input type="number" id="counted_amount" name="counted_amount" step="0.01"
+                class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            <div class="mt-4 flex justify-end space-x-2">
+                <button type="submit"
+                    class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    Guardar
+                </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Enfocar el input de cantidad contada al abrir el modal
+    setTimeout(function () {
+        const amountInput = document.getElementById('counted_amount');
+        if (amountInput) {
+            amountInput.focus();
+            amountInput.select();
+        }
+    }, 100);
+</script>
