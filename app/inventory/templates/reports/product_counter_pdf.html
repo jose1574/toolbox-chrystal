@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<title>{{ title }}</title>
+	<style>
+		* { box-sizing: border-box; }
+		body {
+			font-family: "Segoe UI", Arial, sans-serif;
+			color: #111827;
+			margin: 0;
+			padding: 24px;
+			font-size: 11px;
+		}
+		.header {
+			margin-bottom: 18px;
+		}
+		.title {
+			font-size: 18px;
+			font-weight: 700;
+			margin-bottom: 4px;
+		}
+		.subtitle {
+			font-size: 11px;
+			color: #6b7280;
+		}
+		.meta {
+			margin-top: 8px;
+			font-size: 10px;
+			color: #374151;
+		}
+		.meta span {
+			display: inline-block;
+			margin-right: 12px;
+		}
+		h2 {
+			font-size: 13px;
+			margin: 14px 0 6px 0;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 8px;
+		}
+		thead {
+			background: #f3f4f6;
+		}
+		th, td {
+			border: 1px solid #e5e7eb;
+			padding: 5px 6px;
+			text-align: left;
+		}
+		th {
+			text-transform: uppercase;
+			font-size: 9px;
+			letter-spacing: 0.03em;
+			color: #374151;
+		}
+		td.numeric {
+			text-align: right;
+			font-variant-numeric: tabular-nums;
+		}
+		.status-sobrante { color: #047857; font-weight: 600; }
+		.status-faltante { color: #b91c1c; font-weight: 600; }
+		.status-sin-dif { color: #6b7280; }
+		.footer {
+			margin-top: 14px;
+			font-size: 9px;
+			color: #6b7280;
+		}
+		.section {
+			margin-top: 8px;
+		}
+		.operations-table td {
+			font-size: 10px;
+		}
+	</style>
+</head>
+<body>
+	<div class="header">
+		<div class="title">{{ title }}</div>
+		<div class="subtitle">Generado el {{ now().strftime('%d/%m/%Y %H:%M') }}</div>
+		<div class="meta">
+			<div>
+				<span><strong>Depósito:</strong> {{ store.description }} ({{ store.code }})</span>
+				<span><strong>Usuario:</strong> {{ user.description }} ({{ user.code }})</span>
+			</div>
+			<div>
+				<span><strong>Fecha de conteo:</strong> {{ count_date.strftime('%d/%m/%Y') }}</span>
+				{% if batch_id %}
+				<span><strong>ID Conteo:</strong> {{ batch_id }}</span>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<div class="section">
+		<h2>Operaciones generadas por el conteo</h2>
+		<table class="operations-table">
+			<thead>
+				<tr>
+					<th>Tipo</th>
+					<th>Correlativo</th>
+					<th>N° Documento</th>
+					<th>Descripción</th>
+					<th>Fecha emisión</th>
+					<th>Depósito</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% if load_op %}
+				<tr>
+					<td>Carga (Sobrantes)</td>
+					<td>{{ load_op.correlative }}</td>
+					<td>{{ load_op.document_no }}</td>
+					<td>{{ load_op.description }}</td>
+					<td>{{ load_op.emission_date.strftime('%d/%m/%Y') if load_op.emission_date else '-' }}</td>
+					<td>{{ load_op.store2.description if load_op.store2 else '-' }}</td>
+				</tr>
+				{% endif %}
+
+				{% if download_op %}
+				<tr>
+					<td>Descarga (Faltantes)</td>
+					<td>{{ download_op.correlative }}</td>
+					<td>{{ download_op.document_no }}</td>
+					<td>{{ download_op.description }}</td>
+					<td>{{ download_op.emission_date.strftime('%d/%m/%Y') if download_op.emission_date else '-' }}</td>
+					<td>{{ download_op.store2.description if download_op.store2 else '-' }}</td>
+				</tr>
+				{% endif %}
+
+				{% if not load_op and not download_op %}
+				<tr>
+					<td colspan="6">No se generaron operaciones de ajuste para este conteo.</td>
+				</tr>
+				{% endif %}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="section">
+		<h2>Detalle del resultado de inventario</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>Código</th>
+					<th>Descripción</th>
+					<th>Inv. Sistema</th>
+					<th>Conteo Físico</th>
+					<th>Diferencia</th>
+					<th>Clasificación</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for h in items %}
+				<tr>
+					<td>{{ h.product.code }}</td>
+					<td>{{ h.product.description }}</td>
+					<td class="numeric">{{ '%.2f'|format(h.system_qty) }}</td>
+					<td class="numeric">{{ '%.2f'|format(h.counted_qty) }}</td>
+					<td class="numeric">{{ '%.2f'|format(h.difference) }}</td>
+					<td>
+						{% if h.difference > 0 %}
+							<span class="status-sobrante">Sobrante</span>
+						{% elif h.difference < 0 %}
+							<span class="status-faltante">Faltante</span>
+						{% else %}
+							<span class="status-sin-dif">Sin diferencia</span>
+						{% endif %}
+					</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td colspan="6">No hay productos registrados para este conteo.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="footer">
+		Total de productos en el conteo: {{ items|length }}
+	</div>
+</body>
+</html>
+

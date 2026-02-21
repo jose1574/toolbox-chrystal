@@ -9156,6 +9156,9 @@ class ProductsCounterHistory(db.Model):
         nullable=False,
     )
 
+    # Identificador lógico del conteo (permite agrupar productos de un mismo conteo)
+    count_batch_id = db.Column(db.String(50), index=True, nullable=True)
+
     count_date = db.Column(db.Date, nullable=False)
 
     system_qty = db.Column(db.Double(53), nullable=False)

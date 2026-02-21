@@ -11,6 +11,7 @@ from flask import (
 import json
 from flask_login import login_required, current_user
 from datetime import datetime
+from uuid import uuid4
 from app import db
 from sqlalchemy import select, case, func, text
 from sqlalchemy.orm import aliased, joinedload
@@ -1920,6 +1921,8 @@ def save_products_counter(store_code):
 
         # Registrar / actualizar historial de conteo por producto
         today = datetime.now().date()
+        # Identificador lógico para este conteo (mismo para todos los productos de esta ejecución)
+        count_batch_id = str(uuid4())
         for code, item in store_counters.items():
             if isinstance(item, dict):
                 system_qty = float(item.get("system_qty", 0) or 0)
@@ -1942,6 +1945,7 @@ def save_products_counter(store_code):
                 db.session.add(history)
 
             history.user_code = user_code
+            history.count_batch_id = count_batch_id
             history.count_date = today
             history.system_qty = system_qty
             history.counted_qty = counted
@@ -1969,3 +1973,109 @@ def save_products_counter(store_code):
 
     return redirect(url_for("inventory.product_counter"))
 
+
+@inventory_bp.route("/product_counter/report/<count_batch_id>/pdf")
+@login_required
+def product_counter_report_pdf(count_batch_id):
+    """Genera un PDF con el resultado del conteo y las operaciones de carga/descarga asociadas."""
+
+    # Normalizar el ID de batch por si viene con comillas u espacios
+    count_batch_id = (count_batch_id or "").strip().strip('"').strip("'")
+
+    download = request.args.get("download", "0") == "1"
+
+    # Traer todas las filas del historial para este conteo, con sus relaciones
+    items = (
+        ProductsCounterHistory.query.filter_by(count_batch_id=count_batch_id)
+        .options(
+            joinedload(ProductsCounterHistory.product),
+            joinedload(ProductsCounterHistory.store),
+            joinedload(ProductsCounterHistory.user),
+            joinedload(ProductsCounterHistory.load_operation),
+            joinedload(ProductsCounterHistory.download_operation),
+        )
+        .all()
+    )
+
+    if not items:
+        return (
+            f"No se encontraron datos de conteo para el ID {count_batch_id}.",
+            404,
+        )
+
+    # Asumimos que todas las filas del mismo batch comparten depósito, usuario y fecha
+    first = items[0]
+    store = first.store
+    user = first.user
+    count_date = first.count_date
+
+    # Obtener (si existen) las operaciones de carga y descarga asociadas a este conteo
+    load_op = next((h.load_operation for h in items if h.load_operation), None)
+    download_op = next((h.download_operation for h in items if h.download_operation), None)
+
+    filename = f"conteo_inventario_{store.code if store else 'N/A'}_{count_date.strftime('%Y%m%d') if count_date else '00000000'}.pdf"
+
+    try:
+        pdf = render_pdf(
+            "reports/product_counter_pdf.html",
+            {
+                "title": "Resultado de Conteo de Inventario",
+                "now": datetime.now,
+                "store": store,
+                "user": user,
+                "count_date": count_date,
+                "batch_id": count_batch_id,
+                "items": items,
+                "load_op": load_op,
+                "download_op": download_op,
+            },
+        )
+    except Exception as exc:
+        return (
+            f"Error generando PDF de conteo: {exc}",
+            500,
+        )
+
+    disposition = "attachment" if download else "inline"
+    headers = {"Content-Disposition": f"{disposition}; filename={filename}"}
+    return Response(pdf, mimetype="application/pdf", headers=headers)
+
+
+
+##reporte de contero de productos 
+@inventory_bp.route("/product_counter/report/<count_batch_id>")
+@login_required 
+def product_counter_report(count_batch_id):
+    # Normalizar el ID de batch igual que en la versión PDF
+    count_batch_id = (count_batch_id or "").strip().strip('"').strip("'")
+
+    user = current_user
+    history_records = ProductsCounterHistory.query.filter_by(count_batch_id=count_batch_id).all()
+
+    if not history_records:
+        flash(f"No se encontraron datos de conteo para el ID {count_batch_id}.", "warning")
+        return redirect(url_for("inventory.product_counter"))
+
+    # Por ahora solo devolvemos un JSON simple con info básica; se puede mejorar con una plantilla HTML
+    # para un reporte en pantalla si lo necesitas.
+    data = [
+        {
+            "product_code": h.product_code,
+            "store_code": h.store_code,
+            "user_code": h.user_code,
+            "count_date": h.count_date.isoformat() if h.count_date else None,
+            "system_qty": h.system_qty,
+            "counted_qty": h.counted_qty,
+            "difference": h.difference,
+            "load_operation": h.operation_correlative_up,
+            "download_operation": h.operation_correlative_down,
+        }
+        for h in history_records
+    ]
+
+    return {
+        "count_batch_id": count_batch_id,
+        "records": data,
+    }
+
+    
