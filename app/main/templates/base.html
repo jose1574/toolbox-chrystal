@@ -64,7 +64,7 @@
                                     stroke-width="2" d="m1 1 4 4 4-4" />
                             </svg></button>
                         <div id="dropdownSales"
-                            class="absolute left-0 top-full mt-2 z-50 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-56 dark:bg-gray-700 dark:divide-gray-600">
+                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
                                 aria-labelledby="dropdownSalesLink">
                                 <li>
@@ -83,7 +83,7 @@
                                     stroke-width="2" d="m1 1 4 4 4-4" />
                             </svg></button>
                         <div id="dropdownPurchases"
-                            class="absolute left-0 top-full mt-2 z-50 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-56 dark:bg-gray-700 dark:divide-gray-600">
+                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
                                 aria-labelledby="dropdownPurchasesLink">
                                 <li>
@@ -119,7 +119,7 @@
                             </svg></button>
                         <!-- Dropdown menu -->
                         <div id="dropdownConfig"
-                            class="absolute left-0 top-full mt-2 z-50 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-56 dark:bg-gray-700 dark:divide-gray-600">
+                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
                                 aria-labelledby="dropdownConfigLink">
                                 <li>
@@ -156,6 +156,37 @@
 
     <script src="{{ url_for('static', filename='js/document_manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
+    <script>
+        (function () {
+            const nav = document.getElementById('navbar-dropdown');
+            const toggleBtn = document.querySelector('[data-collapse-toggle="navbar-dropdown"]');
+            if (!nav || !toggleBtn) return;
+
+            function closeMobileMenu() {
+                if (!nav.classList.contains('hidden')) {
+                    nav.classList.add('hidden');
+                }
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            // Cerrar menú al hacer clic en opciones reales (no al abrir dropdowns) en mobile
+            nav.addEventListener('click', function (event) {
+                const target = event.target.closest('a, button');
+                if (!target) return;
+
+                // Sólo afecta en pantallas pequeñas
+                if (window.innerWidth >= 768) return;
+
+                // Si el clic es sobre un botón que abre/cierra un dropdown, no cerrar el menú
+                if (target.hasAttribute('data-dropdown-toggle')) {
+                    return;
+                }
+
+                // Para enlaces y botones de navegación (incluidos los ítems dentro de dropdowns), cerrar menú
+                closeMobileMenu();
+            });
+        })();
+    </script>
 </body>
 
 </html>
