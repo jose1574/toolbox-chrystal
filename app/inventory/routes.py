@@ -1966,12 +1966,57 @@ def save_products_counter(store_code):
         db.session.commit()
         flash("Operaciones de ajuste de inventario generadas correctamente.", "success")
 
+        # Limpiar los contadores de sesión para este usuario y depósito, ya procesados
+        all_counters = session.get("product_counter", {}) or {}
+        user_counters = all_counters.get(user_code, {}) or {}
+        if store_code in user_counters:
+            user_counters.pop(store_code, None)
+
+        if user_counters:
+            all_counters[user_code] = user_counters
+        else:
+            all_counters.pop(user_code, None)
+
+        session["product_counter"] = all_counters
+
+        # Si la petición viene por HTMX, devolvemos la vista limpia (selector de depósito)
+        # y disparamos el evento open-pdf para abrir el reporte del conteo en una nueva pestaña.
+        if request.headers.get("HX-Request"):
+            resp = make_response(
+                render_template(
+                    "product_counter.html",
+                    stores=Store.query.all(),
+                    store=None,
+                    store_code=None,
+                    counter_rows_html="",
+                )
+            )
+            resp.headers["HX-Trigger"] = json.dumps(
+                {
+                    "open-pdf": {
+                        "url": url_for(
+                            "inventory.product_counter_report_pdf",
+                            count_batch_id=count_batch_id,
+                        )
+                    }
+                }
+            )
+            return resp
+
+        # Flujo normal (no HTMX): redirigir directamente al PDF del conteo
+        return redirect(
+            url_for(
+                "inventory.product_counter_report_pdf",
+                count_batch_id=count_batch_id,
+            )
+        )
+
     except Exception as e:
         db.session.rollback()
         print(f"Error al generar operaciones de ajuste: {e}")
         flash("Error al generar las operaciones de ajuste de inventario.", "error")
 
-    return redirect(url_for("inventory.product_counter"))
+        return redirect(url_for("inventory.product_counter"))
 
 
 @inventory_bp.route("/product_counter/report/<count_batch_id>/pdf")

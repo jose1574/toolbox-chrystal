@@ -24,7 +24,7 @@
             hx-post="{{ url_for('inventory.update_product_counter') }}"
             hx-target="#counter-results"
             hx-swap="innerHTML"
-            hx-on:htmx:after-request="if(event.detail.successful){document.getElementById('productModal')?.remove();}"
+            hx-on:htmx:after-request="if(event.detail.successful){document.getElementById('productModal')?.remove();var input=document.getElementById('product_code');if(input){input.value='';input.focus();if(input.select){input.select();}}}"
         >
             <input type="text" name="product_code" value="{{ product.code }}" hidden>
             <input type="text" name="store_code" value="{{ store.code }}" hidden>
