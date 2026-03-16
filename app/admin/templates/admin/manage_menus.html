@@ -3,28 +3,42 @@
 {% block title %}Menus{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Gestión de Menús</h1>
+<div class="p-6 max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Gestión de Menús</h1>
 
-<div>
-    <div>
-        <div id="notification">
-        </div>
+    <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+        <div id="notification" class="mb-4"></div>
+
+        <form hx-post="{{ url_for('admin.create_menu') }}" hx-target="#notification" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="menu_code" class="block mb-2 text-sm font-medium text-gray-900">Código</label>
+                    <input type="text" id="menu_code" name="menu_code"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        required>
+                </div>
+
+                <div>
+                    <label for="menu_description" class="block mb-2 text-sm font-medium text-gray-900">Descripción</label>
+                    <input type="text" id="menu_description" name="menu_description"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        required>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end pt-2">
+                <button type="submit"
+                    class="w-full sm:w-auto text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-6 py-2.5 text-center shadow-sm transition-colors">
+                    Guardar
+                </button>
+                <button type="button" hx-post="{{ url_for('admin.delete_menu') }}" hx-target="#notification"
+                    class="w-full sm:w-auto text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-6 py-2.5 text-center shadow-sm transition-colors">
+                    Eliminar
+                </button>
+            </div>
+        </form>
     </div>
-    <form hx-post="{{ url_for('admin.create_menu') }}" hx-target="#notification">
-        <label for="menu_code">
-            Código:
-            <input type="text" id="menu_code" name="menu_code">
-        </label>
-        <label for="menu_description">
-            Descripción:
-            <input type="text" id="menu_description" name="menu_description">
-        </label>
-        <button type="submit">Guardar</button>
-        <button hx-post="{{ url_for('admin.delete_menu') }}" hx-target="#notification">Eliminar
-        </button>
-    </form>
-</div>
-<div id="menu-list" class="mt-6">
-</div>
+
+    <div id="menu-list" class="mt-6"></div>
 </div>
 {% endblock %}

@@ -3,7 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css', v='20260224') }}">
      <!-- <link href="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.js"></script> -->
 
@@ -13,177 +25,219 @@
     </title>
 </head>
 
-<body>
+<body class="bg-gray-50 dark:bg-gray-900">
 
+    <aside id="default-sidebar"
+        class="fixed top-0 left-0 z-40 w-16 h-screen transition-all duration-300"
+        aria-label="Sidenav">
+        <div class="overflow-y-auto py-5 px-3 h-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <ul class="space-y-2">
+                <li>
+                    <button id="sidebar-toggle" type="button" class="sidebar-item" aria-label="Alternar menú">
+                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+                        </svg>
+                        <span class="sidebar-text hidden ml-3">Menú</span>
+                    </button>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.index') }}" class="sidebar-item">
+                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+                        </svg>
+                        <span class="sidebar-text hidden ml-3">Inicio</span>
+                    </a>
+                </li>
 
-    <nav class="bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 w-full">
-        <div class="w-full flex flex-wrap items-center justify-between px-6 py-3">
-            <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
-                <span class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Toolbox</span>
-            </a>
-            <button data-collapse-toggle="navbar-dropdown" type="button"
-                class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-                aria-controls="navbar-dropdown" aria-expanded="false">
-                <span class="sr-only">Abrir menú principal</span>
-                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 17 14">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M1 1h15M1 7h15M1 13h15" />
-                </svg>
-            </button>
-            <div class="hidden w-full md:block md:w-auto" id="navbar-dropdown">
-                <ul
-                    class="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-                    <li>
-                        <a href="{{ url_for('main.index') }}"
-                            class="block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500 dark:bg-blue-600 md:dark:bg-transparent"
-                            aria-current="page">Inicio</a>
-                    </li>
-                    <li class="relative">
-                          <button 
-                            hx-get="{{ url_for('inventory.index') }}"
-                            hx-select="#main-content"
-                            hx-target="#main-content"
-                            hx-trigger="click"
-                            hx-push-url="true"
-                            type="button"
-                            class="flex items-center justify-between py-2 ps-3 pe-1 text-gray-900 rounded hover:bg-gray-100
-                                md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto
-                                dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 
-                                md:dark:hover:bg-transparent">Inventario
-                        </button>
-                        <!-- Dropdown menu -->
-                        
-                    </li>
-                    <li class="relative">
-                        <button id="dropdownSalesLink" data-dropdown-toggle="dropdownSales"
-                            class="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">Ventas
-                            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" viewBox="0 0 10 6">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="m1 1 4 4 4-4" />
-                            </svg></button>
-                        <div id="dropdownSales"
-                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
-                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
-                                aria-labelledby="dropdownSalesLink">
-                                <li>
-                                    <a href="#"
-                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Presupuestos</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li class="relative">
-                        <button id="dropdownPurchasesLink" data-dropdown-toggle="dropdownPurchases"
-                            class="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">Compras
-                            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" viewBox="0 0 10 6">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="m1 1 4 4 4-4" />
-                            </svg></button>
-                        <div id="dropdownPurchases"
-                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
-                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
-                                aria-labelledby="dropdownPurchasesLink">
-                                <li>
-                                    <a href="#"
-                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Orden
-                                        de Compra</a>
-                                </li>
-                                <li>
-                                    <a href="#"
-                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Orden
-                                        de Compra Automática</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
+                <li>
+                    <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-inventory" aria-expanded="false" aria-controls="dropdown-inventory">
+                        <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="sidebar-text hidden flex-1 ml-3 text-left whitespace-nowrap">Inventario</span>
+                        <svg class="sidebar-arrow hidden w-5 h-5 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <ul id="dropdown-inventory" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
+                        <li><a href="{{ url_for('inventory.index') }}" class="sidebar-subitem" role="menuitem">Panel de inventario</a></li>
+                        <li><a href="{{ url_for('inventory.auto_order_collection') }}" class="sidebar-subitem" role="menuitem">Orden de recolección</a></li>
+                        <li><a href="{{ url_for('inventory.check_order') }}" class="sidebar-subitem" role="menuitem">Chequeo de recolección</a></li>
+                        <li><a href="{{ url_for('inventory.check_transfer_operation') }}" class="sidebar-subitem" role="menuitem">Chequeo de traslado</a></li>
+                        <li><a href="{{ url_for('inventory.product_params') }}" class="sidebar-subitem" role="menuitem">Parámetros de productos</a></li>
+                        <li><a href="{{ url_for('inventory.products_locations') }}" class="sidebar-subitem" role="menuitem">Ubicación de productos</a></li>
+                        <li><a href="{{ url_for('inventory.product_counter') }}" class="sidebar-subitem" role="menuitem">Contador de productos</a></li>
+                    </ul>
+                </li>
 
-                    <li>
-                        <button type="button" hx-get="{{ url_for('document_manager.index') }}"
-                            hx-target="#main-content" hx-select="#main-content" hx-push-url="true"
-                            class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 
-                            md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 
-                            dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Administrador de documentos</button>
-                    </li>
-                    <li class="relative">
-                        <button id="dropdownConfigLink" data-dropdown-toggle="dropdownConfig"
-                            class="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0
-                             md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500
-                              dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">Configuración
-                            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" viewBox="0 0 10 6">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="m1 1 4 4 4-4" />
-                            </svg></button>
-                        <!-- Dropdown menu -->
-                        <div id="dropdownConfig"
-                            class="hidden md:absolute md:left-0 md:top-full md:mt-2 z-50 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-full md:w-56 dark:bg-gray-700 dark:divide-gray-600">
-                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-400"
-                                aria-labelledby="dropdownConfigLink">
-                                <li>
-                                    <button type="button" hx-get="{{ url_for('admin.manage_users') }}"
-                                        hx-target="#main-content" hx-select="#main-content" hx-push-url="true"
-                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Usuarios</button>
-                                </li>
-                                <li>
-                                    <button type="button" hx-get="{{ url_for('admin.user_profile') }}"
-                                        hx-target="#main-content" hx-select="#main-content" hx-push-url="true"
-                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Perfiles</button>
-                                </li>
-                                <li>
-                                    <button type="button" hx-get="{{ url_for('admin.manage_menus') }}"
-                                        hx-target="#main-content" hx-select="#main-content" hx-push-url="true"
-                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Menus</button>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            <!-- Desktop/logout on right -->
-            <div class="hidden md:flex items-center space-x-4">
-                <a href="{{ url_for('auth.logout') }}"
-                    class="py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 dark:text-white md:dark:hover:text-blue-500">salir</a>
-            </div>
+                <li>
+                    <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-admin" aria-expanded="false" aria-controls="dropdown-admin">
+                        <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="sidebar-text hidden flex-1 ml-3 text-left whitespace-nowrap">Administración</span>
+                        <svg class="sidebar-arrow hidden w-5 h-5 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <ul id="dropdown-admin" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
+                        <li><a href="{{ url_for('admin.manage_users') }}" class="sidebar-subitem" role="menuitem">Usuarios</a></li>
+                        <li><a href="{{ url_for('admin.user_profile') }}" class="sidebar-subitem" role="menuitem">Perfiles</a></li>
+                        <li><a href="{{ url_for('admin.manage_menus') }}" class="sidebar-subitem" role="menuitem">Menús</a></li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a href="{{ url_for('document_manager.index') }}" class="sidebar-item">
+                        <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414L11 7.586V3a1 1 0 10-2 0v4.586l-.293-.293z"></path>
+                            <path d="M3 5a2 2 0 012-2h1a1 1 0 010 2H5v7h2l1 2h4l1-2h2V5h-1a1 1 0 110-2h1a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"></path>
+                        </svg>
+                        <span class="sidebar-text hidden flex-1 ml-3 whitespace-nowrap text-left">Documentos</span>
+                    </a>
+                </li>
+            </ul>
+
+            <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
+                <li>
+                    <button id="theme-toggle" type="button" class="sidebar-item" aria-label="Cambiar tema">
+                        <svg id="theme-toggle-dark-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 6a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707A1 1 0 104.343 5.757l.707.707zM4 11a1 1 0 100-2H3a1 1 0 000 2h1zm1.343 4.657a1 1 0 001.414 0l.707-.707A1 1 0 106.05 13.536l-.707.707a1 1 0 000 1.414z"></path>
+                        </svg>
+                        <svg id="theme-toggle-light-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                        <span id="theme-toggle-label" class="sidebar-text hidden ml-3">Tema</span>
+                    </button>
+                </li>
+                <li>
+                    <a href="{{ url_for('auth.logout') }}" class="sidebar-item" aria-label="Cerrar sesión">
+                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M3 4.5A1.5 1.5 0 014.5 3h7A1.5 1.5 0 0113 4.5V6a1 1 0 11-2 0v-.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V14a1 1 0 112 0v1.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 15.5v-11z" clip-rule="evenodd"></path>
+                            <path fill-rule="evenodd" d="M15.707 10.707a1 1 0 00-1.414-1.414L13.586 10H8a1 1 0 100 2h5.586l.707.707a1 1 0 001.414-1.414L14.414 11l1.293-1.293z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="sidebar-text hidden ml-3">Salir</span>
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </aside>
 
-    <div id="main-content">
-        {% block content %}{% endblock %}
+    <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/40 z-30"></div>
+
+        <div id="main-content" class="p-4 ml-[4.5rem]">
+        <div id="content-inner">
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/document_manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
     <script>
         (function () {
-            const nav = document.getElementById('navbar-dropdown');
-            const toggleBtn = document.querySelector('[data-collapse-toggle="navbar-dropdown"]');
-            if (!nav || !toggleBtn) return;
+            const sidebar = document.getElementById('default-sidebar');
+            const toggle = document.getElementById('sidebar-toggle');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (!sidebar || !toggle || !backdrop) return;
 
-            function closeMobileMenu() {
-                if (!nav.classList.contains('hidden')) {
-                    nav.classList.add('hidden');
+            let expanded = false;
+
+            function setExpandedState(value) {
+                expanded = value;
+
+                sidebar.classList.toggle('w-56', expanded);
+                sidebar.classList.toggle('w-16', !expanded);
+
+                document.querySelectorAll('.sidebar-text, .sidebar-arrow').forEach((el) => {
+                    el.classList.toggle('hidden', !expanded);
+                });
+
+                document.querySelectorAll('.sidebar-item').forEach((el) => {
+                    el.classList.toggle('justify-center', !expanded);
+                    el.classList.toggle('justify-start', expanded);
+                });
+
+                if (!expanded) {
+                    document.querySelectorAll('.sidebar-submenu').forEach((submenu) => {
+                        submenu.classList.add('hidden');
+                    });
                 }
-                toggleBtn.setAttribute('aria-expanded', 'false');
+
+                backdrop.classList.toggle('hidden', !expanded);
+                sidebar.classList.toggle('shadow-2xl', expanded);
             }
 
-            // Cerrar menú al hacer clic en opciones reales (no al abrir dropdowns) en mobile
-            nav.addEventListener('click', function (event) {
+            toggle.addEventListener('click', function () {
+                setExpandedState(!expanded);
+            });
+
+            backdrop.addEventListener('click', function () {
+                setExpandedState(false);
+            });
+
+            sidebar.addEventListener('click', function (event) {
                 const target = event.target.closest('a, button');
                 if (!target) return;
 
-                // Sólo afecta en pantallas pequeñas
-                if (window.innerWidth >= 768) return;
-
-                // Si el clic es sobre un botón que abre/cierra un dropdown, no cerrar el menú
-                if (target.hasAttribute('data-dropdown-toggle')) {
+                if (!expanded && target.classList.contains('sidebar-item') && target.id !== 'sidebar-toggle') {
+                    setExpandedState(true);
                     return;
                 }
 
-                // Para enlaces y botones de navegación (incluidos los ítems dentro de dropdowns), cerrar menú
-                closeMobileMenu();
+                if (expanded && target.tagName === 'A') {
+                    setExpandedState(false);
+                }
+            });
+
+            document.querySelectorAll('.sidebar-dropdown-trigger').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    if (!expanded) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var id = btn.getAttribute('data-dropdown');
+                    var panel = id ? document.getElementById(id) : null;
+                    if (!panel) return;
+                    var isHidden = panel.classList.contains('hidden');
+                    document.querySelectorAll('.sidebar-submenu').forEach(function (sub) {
+                        sub.classList.add('hidden');
+                    });
+                    document.querySelectorAll('.sidebar-dropdown-trigger').forEach(function (b) {
+                        b.setAttribute('aria-expanded', 'false');
+                    });
+                    if (isHidden) {
+                        panel.classList.remove('hidden');
+                        btn.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+
+            setExpandedState(expanded);
+        })();
+    </script>
+    <script>
+        (function () {
+            const toggleButton = document.getElementById('theme-toggle');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            const label = document.getElementById('theme-toggle-label');
+
+            if (!toggleButton || !darkIcon || !lightIcon || !label) return;
+
+            function renderThemeState() {
+                const isDark = document.documentElement.classList.contains('dark');
+                darkIcon.classList.toggle('hidden', !isDark);
+                lightIcon.classList.toggle('hidden', isDark);
+                label.textContent = isDark ? 'Tema oscuro' : 'Tema claro';
+            }
+
+            renderThemeState();
+
+            toggleButton.addEventListener('click', function () {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                renderThemeState();
             });
         })();
     </script>

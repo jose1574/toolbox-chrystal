@@ -23,7 +23,7 @@
     <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
         <form hx-post="{{ url_for('admin.create_user_profile') }}" hx-target="#main-content" hx-select="#main-content"
             hx-swap="innerHTML" class="space-y-4">
-            <div class="flex items-end space-x-2">
+            <div class="flex flex-col sm:flex-row sm:items-end gap-2">
                 <div class="flex-1">
                     <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Código de
                         Perfil:</label>
@@ -41,7 +41,7 @@
                     hx-get="{{ url_for('admin.profile_user_modal') }}" 
                     hx-target="#modal-profiles" 
                     hx-select="#modalProfileSearch"
-                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                    class="w-full sm:w-auto text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
                     Buscar
                 </button>
             </div>
@@ -66,7 +66,7 @@
 
             <div class="mt-8 flex justify-end">
                 <button type="submit"
-                    class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">
+                    class="w-full sm:w-auto text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">
                     Guardar
                 </button>
             </div>

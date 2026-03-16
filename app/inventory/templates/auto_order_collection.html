@@ -1,9 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Orden de recolección - Toolbox{% endblock %}
+{% block content %}
 <div class="p-4">
     <div class="flex items-center justify-between mb-4">
         {% if store_origin and store_dst %}
         <button type="button"
                 hx-get="{{ url_for('inventory.auto_order_collection') }}"
                 hx-target="#main-content"
+                hx-select="#content-inner"
+                hx-swap="innerHTML"
                 hx-push-url="true"
                 class="text-sm text-blue-700 hover:underline">
             Cambiar depósitos
@@ -11,7 +16,6 @@
         {% endif %}
     </div>
 
- 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="mb-4 space-y-2">
@@ -24,8 +28,6 @@
     {% endif %}
     {% endwith %}
 
-    
-
     {% if not store_origin or not store_dst %}
     <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-md w-full mx-auto">
         <h1 class="text-2xl font-bold">Orden de Traslado Automático</h1>
@@ -34,6 +36,8 @@
         <form method="get" action="{{ url_for('inventory.auto_order_collection') }}"
               hx-get="{{ url_for('inventory.auto_order_collection') }}"
               hx-target="#main-content"
+              hx-select="#content-inner"
+              hx-swap="innerHTML"
               hx-push-url="true"
               class="space-y-4">
             <div>
@@ -64,7 +68,8 @@
                 <button type="button"
                         hx-get="{{ url_for('inventory.index') }}"
                         hx-target="#main-content"
-                        hx-select="#main-content"
+                        hx-select="#content-inner"
+                        hx-swap="innerHTML"
                         hx-push-url="true"
                         class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
                     <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -105,7 +110,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <divx
+                <div
                     class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
                     {% for dept in departments %}
                     <label class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer transition-colors">
@@ -114,7 +119,7 @@
                         <span class="ml-2 text-xs text-gray-700 truncate">{{ dept }}</span>
                     </label>
                     {% endfor %}
-                </divx>
+                </div>
             </div>
         </div>
 
@@ -160,9 +165,11 @@
 
     <div id="results-container" class="relative overflow-x-auto shadow-md sm:rounded-lg">
         <form id="auto-order-form" hx-post="{{ url_for('inventory.save_auto_order_collection') }}"
-            hx-target="#main-content" hx-trigger="submit">
+            hx-target="#main-content"
+            hx-select="#content-inner"
+            hx-swap="innerHTML"
+            hx-trigger="submit">
 
-            <!-- Mantener depósitos seleccionados para el envío del formulario -->
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
             <table class="w-full text-sm text-left text-gray-500">
@@ -182,7 +189,7 @@
                         <th scope="col" class="px-6 py-3">Exist. Min</th>
                         <th scope="col" class="px-6 py-3">Exist. Max</th>
                         <th scope="col" class="px-6 py-3">Stock Dest. {{ store_dst_name or store_dst }}</th>
-                        <th scope="col" class="px-6 py-3 bg-blue-50">A Transferir</th>
+                        <th scope="col" class="px-6 py-3 bg-blue-50 dark:bg-slate-800/80 dark:text-slate-100">A Transferir</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -204,9 +211,9 @@
                         <td class="px-6 py-4">{{ product.minimum_stock }}</td>
                         <td class="px-6 py-4">{{ product.maximum_stock }}</td>
                         <td class="px-6 py-4">{{ product.stock_destination }}</td>
-                        <td class="px-6 py-4 bg-blue-50">
+                        <td class="px-6 py-4 bg-blue-50 dark:bg-slate-800/70">
                             <input type="number" value="{{ product.to_transfer }}" name="qty_{{ product.code }}"
-                                class="block w-20 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1">
+                            class="block w-20 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-600">
                         </td>
                     </tr>
                     {% else %}
@@ -225,7 +232,6 @@
 
 <script>
     (function () {
-        // Abrir PDF en nueva pestaña cuando el backend dispare open-pdf (se adjunta una sola vez)
         if (!window.__openPdfListenerAttached) {
             window.addEventListener('open-pdf', function (e) {
                 if (e.detail && e.detail.url) {
@@ -241,15 +247,11 @@
         const rows = document.querySelectorAll('.product-row');
         const selectedCountEl = document.getElementById('selected-count');
 
-        // Lógica de Dropdowns
         document.querySelectorAll('.dropdown-trigger').forEach(trigger => {
             trigger.addEventListener('click', (e) => {
                 const menu = trigger.nextElementSibling;
                 const isOpen = !menu.classList.contains('hidden');
-
-                // Cerrar todos los demás
                 document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-
                 if (!isOpen) menu.classList.remove('hidden');
                 e.stopPropagation();
             });
@@ -310,7 +312,6 @@
             updateSelectedCount();
         }
 
-        // Event listeners
         searchInput?.addEventListener('input', applyFilters);
 
         document.getElementById('filter-panel').addEventListener('change', function (e) {
@@ -340,3 +341,4 @@
         updateSelectedCount();
     })();
 </script>
+{% endblock %}

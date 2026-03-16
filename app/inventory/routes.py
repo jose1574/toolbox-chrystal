@@ -308,21 +308,11 @@ def save_auto_order_collection():
         db.session.commit()
         flash(f"Operación #{document_no} guardada correctamente.", "success")
 
-        # HTMX: devolver la vista limpia y disparar un evento para abrir el PDF en nueva pestaña
+        # HTMX: redirigir a la vista y abrir el PDF en nueva pestaña
         if request.headers.get("HX-Request"):
-            resp = make_response(
-                render_template(
-                    "auto_order_collection.html",
-                    store_origin=None,
-                    store_dst=None,
-                    store_origin_name="",
-                    store_dst_name="",
-                    products=[],
-                    departments=[],
-                    marks=[],
-                    stores=Store.query.all(),
-                    new_order_id=document_no,
-                )
+            resp = make_response("", 200)
+            resp.headers["HX-Redirect"] = url_for(
+                "inventory.auto_order_collection", new_order_id=document_no
             )
             resp.headers["HX-Trigger"] = json.dumps(
                 {

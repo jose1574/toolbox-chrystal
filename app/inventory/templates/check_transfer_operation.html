@@ -2,9 +2,9 @@
 {% block title %}Chequeo de Traslado de Inventario{% endblock %}
 
 {% block content %}
-<div class="px-4 py-6 space-y-6">
+<div class="px-2 sm:px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
 	{% if not details %}
-	<div class="p-6 bg-white shadow-sm mx-auto mt-8" style="width:30%;min-width:280px;">
+	<div class="p-6 bg-white shadow-sm mx-auto mt-8 w-full max-w-md rounded-lg border border-gray-200">
 		<h1 class="text-2xl font-bold text-heading mb-4">Chequeo de Traslado de Inventario</h1>
 		{% if error_message %}
 		<div class="mb-3 p-3 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200">
@@ -17,7 +17,7 @@
 		</div>
 		{% endif %}
 		<form hx-post="{{ url_for('inventory.check_transfer_operation') }}" hx-target="#main-content"
-			hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
+			hx-select="#content-inner" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
 			<div>
 				<label for="correlative" class="block mb-2 text-sm font-medium text-heading">Correlativo del
 					traslado</label>
@@ -25,21 +25,21 @@
 					class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
 					placeholder="Ingresa el correlativo">
 			</div>
-			<div class="mt-2">
+			<div class="mt-2 flex flex-col sm:flex-row gap-2 sm:gap-3">
 				<button type="submit"
 					class="inline-flex items-center justify-center text-white
 					 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
 					Buscar traslado
 				</button>
 				<a href="{{ url_for('inventory.index') }}"
-				   class="inline-flex items-center justify-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors ml-2">
+				   class="inline-flex items-center justify-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
 					Regresar
 				</a>
 			</div>
 		</form>
 	</div>
 	{% else %}
-	<div class="bg-white shadow-sm p-6">
+	<div class="bg-white shadow-sm p-3 sm:p-4 md:p-6 w-full">
 		<h1 class="text-2xl font-bold text-heading mb-4">Chequeo de Traslado de Inventario</h1>
 		<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-gray-200">
 			<div>
@@ -47,10 +47,18 @@
 				<p class="text-gray-600 text-sm mt-1">Fecha: {{ operation.emission_date }} | {{ operation.description }}
 				</p>
 			</div>
-			<div class="flex space-x-3">
+			<div class="flex flex-wrap gap-2 sm:gap-3">
+				<a href="{{ url_for('inventory.transfer_operation_report', order_id=operation.correlative) }}" target="_blank" rel="noopener noreferrer" id="btn-finalize-count" role="button"
+					onclick="var m=document.getElementById('completion-message');var f=document.getElementById('transfer-form');if(m){m.classList.remove('hidden');m.scrollIntoView({behavior:'smooth',block:'start'});}if(f)f.classList.remove('hidden');"
+					class="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all shadow-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2 no-underline">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+					Finalizar conteo y generar reporte
+				</a>
 				<a href="{{ url_for('inventory.check_transfer_operation') }}"
 					hx-get="{{ url_for('inventory.check_transfer_operation') }}" hx-target="#main-content"
-					hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true"
+					hx-select="#content-inner" hx-swap="innerHTML" hx-push-url="true"
 					class="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm">
 					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -84,10 +92,10 @@
 			<p class="text-green-700 text-sm mt-1">Selecciona otro traslado para continuar.</p>
 		</div>
 
-		<div id="transfer-form" class="hidden mt-4 p-6 bg-white shadow-sm mx-auto" style="width:30%;min-width:280px;">
+		<div id="transfer-form" class="hidden mt-4 p-6 bg-white shadow-sm mx-auto w-full max-w-md rounded-lg border border-gray-200">
 			<h2 class="text-xl font-bold text-heading mb-4">Seleccionar Nuevo Traslado</h2>
 			<form hx-post="{{ url_for('inventory.check_transfer_operation') }}" hx-target="#main-content"
-				hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
+				hx-select="#content-inner" hx-swap="innerHTML" hx-push-url="true" class="space-y-6">
 				<div>
 					<label for="correlative-new" class="block mb-2 text-sm font-medium text-heading">Correlativo del
 						traslado</label>
@@ -97,7 +105,7 @@
 				</div>
 				<div class="mt-2">
 					<button type="submit"
-						class="inline-flex items-center justify-center text-white
+						class="w-full sm:w-auto inline-flex items-center justify-center text-white
 						 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
 						Buscar traslado
 					</button>
@@ -106,7 +114,7 @@
 		</div>
 
 		<div id="checking-section">
-			<div class="max-w-xl">
+			<div class="w-full">
 				<label for="product_code" class="block mb-1.5 text-sm font-medium text-heading">Buscar producto por
 					código</label>
 				<form class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 items-start">
@@ -127,40 +135,39 @@
 
 			<div id="modal-container"></div>
 
-			<div class="overflow-x-auto bg-white mt-4">
-				<table class="w-full text-sm text-left text-gray-500">
-					<thead class="text-xs text-gray-700 uppercase bg-gray-50 font-black tracking-wider">
+			<div class="mt-4 bg-white rounded-md border border-gray-200 overflow-x-auto md:overflow-x-hidden">
+				<table class="w-full table-fixed text-[11px] sm:text-xs md:text-sm text-left text-gray-500">
+					<thead class="text-[10px] sm:text-[11px] md:text-xs text-gray-700 uppercase bg-gray-50 font-black tracking-wide">
 						<tr>
-							<th class="px-6 py-4 font-bold">Código</th>
-							<th class="px-6 py-4 font-bold">Descripción</th>
-							<th class="px-6 py-4 font-bold">Referencia</th>
-							<th class="px-6 py-4 font-bold text-center">Cant. Esperada</th>
-							<th class="px-6 py-4 font-bold text-center">Cant. Contada</th>
-							<th class="px-6 py-4 font-bold text-center">Diferencia</th>
+							<th class="w-[18%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold">Código</th>
+							<th class="w-[34%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold">Descripción</th>
+							<th class="w-[18%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold hidden md:table-cell">Referencia</th>
+							<th class="w-[16%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold text-center">Cant. Esperada</th>
+							<th class="w-[16%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold text-center">Cant. Contada</th>
+							<th class="w-[16%] px-2 py-2 sm:px-3 md:px-4 md:py-3 font-bold text-center">Diferencia</th>
 						</tr>
 					</thead>
 					<tbody class="bg-white" id="products-table">
 						{% for detail in details %}
 						{% set has_diff = (0 != detail.amount) %}
-						<tr id="row-{{ detail.code_product }}" {% if has_diff %} class="bg-red-100"
-							style="background-color:#fee2e2;" {% endif %}>
+						<tr id="row-{{ detail.code_product }}" {% if has_diff %} class="row-diff"{% endif %}>
 							<td
-								class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">
+								class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm font-medium text-gray-900 wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">
 								{{ detail.code_product }}</td>
 							<td
-								class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
+								class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-gray-600 wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">
 								{{ detail.description_product }}</td>
 							<td
-								class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">
+								class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-gray-600 hidden md:table-cell wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">
 								{{ detail.referenc }}</td>
 							<td
-								class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">
+								class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-center text-gray-700{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">
 								{{ detail.amount }}</td>
-							<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
+							<td class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-center text-gray-700{% if has_diff %} text-red-900 dark:text-red-200{% endif %}"
 								id="counted-{{ detail.code_product }}">
 								0
 							</td>
-							<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}"
+							<td class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-center text-gray-700{% if has_diff %} text-red-900 dark:text-red-200{% endif %}"
 								id="diff-{{ detail.code_product }}">
 								{{ -detail.amount }}
 							</td>
@@ -223,5 +230,6 @@
 			actionExecuted = true;
 		}
 	}
+
 </script>
 {% endblock %}

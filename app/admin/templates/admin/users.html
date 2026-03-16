@@ -24,7 +24,7 @@
         <form hx-post="{{ url_for('admin.assign_profile_user') }}" hx-target="#main-content" hx-select="#main-content"
             hx-swap="innerHTML" class="space-y-4">
 
-            <div class="flex items-end space-x-2">
+            <div class="flex flex-col sm:flex-row sm:items-end gap-2">
                 <div class="flex-1">
                     <label for="searchUser" class="block mb-2 text-sm font-medium text-gray-900">Código:</label>
                     <input type="text" id="searchUser" name="searchUser"
@@ -37,7 +37,7 @@
                 <button type="button" hx-get="{{ url_for('admin.search_users') }}" hx-target="#modal-users"
                     hx-select="#modalUserSearch" hx-on:keydown="if(event.key === 'Enter') event.preventDefault()"
                     type="button"
-                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                    class="w-full sm:w-auto text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
                     Buscar usuario
                 </button>
             </div>
@@ -53,21 +53,21 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                         <label for="profile_code" class="block mb-2 text-sm font-medium text-gray-900">Perfil:</label>
-                        <div class="flex space-x-2">
+                        <div class="flex flex-col sm:flex-row gap-2">
                             <input type="text" id="profile_code" name="profile_code"
                                 value="{{ user.toolbox_profile_code if user else '' }}" placeholder="Perfil del usuario" readonly
                                 class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
                             <button hx-get="{{ url_for('admin.profile_user_modal') }}" hx-target="#modal-profiles"
                                 hx-select="#modalProfileSearch" type="button"
-                                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
+                                class="w-full sm:w-auto text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2.5 transition-colors">
                                 Buscar perfil
                             </button>
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="pt-2">
                     <button type="submit"
-                        class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">Asignar
+                    class="w-full sm:w-auto text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-8 py-3 text-center shadow-lg uppercase tracking-wider">Asignar
                         perfil</button>
                 </div>
 
