@@ -7,8 +7,10 @@ from flask import (
     Response,
     make_response,
     session,
+    send_file,
 )
 import json
+from io import BytesIO
 from flask_login import login_required, current_user
 from datetime import datetime
 from uuid import uuid4
@@ -16,6 +18,8 @@ from app import db
 from sqlalchemy import select, case, func, text
 from sqlalchemy.orm import aliased, joinedload
 from app.inventory import inventory_bp
+import pandas as pd
+import xlwt
 from app.models import (
     Store,
     Product,
@@ -39,6 +43,172 @@ from app.reports.utils import render_pdf, generate_barcode
 @login_required
 def index():
     return render_template("index.html")
+
+
+def _build_products_list_df():
+    stmt = (
+        select(
+            Product.code.label("code"),
+            Product.description.label("description"),
+            Product.referenc.label("referenc"),
+            Product.mark.label("mark"),
+            Product.model.label("model"),
+            Product.department.label("department"),
+            Product.buy_tax.label("buy_tax"),
+            Product.sale_tax.label("sale_tax"),
+            Product.coin.label("coin"),
+            Product.serialized.label("serialized"),
+            Product.use_lots.label("use_lots"),
+            ProductsUnit.unit.label("unit"),
+            ProductsUnit.unitary_cost.label("unitary_cost"),
+            ProductsUnit.maximum_price.label("maximum_price"),
+            ProductsUnit.offer_price.label("offer_price"),
+            ProductsUnit.higher_price.label("higher_price"),
+            ProductsUnit.minimum_price.label("minimum_price"),
+        )
+        .join(ProductsUnit, ProductsUnit.product_code == Product.code)
+        .where(ProductsUnit.main_unit.is_(True))
+        .order_by(Product.code.asc())
+    )
+    rows = db.session.execute(stmt).mappings().all()
+    return pd.DataFrame(rows)
+
+
+@inventory_bp.route("/listado-productos", methods=["GET"])
+@login_required
+def listado_productos():
+    df = _build_products_list_df()
+    columns = [
+        "code",
+        "description",
+        "referenc",
+        "mark",
+        "model",
+        "department",
+        "buy_tax",
+        "sale_tax",
+        "unit",
+        "unitary_cost",
+        "maximum_price",
+        "offer_price",
+        "higher_price",
+        "minimum_price",
+        "coin",
+        "serialized",
+        "use_lots",
+    ]
+    if df.empty:
+        products = []
+    else:
+        df = df.reindex(columns=columns)
+        products = df.to_dict(orient="records")
+
+    return render_template("inventory/listado.html", products=products, columns=columns)
+
+
+@inventory_bp.route("/exportar-excel", methods=["GET"])
+@login_required
+def exportar_excel_productos():
+    df = _build_products_list_df()
+
+    column_order = [
+        "code",
+        "description",
+        "referenc",
+        "mark",
+        "model",
+        "department",
+        "buy_tax",
+        "sale_tax",
+        "unit",
+        "unitary_cost",
+        "maximum_price",
+        "offer_price",
+        "higher_price",
+        "minimum_price",
+        "coin",
+        "serialized",
+        "use_lots",
+    ]
+
+    if df.empty:
+        df = pd.DataFrame(columns=column_order)
+    else:
+        df = df.reindex(columns=column_order)
+
+    text_cols = [
+        "code",
+        "description",
+        "referenc",
+        "mark",
+        "model",
+        "unit",
+        "coin",
+        "serialized",
+        "use_lots",
+        "department",
+        "buy_tax",
+        "sale_tax",
+    ]
+    money_cols = [
+        "unitary_cost",
+        "maximum_price",
+        "offer_price",
+        "higher_price",
+        "minimum_price",
+    ]
+
+    df_excel = df.copy()
+
+    for col in text_cols:
+        if col in df_excel.columns:
+            df_excel[col] = df_excel[col].fillna("").astype(str)
+    for col in money_cols:
+        if col in df_excel.columns:
+            df_excel[col] = pd.to_numeric(df_excel[col], errors="coerce").fillna(0.0)
+
+    # Construcción de XLS (Excel 97-2003) con xlwt
+    output = BytesIO()
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet("Productos")
+
+    header_style = xlwt.easyxf("font: bold on; pattern: pattern solid, fore_colour gray25;")
+    text_style = xlwt.easyxf(num_format_str="@")
+    number_style = xlwt.easyxf(num_format_str="#,##0.00")
+
+    # Encabezados
+    for col_idx, col_name in enumerate(df_excel.columns):
+        ws.write(0, col_idx, col_name, header_style)
+
+    col_index = {name: i for i, name in enumerate(df_excel.columns)}
+    money_set = set(money_cols)
+
+    # Filas de datos con tipos estrictos
+    for row_idx, row in enumerate(df_excel.itertuples(index=False), start=1):
+        for col_name, col_idx in col_index.items():
+            val = getattr(row, col_name)
+            if col_name in money_set:
+                num = float(val) if val is not None and val != "" else 0.0
+                ws.write(row_idx, col_idx, num, number_style)
+            else:
+                s = "" if val is None else str(val)
+                ws.write(row_idx, col_idx, s, text_style)
+
+    # Autoajuste básico de ancho
+    for i, col in enumerate(df_excel.columns):
+        values = [str(v) for v in df_excel[col].head(500).tolist()]
+        max_len = max([len(str(col))] + [len(v) for v in values])
+        ws.col(i).width = min(max_len + 2, 60) * 256
+
+    wb.save(output)
+    output.seek(0)
+    filename = "PRODUCTS.xls"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.ms-excel",
+    )
 
 
 @inventory_bp.route("/auto_order_collection", methods=["GET"])
