@@ -80,7 +80,8 @@
         <div id="search-error" class="hidden text-red-600 text-sm mb-4"></div>
 
         <form hx-get="{{ url_for('inventory.search_products_for_location') }}" hx-target="#products_codes"
-            hx-swap="beforeend" class="flex flex-wrap items-end gap-4 mb-4">
+            hx-swap="beforeend" class="flex flex-wrap items-end gap-4 mb-4"
+            hx-on::after-request="if(event.detail.successful){const input=document.getElementById('product_code'); if(input){input.value=''; input.focus(); input.select && input.select();}}">
            
             <input type="hidden" name="store_code" value="{{ store.code }}">
             <div class="flex-1 min-w-220px">

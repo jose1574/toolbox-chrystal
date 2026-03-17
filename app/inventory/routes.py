@@ -45,6 +45,42 @@ def index():
     return render_template("index.html")
 
 
+def _normalize_code(code: str) -> str:
+    return (code or "").strip().upper()
+
+
+def _resolve_main_code(code: str) -> str:
+    normalized = _normalize_code(code)
+    mapping = (
+        ProductsCode.query.filter(
+            func.upper(func.trim(ProductsCode.other_code)) == normalized
+        )
+        .first()
+    )
+    return _normalize_code(mapping.main_code) if mapping else normalized
+
+
+def _find_detail_by_codes(order_id, codes):
+    normalized_codes = {_normalize_code(code) for code in codes if code}
+    if not normalized_codes:
+        return None
+    return (
+        InventoryOperationDetail.query.filter(
+            InventoryOperationDetail.main_correlative == order_id,
+            func.upper(func.trim(InventoryOperationDetail.code_product)).in_(
+                normalized_codes
+            ),
+        )
+        .options(
+            joinedload(InventoryOperationDetail.product),
+            joinedload(InventoryOperationDetail.products_unit).joinedload(
+                ProductsUnit.unit1
+            ),
+        )
+        .first()
+    )
+
+
 def _build_products_list_df():
     stmt = (
         select(
@@ -644,7 +680,7 @@ def check_order():
 @inventory_bp.route("/search_product", methods=["GET"])
 @login_required
 def search_product():
-    code_product = request.args.get("code-product")
+    code_product = _normalize_code(request.args.get("code-product"))
     order_id = request.args.get("order_id", type=int)
 
     if not code_product or not order_id:
@@ -656,18 +692,15 @@ def search_product():
             order=None,
         )
 
-    # Buscar el código principal del producto usando products_codes
-    products_code = ProductsCode.query.filter_by(other_code=code_product).first()
-    main_code = products_code.main_code if products_code else code_product
+    main_code = _resolve_main_code(code_product)
 
-    # Buscar el producto en los detalles de la orden usando el código principal
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=order_id, code_product=main_code
-    ).first()
+    detail = _find_detail_by_codes(order_id, [main_code, code_product])
 
     if not detail:
         # Producto no encontrado en la orden, validar existencia en catálogo
-        product = Product.query.filter_by(code=main_code).first()
+        product = (
+            Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
+        )
         if not product:
             error_payload = {
                 "product-error": {
@@ -694,9 +727,14 @@ def search_product():
             )
 
         # Obtener unidad principal
-        pu = ProductsUnit.query.filter_by(
-            product_code=main_code, main_unit=True
-        ).first()
+        pu = (
+            ProductsUnit.query.filter(
+                func.upper(func.trim(ProductsUnit.product_code)) == main_code,
+                ProductsUnit.main_unit.is_(True),
+            )
+            .options(joinedload(ProductsUnit.unit1))
+            .first()
+        )
         if not pu:
             return render_template(
                 "partials/check_order_product_modal.html",
@@ -710,8 +748,9 @@ def search_product():
         unit = Unit.query.filter_by(code=pu.unit).first()
 
         # Obtener cantidad en depósito origen
-        stock = ProductsStock.query.filter_by(
-            product_code=main_code, store=order.store
+        stock = ProductsStock.query.filter(
+            func.upper(func.trim(ProductsStock.product_code)) == main_code,
+            ProductsStock.store == order.store,
         ).first()
         stock_amount = stock.stock if stock else 0.0
 
@@ -728,7 +767,10 @@ def search_product():
         )
 
     # Obtener descripción del producto y unidad
-    product = Product.query.filter_by(code=main_code).first()
+    actual_code = _normalize_code(detail.code_product)
+    product = Product.query.filter(
+        func.upper(func.trim(Product.code)) == actual_code
+    ).first()
     unit = (
         Unit.query.join(ProductsUnit)
         .filter(ProductsUnit.correlative == detail.unit)
@@ -736,8 +778,9 @@ def search_product():
     )
 
     # Obtener cantidad en depósito origen para validación de conteo
-    stock = ProductsStock.query.filter_by(
-        product_code=main_code, store=detail.store
+    stock = ProductsStock.query.filter(
+        func.upper(func.trim(ProductsStock.product_code)) == actual_code,
+        ProductsStock.store == detail.store,
     ).first()
     stock_amount = stock.stock if stock else 0.0
 
@@ -756,7 +799,7 @@ def search_product():
 @login_required
 def add_product_to_order():
     order_id = request.form.get("order_id", type=int)
-    code_product = request.form.get("code_product")
+    code_product = _normalize_code(request.form.get("code_product"))
 
     print(f"Agregando producto: order_id={order_id}, code_product={code_product}")
 
@@ -772,16 +815,12 @@ def add_product_to_order():
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    # Buscar el código principal
-    products_code = ProductsCode.query.filter_by(other_code=code_product).first()
-    main_code = products_code.main_code if products_code else code_product
+    main_code = _resolve_main_code(code_product)
 
     print(f"Main code: {main_code}")
 
     # Verificar si ya existe
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=order_id, code_product=main_code
-    ).first()
+    detail = _find_detail_by_codes(order_id, [main_code, code_product])
 
     if detail:
         print("Producto ya agregado")
@@ -796,9 +835,18 @@ def add_product_to_order():
         )
 
     # Obtener datos
-    product = Product.query.filter_by(code=main_code).first()
+    product = Product.query.filter(
+        func.upper(func.trim(Product.code)) == main_code
+    ).first()
     order = InventoryOperation.query.get(order_id)
-    pu = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
+    pu = (
+        ProductsUnit.query.filter(
+            func.upper(func.trim(ProductsUnit.product_code)) == main_code,
+            ProductsUnit.main_unit.is_(True),
+        )
+        .options(joinedload(ProductsUnit.unit1))
+        .first()
+    )
 
     if not product:
         error_payload = {
@@ -838,8 +886,9 @@ def add_product_to_order():
     print(f"Product: {product}, Order: {order}, PU: {pu}, Tax: {tax}")
 
     # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter_by(
-        product_code=main_code, store=order.store
+    stock = ProductsStock.query.filter(
+        func.upper(func.trim(ProductsStock.product_code)) == main_code,
+        ProductsStock.store == order.store,
     ).first()
     stock_amount = stock.stock if stock else 0.0
     if stock_amount <= 0:
@@ -926,7 +975,7 @@ def add_product_to_order():
 @login_required
 def update_counted_amount():
     order_id = request.form.get("order_id", type=int)
-    code_product = request.form.get("code_product")
+    code_product = _normalize_code(request.form.get("code_product"))
     counted_amount = request.form.get("counted_amount", type=float)
 
     if not order_id or not code_product or counted_amount is None:
@@ -934,16 +983,21 @@ def update_counted_amount():
 
     # Actualizar el detalle (por ahora, solo en memoria, pero luego en BD)
     # Para simplificar, devolver HTML actualizado para la fila
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=order_id, code_product=code_product
-    ).first()
+    detail = _find_detail_by_codes(order_id, [code_product])
 
     if not detail:
-        return "Producto no encontrado."
+        error_payload = {
+            "counted-error": {
+                "message": "Producto no encontrado en la orden.",
+                "focus_id": "code-product",
+            }
+        }
+        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload)})
 
     # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter_by(
-        product_code=code_product, store=detail.store
+    stock = ProductsStock.query.filter(
+        func.upper(ProductsStock.product_code) == _normalize_code(detail.code_product),
+        ProductsStock.store == detail.store,
     ).first()
     stock_amount = stock.stock if stock else 0.0
     if counted_amount > stock_amount:
@@ -978,15 +1032,13 @@ def update_counted_amount():
 @login_required
 def delete_product_from_order():
     order_id = request.form.get("order_id", type=int)
-    code_product = request.form.get("code_product")
+    code_product = _normalize_code(request.form.get("code_product"))
 
     if not order_id or not code_product:
         return "Error: Datos incompletos.", 400
 
     # Eliminar de la BD
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=order_id, code_product=code_product
-    ).first()
+    detail = _find_detail_by_codes(order_id, [code_product])
 
     if detail:
         db.session.delete(detail)
@@ -1013,15 +1065,12 @@ def save_order_check():
     # Actualizar las cantidades contadas en la BD para los productos restantes
     for key, value in request.form.items():
         if key.startswith("counted_"):
-            code_product = key[8:]  # Remove "counted_"
+            code_product = _normalize_code(key[8:])  # Remove "counted_"
             counted_amount = float(value) if value else 0
 
-            detail = InventoryOperationDetail.query.filter_by(
-                main_correlative=order_id, code_product=code_product
-            ).first()
+            detail = _find_detail_by_codes(order_id, [code_product])
 
             if detail:
-                # Actualizar amount con la cantidad contada
                 detail.amount = counted_amount
 
     # Actualizar descripción de cabecera para reflejar el chequeo
@@ -1112,11 +1161,11 @@ def check_transfer_operation():
     )
 
 
-@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>")
+@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>", methods=["GET", "POST"])
 @login_required
 def search_product_in_transfer(operation_id):
-    product_code = request.args.get("product_code")
-    if not product_code:
+    product_code_input = (request.values.get("product_code") or "").strip().upper()
+    if not product_code_input:
         error_payload = {
             "search-error": {
                 "message": "Código de producto requerido.",
@@ -1129,10 +1178,15 @@ def search_product_in_transfer(operation_id):
             headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
         )
 
-    # Buscar el producto en la operación
+    # Resolver código alterno a código principal
+    products_code = ProductsCode.query.filter_by(other_code=product_code_input).first()
+    main_code = (products_code.main_code if products_code else product_code_input).strip().upper()
+
+    # Buscar el producto en la operación usando código principal o alterno
     detail = (
-        InventoryOperationDetail.query.filter_by(
-            main_correlative=operation_id, code_product=product_code
+        InventoryOperationDetail.query.filter(
+            InventoryOperationDetail.main_correlative == operation_id,
+            InventoryOperationDetail.code_product == main_code,
         )
         .options(
             joinedload(InventoryOperationDetail.product),
@@ -1156,22 +1210,11 @@ def search_product_in_transfer(operation_id):
             headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
         )
 
-    ##busca parametros de existencia minimia y maxima en el deposito de destino
-    failure_info = ProductsFailure.query.filter_by(
-        product_code=product_code, store_code=detail.destination_store
-    ).first()
-
-    # Devolver el modal renderizado
-    # return render_template("partials/product_modal.html",
-    #                      detail=detail,
-    #                      operation_id=operation_id,
-    #                      destination_store=detail.destination_store,
-    #                      product_failure=failure_info)
     return redirect(
         url_for(
             "inventory.product_modal",
             operation_id=operation_id,
-            product_code=product_code,
+            product_code=main_code,
         )
     )
 
@@ -1269,12 +1312,7 @@ def update_count(operation_id, product_code, destination_store):
 
     db.session.commit()
 
-    # Como es solo informativo, no guardamos en BD
-    # Si no hay diferencia, devolvemos vacío para eliminar la fila
-    if counted_amount == detail.amount:
-        return ""
-
-    # Si hay diferencia, devolvemos la fila actualizada con fondo rojo
+    # Devolver siempre la fila actualizada (aunque no haya diferencia) para permitir re-conteos posteriores
     return render_template(
         "partials/table_row.html",
         detail=detail,

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Chequeo de Traslado de Inventario{% endblock %}
 
+{% set show_products = show_products|default(false) %}
+{% set operation = operation|default(None) %}
+
 {% block content %}
 <div class="px-4 py-6 space-y-6">
 	<div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
@@ -74,6 +77,12 @@
 		<div id="modal-container"></div>
 
 		<div class="overflow-x-auto shadow-xl rounded-xl border border-gray-200 bg-white mt-4">
+			<div class="flex items-center justify-end px-6 pt-4 pb-2">
+				<button type="button" id="report-button" disabled
+				        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-gray-100 text-gray-400 px-4 py-2 text-sm font-medium shadow-sm cursor-not-allowed">
+					<span>Generar reporte</span>
+				</button>
+			</div>
 			<table class="w-full text-sm text-left text-gray-500">
 				<thead class="text-xs text-gray-700 uppercase bg-gray-100 font-black tracking-wider border-b border-gray-200">
 					<tr>
@@ -88,7 +97,7 @@
 				<tbody class="divide-y divide-gray-200 bg-white" id="products-table">
 					{% for detail in details %}
 					{% set has_diff = (0 != detail.amount) %}
-					<tr id="row-{{ detail.code_product }}"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
+					<tr id="row-{{ detail.code_product }}" data-counted="false"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
 						<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">{{ detail.code_product }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.description_product }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.referenc }}</td>
@@ -131,5 +140,67 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		}
 	}
 });
+
+// Abrir el PDF cuando todos los productos estén contados
+(function() {
+	const reportUrl = "{{ url_for('inventory.transfer_operation_report', order_id=operation.correlative) if show_products and operation else '' }}";
+	const reportBtn = document.getElementById('report-button');
+	let reportShown = false;
+
+	function allRowsCounted() {
+		const rows = document.querySelectorAll('#products-table tr[id^="row-"]');
+		if (!rows.length) return false;
+		for (const row of rows) {
+			if (row.getAttribute('data-counted') !== 'true') {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function updateReportButton() {
+		if (!reportBtn) return;
+		const enabled = allRowsCounted() && !!reportUrl;
+		reportBtn.disabled = !enabled;
+		reportBtn.classList.toggle('cursor-not-allowed', !enabled);
+		reportBtn.classList.toggle('bg-gray-100', !enabled);
+		reportBtn.classList.toggle('text-gray-400', !enabled);
+		reportBtn.classList.toggle('border-gray-300', !enabled);
+		reportBtn.classList.toggle('bg-green-600', enabled);
+		reportBtn.classList.toggle('text-white', enabled);
+		reportBtn.classList.toggle('border-green-700', enabled);
+		reportBtn.classList.toggle('hover:bg-green-700', enabled);
+	}
+
+	function maybeOpenReport(auto) {
+		if (!reportUrl) return;
+		if (auto && reportShown) return;
+		if (!allRowsCounted()) return;
+		reportShown = true;
+		window.open(reportUrl, '_blank');
+	}
+
+	if (reportBtn) {
+		reportBtn.addEventListener('click', function() {
+			maybeOpenReport(false);
+		});
+	}
+
+	document.body.addEventListener('htmx:afterSwap', function(evt) {
+		const target = evt.detail && evt.detail.target;
+		if (!target) return;
+		const isProductRow = target.id && target.id.startsWith('row-');
+		if (isProductRow) {
+			// Marcar la fila como contada si viene de un update
+			target.setAttribute('data-counted', 'true');
+			updateReportButton();
+			maybeOpenReport(true);
+		}
+	});
+
+	window.addEventListener('DOMContentLoaded', function() {
+		updateReportButton();
+	});
+})();
 </script>
 {% endblock %}

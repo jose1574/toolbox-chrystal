@@ -1,5 +1,5 @@
 {% set has_diff = counted_amount != detail.amount %}
-<tr id="row-{{ detail.code_product }}"{% if has_diff %} class="row-diff"{% endif %}>
+<tr id="row-{{ detail.code_product }}" data-counted="true"{% if has_diff %} class="row-diff"{% endif %}>
     <td class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm font-medium text-gray-900 wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">{{ detail.code_product }}</td>
     <td class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-gray-500 wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">{{ detail.description_product }}</td>
     <td class="px-2 py-2 sm:px-3 md:px-4 md:py-3 text-[11px] sm:text-xs md:text-sm text-gray-500 hidden md:table-cell wrap-break-word{% if has_diff %} text-red-900 dark:text-red-200{% endif %}">{{ detail.referenc }}</td>
