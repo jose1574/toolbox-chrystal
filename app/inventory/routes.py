@@ -694,7 +694,7 @@ def search_product():
 
     main_code = _resolve_main_code(code_product)
 
-    detail = _find_detail_by_codes(order_id, [main_code, code_product])
+    detail = _find_detail_by_codes(order_id, [main_code])
 
     if not detail:
         # Producto no encontrado en la orden, validar existencia en catálogo
