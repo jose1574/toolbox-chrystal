@@ -3254,6 +3254,8 @@
     width: 100%;
     align-items: center;
     justify-content: center;
+    column-gap: calc(var(--spacing) * 3);
+    text-align: left;
     border-radius: var(--radius-lg);
     padding: calc(var(--spacing) * 2);
     font-size: var(--text-base);

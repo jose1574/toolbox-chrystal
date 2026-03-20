@@ -162,7 +162,7 @@
 
   /* Sidebar: botones e ítems simplificados */
   .sidebar-item {
-    @apply flex items-center justify-center p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white;
+    @apply flex items-center justify-center p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white gap-3 text-left;
   }
   .sidebar-item:hover .sidebar-icon {
     @apply text-gray-900 dark:text-white;

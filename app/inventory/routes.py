@@ -1766,7 +1766,8 @@ def search_product_counter(store_code):
     stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
     unit = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
 
-    return render_template("partials/product_counter_modal.html", product=product_info, stock=stock, unit=unit.unit1, store=store)
+    unit_value = unit.unit1 if unit is not None else None
+    return render_template("partials/product_counter_modal.html", product=product_info, stock=stock, unit=unit_value, store=store)
 
     
     
