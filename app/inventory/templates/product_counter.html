@@ -2,11 +2,12 @@
 {% block title %}Contador de Productos - Toolbox{% endblock %}
 
 {% block content %}
-
-<h1 class="text-2xl font-semibold text-gray-800 mb-4">Contador de Productos</h1>
+<div class="p-4 ml-[4.5rem]">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-4">Contador de Productos</h1>
+</div>
 
 {% if not store %}
-<div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
+<div class="bg-white shadow-sm p-6 rounded-lg space-y-4 p-4 ml-[4.5rem]">
     <h2 class="text-lg font-semibold text-heading">Seleccionar Depósito</h2>
     <form hx-post="{{ url_for('inventory.product_counter') }}" hx-target="#main-content" hx-select="#main-content"
         hx-push-url="true" class="space-y-4">
@@ -41,75 +42,83 @@
 
 {% endif %}
 {% if store %}
-<div class="flex items-center justify-between mb-2">
+<div class="flex items-center justify-between mb-2 p-4 ml-[4.5rem]">
     <h3 class="text-lg font-semibold text-gray-800">Depósito seleccionado: {{ store.description }}</h3>
     <button type="button" hx-get="{{ url_for('inventory.product_counter') }}" hx-target="#main-content"
         hx-select="#main-content" hx-push-url="true"
         class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
-        <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-            stroke-width="1.8" stroke="currentColor">
+        <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
+            stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
         Regresar
     </button>
 </div>
 <!-- resultado del conteo de productos -->
-<div class="bg-white shadow-sm p-4 rounded-lg mt-4">
+<div class="bg-white shadow-sm rounded-lg mt-4 p-4 ml-[4.5rem]">
+    <div id="container-table"
+        class="w-full max-w-full overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white">
 
-    <div id="controls" class="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <form hx-get="{{ url_for('inventory.search_product_counter', store_code=store.code) }}" hx-target="body"
-            hx-swap="beforeend" autocomplete="off" class="flex items-center gap-2">
-            <input type="hidden" name="store_code" value="{{ store.code }}">
-            <label for="product_code" class="text-sm font-medium text-gray-700 mr-3">Código de producto:</label>
-            <input id="product_code" name="product_code" type="text" placeholder="Escanear o escribir código"
-                class="block w-48 md:w-64 rounded-md border border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                autocomplete="off">
-        </form>
-        <div class="flex items-center gap-4 md:gap-6">
-            <button type="button" hx-post="{{ url_for('inventory.clear_product_counter') }}"
-                hx-target="#counter-results" hx-swap="innerHTML"
-                class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-1 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
-                    <path d="M3 6h18" />
-                    <path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" />
-                    <path d="M10 10v6" />
-                    <path d="M14 10v6" />
-                    <path d="M9 6l1-2h4l1 2" />
-                </svg>
-                Limpiar conteo
-            </button>
-            <button type="submit" form="save-counter-form"
-                class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
-                    <path d="M5 12l4 4L19 6" />
-                </svg>
-                Finalizar conteo
-            </button>
+        <div class="w-full">
+            <div id="controls" class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <form hx-get="{{ url_for('inventory.search_product_counter', store_code=store.code) }}" hx-target="body"
+                    hx-swap="beforeend" autocomplete="off" class="flex items-center gap-2">
+                    <input type="hidden" name="store_code" value="{{ store.code }}">
+                    <label for="product_code" class="text-sm font-medium text-gray-700 mr-3">Código de producto:</label>
+                    <input id="product_code" name="product_code" type="text" placeholder="Escanear o escribir código"
+                        class="block w-48 md:w-64 rounded-md border border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        autocomplete="off">
+                </form>
+                <div class="flex items-center gap-4 md:gap-6">
+                    <button type="button" hx-post="{{ url_for('inventory.clear_product_counter') }}"
+                        hx-target="#counter-results" hx-swap="innerHTML"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                            <path d="M3 6h18" />
+                            <path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" />
+                            <path d="M10 10v6" />
+                            <path d="M14 10v6" />
+                            <path d="M9 6l1-2h4l1 2" />
+                        </svg>
+                        Limpiar conteo
+                    </button>
+                    <button type="submit" form="save-counter-form"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                            <path d="M5 12l4 4L19 6" />
+                        </svg>
+                        Finalizar conteo
+                    </button>
+                </div>
+            </div>
+            <form id="save-counter-form" method="post"
+                action="{{ url_for('inventory.save_products_counter', store_code=store.code) }}"
+                hx-post="{{ url_for('inventory.save_products_counter', store_code=store.code) }}"
+                hx-target="#main-content" hx-select="#main-content" hx-push-url="true">
+                <table class=" w-full table-fixed text-xs text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr scope="col" class="px-6 py-3">
+                            <th class="px-4 py-3 w-[15%]">Código</th>
+                            <th class="px-4 py-3 w-[30%]">Descripción</th>
+                            <th class="px-4 py-3 w-[15%]">Referencia</th>
+                            <th class="px-4 py-3 w-[10%] text-center">Unidad</th>
+                            <th class="px-4 py-3 w-[10%] text-center">Exist.</th>
+                            <th class="px-4 py-3 w-[10%] text-center">Contada</th>
+                            <th class="px-4 py-3 w-[10%] text-center">Dif.</th>
+                            <th class="px-4 py-3 w-[10%] text-center">
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="counter-results">
+                        {{ counter_rows_html|safe if counter_rows_html else '' }}
+                    </tbody>
+                </table>
+            </form>
         </div>
     </div>
-    <form id="save-counter-form" method="post"
-        action="{{ url_for('inventory.save_products_counter', store_code=store.code) }}"
-        hx-post="{{ url_for('inventory.save_products_counter', store_code=store.code) }}"
-        hx-target="#main-content" hx-select="#main-content" hx-push-url="true">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr scope="col" class="px-6 py-3">
-                    <th scope="col" class="px-6 py-3">Código</th>
-                    <th scope="col" class="px-6 py-3">Descripción</th>
-                    <th scope="col" class="px-6 py-3">Referencia</th>
-                    <th scope="col" class="px-6 py-3">Unidad</th>
-                    <th scope="col" class="px-6 py-3">Existencia</th>
-                    <th scope="col" class="px-6 py-3">Cantidad contada</th>
-                    <th scope="col" class="px-6 py-3">Diferencia</th>
-                </tr>
-            </thead>
-            <tbody id="counter-results">
-                {{ counter_rows_html|safe if counter_rows_html else '' }}
-            </tbody>
-        </table>
-    </form>
 </div>
 
 {% endif %}
@@ -127,7 +136,5 @@
         }
     })();
 </script>
-
-</div>
 
 {% endblock %}

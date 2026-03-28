@@ -3,14 +3,14 @@
     <input type="hidden" name="product_code" value="{{ product.code }}">
     <input type="hidden" name="store_code" value="{{ store_code }}">
 
-    <td class="py-2">{{ product.code }}</td>
-    <td class="py-2">{{ product.description }}</td>
-    <td class="py-2">{{ product.referenc }}</td>
-    <td class="py-2">{{ unit.description }}</td>
-    <td class="py-2">{{ system_qty }}</td>
-    <td class="py-2">{{ counted_amount }}</td>
-    <td class="py-2">{{ difference }}</td>
-    <td class="py-2">
+    <td class="py-2 w-[15%]">{{ product.code }}</td>
+    <td class="py-2 w-[30%]">{{ product.description }}</td>
+    <td class="py-2 w-[15%]">{{ product.referenc }}</td>
+    <td class="py-2 w-[10%] text-center">{{ unit.description }}</td>
+    <td class="py-2 w-[10%] text-center">{{ system_qty }}</td>
+    <td class="py-2 w-[10%] text-center">{{ counted_amount }}</td>
+    <td class="py-2 w-[10%] text-center">{{ difference }}</td>
+    <td class="py-2 w-[10%] text-center">
         <button
             type="button"
             hx-post="{{ url_for('inventory.remove_product_counter_row') }}"
