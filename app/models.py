@@ -9046,7 +9046,7 @@ class ProductsFailure(db.Model):
     )
 
     correlative = db.Column(
-        db.Integer, primary_key=True, server_default=db.FetchedValue()
+        db.Integer, primary_key=True
     )
     product_code = db.Column(db.ForeignKey("public.products.code"), nullable=False)
     store_code = db.Column(db.ForeignKey("public.store.code"), nullable=False)
