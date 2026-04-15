@@ -44,7 +44,11 @@
             </thead>
             <tbody>
             {% for operation in transfer_operations %}
-                <tr class="bg-white border-b hover:bg-gray-50">
+                <tr class="document-row bg-white border-b hover:bg-gray-50 cursor-pointer"
+                    data-report-url="{{ url_for('inventory.order_collection_report', order_id=operation.correlative) }}"
+                    tabindex="0"
+                    role="link"
+                    aria-label="Abrir reporte de la operación {{ operation.correlative }}">
                     <td class="w-4 p-4">
                         <div class="flex items-center">
                             <input type="checkbox"

@@ -81,6 +81,18 @@ def _find_detail_by_codes(order_id, codes):
     )
 
 
+def _sort_details_by_location(details):
+    def sort_key(detail):
+        location = ""
+        if detail.failure_info and detail.failure_info.location:
+            location = detail.failure_info.location.strip().upper()
+
+        code_product = _normalize_code(detail.code_product)
+        return (location == "", location, code_product)
+
+    return sorted(details, key=sort_key)
+
+
 def _build_products_list_df():
     stmt = (
         select(
@@ -566,6 +578,7 @@ def order_collection_report(order_id):
             joinedload(InventoryOperationDetail.failure_info),
         ),
     ).get_or_404(order_id)
+    sorted_details = _sort_details_by_location(order.inventory_operation_details)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -578,6 +591,7 @@ def order_collection_report(order_id):
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,
                 "user": user,
+                "sorted_details": sorted_details,
             },
             paper_format="Letter",
             orientation="Portrait",
@@ -1529,6 +1543,7 @@ def transfer_operation_report(order_id):
             joinedload(InventoryOperationDetail.failure_info),
         ),
     ).get_or_404(order_id)
+    sorted_details = _sort_details_by_location(order.inventory_operation_details)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -1541,6 +1556,7 @@ def transfer_operation_report(order_id):
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,
                 "user": user,
+                "sorted_details": sorted_details,
             },
             paper_format="Letter",
             orientation="Portrait",

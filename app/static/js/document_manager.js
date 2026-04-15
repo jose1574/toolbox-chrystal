@@ -60,6 +60,15 @@
             .filter((value) => value !== null && value !== undefined && String(value).trim() !== '');
     }
 
+    function navigateToReport(row) {
+        if (!(row instanceof HTMLElement)) return;
+
+        const url = row.dataset.reportUrl;
+        if (!url) return;
+
+        window.open(url, '_blank', 'noopener');
+    }
+
     function deleteSelected() {
         const root = getRoot();
         const state = getState(root);
@@ -129,12 +138,38 @@
         const target = event.target;
         if (!(target instanceof Element)) return;
 
+        const row = target.closest('.document-row');
+        if (row && root.contains(row)) {
+            if (target.closest('input, label, button, a')) {
+                return;
+            }
+
+            navigateToReport(row);
+            return;
+        }
+
         const deleteBtn = target.closest('#delete-btn');
         if (!deleteBtn) return;
         if (!root.contains(deleteBtn)) return;
 
         event.preventDefault();
         deleteSelected();
+    });
+
+    document.addEventListener('keydown', function (event) {
+        const root = getRoot();
+        if (!root) return;
+
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const row = target.closest('.document-row');
+        if (!row || !root.contains(row)) return;
+        if (target.closest('input, label, button, a')) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        event.preventDefault();
+        navigateToReport(row);
     });
 
     document.addEventListener('DOMContentLoaded', updateUI);

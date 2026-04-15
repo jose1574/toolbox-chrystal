@@ -184,7 +184,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for detail in order.inventory_operation_details %}
+                {% for detail in sorted_details %}
                 <tr>
                     <td>{{ detail.code_product }}</td>
                     <td style="width: 40%;">{{ detail.product.description if detail.product else
