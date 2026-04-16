@@ -51,12 +51,9 @@ def _normalize_code(code: str) -> str:
 
 def _resolve_main_code(code: str) -> str:
     normalized = _normalize_code(code)
-    mapping = (
-        ProductsCode.query.filter(
-            func.upper(func.trim(ProductsCode.other_code)) == normalized
-        )
-        .first()
-    )
+    mapping = ProductsCode.query.filter(
+        func.upper(func.trim(ProductsCode.other_code)) == normalized
+    ).first()
     return _normalize_code(mapping.main_code) if mapping else normalized
 
 
@@ -220,7 +217,9 @@ def exportar_excel_productos():
     wb = xlwt.Workbook()
     ws = wb.add_sheet("Productos")
 
-    header_style = xlwt.easyxf("font: bold on; pattern: pattern solid, fore_colour gray25;")
+    header_style = xlwt.easyxf(
+        "font: bold on; pattern: pattern solid, fore_colour gray25;"
+    )
     text_style = xlwt.easyxf(num_format_str="@")
     number_style = xlwt.easyxf(num_format_str="#,##0.00")
 
@@ -712,9 +711,9 @@ def search_product():
 
     if not detail:
         # Producto no encontrado en la orden, validar existencia en catálogo
-        product = (
-            Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
-        )
+        product = Product.query.filter(
+            func.upper(func.trim(Product.code)) == main_code
+        ).first()
         if not product:
             error_payload = {
                 "product-error": {
@@ -1006,7 +1005,9 @@ def update_counted_amount():
                 "focus_id": "code-product",
             }
         }
-        return Response("", status=404, headers={"HX-Trigger": json.dumps(error_payload)})
+        return Response(
+            "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     # Validar stock en depósito de origen
     stock = ProductsStock.query.filter(
@@ -1175,7 +1176,10 @@ def check_transfer_operation():
     )
 
 
-@inventory_bp.route("/check_transfer_operation/search_product/<int:operation_id>", methods=["GET", "POST"])
+@inventory_bp.route(
+    "/check_transfer_operation/search_product/<int:operation_id>",
+    methods=["GET", "POST"],
+)
 @login_required
 def search_product_in_transfer(operation_id):
     product_code_input = (request.values.get("product_code") or "").strip().upper()
@@ -1194,7 +1198,11 @@ def search_product_in_transfer(operation_id):
 
     # Resolver código alterno a código principal
     products_code = ProductsCode.query.filter_by(other_code=product_code_input).first()
-    main_code = (products_code.main_code if products_code else product_code_input).strip().upper()
+    main_code = (
+        (products_code.main_code if products_code else product_code_input)
+        .strip()
+        .upper()
+    )
 
     # Buscar el producto en la operación usando código principal o alterno
     detail = (
@@ -1732,7 +1740,9 @@ def product_counter():
             if not product_row:
                 continue
 
-            unit_rel = ProductsUnit.query.filter_by(product_code=code, main_unit=True).first()
+            unit_rel = ProductsUnit.query.filter_by(
+                product_code=code, main_unit=True
+            ).first()
 
             if isinstance(item, dict):
                 qty = float(item.get("counted", 0))
@@ -1771,22 +1781,29 @@ def product_counter():
 def search_product_counter(store_code):
     product_code = request.args.get("product_code", "").strip()
 
-    # Resolver código alterno a código principal    
+    # Resolver código alterno a código principal
     products_code = ProductsCode.query.filter_by(other_code=product_code).first()
-    main_code = products_code.main_code if products_code else product_code  
+    main_code = products_code.main_code if products_code else product_code
 
-    product_info = Product.query.filter_by(code=main_code).first() 
-    
+    product_info = Product.query.filter_by(code=main_code).first()
+
     store = Store.query.filter_by(code=store_code).first()
 
-    stock = ProductsStock.query.filter_by(product_code=main_code, store=store_code).first()
+    stock = ProductsStock.query.filter_by(
+        product_code=main_code, store=store_code
+    ).first()
     unit = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
 
     unit_value = unit.unit1 if unit is not None else None
-    return render_template("partials/product_counter_modal.html", product=product_info, stock=stock, unit=unit_value, store=store)
+    return render_template(
+        "partials/product_counter_modal.html",
+        product=product_info,
+        stock=stock,
+        unit=unit_value,
+        store=store,
+    )
 
-    
-    
+
 @inventory_bp.route("/product_counter/update_count", methods=["POST"])
 @login_required
 def update_product_counter():
@@ -1836,7 +1853,9 @@ def update_product_counter():
         if not product_row:
             continue
 
-        unit_rel = ProductsUnit.query.filter_by(product_code=code, main_unit=True).first()
+        unit_rel = ProductsUnit.query.filter_by(
+            product_code=code, main_unit=True
+        ).first()
 
         # Compatibilidad: si todavía hay datos antiguos (solo cantidad), recalcular
         if isinstance(item, dict):
@@ -1910,7 +1929,7 @@ def clear_product_counter():
 
 
 @inventory_bp.route("/product_counter/save_counter/<store_code>", methods=["POST"])
-@login_required 
+@login_required
 def save_products_counter(store_code):
     """Guarda el conteo de productos en la base de datos o lo procesa según la lógica de negocio."""
     user_code = current_user.code
@@ -1921,7 +1940,7 @@ def save_products_counter(store_code):
     # Agrupar por tipo de diferencia para el usuario actual en este depósito
     positive_diffs = {}  # diferencia > 0 (sobrante)
     negative_diffs = {}  # diferencia < 0 (faltante)
-    zero_diffs = {}      # diferencia == 0 (sin ajuste)
+    zero_diffs = {}  # diferencia == 0 (sin ajuste)
 
     print(f"Guardando conteo para depósito {store_code} (usuario {user_code}):")
     for code, item in store_counters.items():
@@ -1942,8 +1961,6 @@ def save_products_counter(store_code):
                 "counted": counted,
                 "difference": difference,
             }
-
-
 
         elif difference < 0:
             negative_diffs[code] = {
@@ -2017,7 +2034,9 @@ def save_products_counter(store_code):
                 "p_internal_use": False,
             }
 
-            load_correlative = db.session.execute(sql_header, header_params_load).scalar()
+            load_correlative = db.session.execute(
+                sql_header, header_params_load
+            ).scalar()
             if not load_correlative:
                 raise Exception("La DB no devolvió ID de operación de carga.")
 
@@ -2027,7 +2046,10 @@ def save_products_counter(store_code):
                     db.session.query(ProductsUnit, Product, Tax)
                     .join(Product, ProductsUnit.product_code == Product.code)
                     .outerjoin(Tax, Product.buy_tax == Tax.code)
-                    .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
+                    .filter(
+                        ProductsUnit.product_code == code,
+                        ProductsUnit.main_unit == True,
+                    )
                     .first()
                 )
 
@@ -2088,7 +2110,9 @@ def save_products_counter(store_code):
                 "p_internal_use": False,
             }
 
-            download_correlative = db.session.execute(sql_header, header_params_down).scalar()
+            download_correlative = db.session.execute(
+                sql_header, header_params_down
+            ).scalar()
             if not download_correlative:
                 raise Exception("La DB no devolvió ID de operación de descarga.")
 
@@ -2097,7 +2121,10 @@ def save_products_counter(store_code):
                     db.session.query(ProductsUnit, Product, Tax)
                     .join(Product, ProductsUnit.product_code == Product.code)
                     .outerjoin(Tax, Product.buy_tax == Tax.code)
-                    .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
+                    .filter(
+                        ProductsUnit.product_code == code,
+                        ProductsUnit.main_unit == True,
+                    )
                     .first()
                 )
 
@@ -2115,7 +2142,9 @@ def save_products_counter(store_code):
                     "p_referenc": prod.referenc,
                     "p_mark": prod.mark,
                     "p_model": prod.model,
-                    "p_amount": abs(float(data["difference"])),  # usar valor absoluto de la diferencia negativa
+                    "p_amount": abs(
+                        float(data["difference"])
+                    ),  # usar valor absoluto de la diferencia negativa
                     "p_store": store_code,
                     "p_locations": "00",
                     "p_destination_store": store_code,
@@ -2271,7 +2300,9 @@ def product_counter_report_pdf(count_batch_id):
 
     # Obtener (si existen) las operaciones de carga y descarga asociadas a este conteo
     load_op = next((h.load_operation for h in items if h.load_operation), None)
-    download_op = next((h.download_operation for h in items if h.download_operation), None)
+    download_op = next(
+        (h.download_operation for h in items if h.download_operation), None
+    )
 
     filename = f"conteo_inventario_{store.code if store else 'N/A'}_{count_date.strftime('%Y%m%d') if count_date else '00000000'}.pdf"
 
@@ -2301,19 +2332,22 @@ def product_counter_report_pdf(count_batch_id):
     return Response(pdf, mimetype="application/pdf", headers=headers)
 
 
-
-##reporte de contero de productos 
+##reporte de contero de productos
 @inventory_bp.route("/product_counter/report/<count_batch_id>")
-@login_required 
+@login_required
 def product_counter_report(count_batch_id):
     # Normalizar el ID de batch igual que en la versión PDF
     count_batch_id = (count_batch_id or "").strip().strip('"').strip("'")
 
     user = current_user
-    history_records = ProductsCounterHistory.query.filter_by(count_batch_id=count_batch_id).all()
+    history_records = ProductsCounterHistory.query.filter_by(
+        count_batch_id=count_batch_id
+    ).all()
 
     if not history_records:
-        flash(f"No se encontraron datos de conteo para el ID {count_batch_id}.", "warning")
+        flash(
+            f"No se encontraron datos de conteo para el ID {count_batch_id}.", "warning"
+        )
         return redirect(url_for("inventory.product_counter"))
 
     # Por ahora solo devolvemos un JSON simple con info básica; se puede mejorar con una plantilla HTML
@@ -2337,5 +2371,91 @@ def product_counter_report(count_batch_id):
         "count_batch_id": count_batch_id,
         "records": data,
     }
+
+
+@inventory_bp.route("/modal_product_params/<product_code>/<store>", methods=["GET", "POST"])
+@login_required
+def modal_product_params(product_code, store):
+    if request.method == "POST":
+        form_product_code = _normalize_code(request.form.get("product_code") or product_code)
+        form_store_code = (request.form.get("store_code") or store or "").strip()
+
+        if not form_product_code or not form_store_code:
+            return "Datos incompletos para guardar parametros.", 400
+
+        main_code = _resolve_main_code(form_product_code)
+        product_info = Product.query.filter_by(code=main_code).first()
+        store_info = Store.query.filter_by(code=form_store_code).first()
+
+        if not product_info:
+            return "Producto no encontrado.", 404
+        if not store_info:
+            return "Deposito no encontrado.", 404
+
+        try:
+            minimal_stock = request.form.get("minimal_stock", type=float, default=0)
+            maximum_stock = request.form.get("maximum_stock", type=float, default=0)
+
+            if minimal_stock is None:
+                minimal_stock = 0
+            if maximum_stock is None:
+                maximum_stock = 0
+
+            if minimal_stock < 0 or maximum_stock < 0:
+                return "Los valores de stock no pueden ser negativos.", 422
+
+            if minimal_stock > maximum_stock:
+                return "El stock minimo no puede ser mayor al stock maximo.", 422
+
+            failure = ProductsFailure.query.filter_by(
+                product_code=main_code, store_code=form_store_code
+            ).first()
+
+            if not failure:
+                failure = ProductsFailure(
+                    product_code=main_code,
+                    store_code=form_store_code,
+                    minimal_stock=minimal_stock,
+                    maximum_stock=maximum_stock,
+                    location="",
+                )
+                db.session.add(failure)
+            else:
+                failure.minimal_stock = minimal_stock
+                failure.maximum_stock = maximum_stock
+
+            db.session.commit()
+            return "Parametros guardados correctamente.", 200
+        except Exception as exc:
+            db.session.rollback()
+            return f"Error al guardar parametros: {exc}", 500
+
+    if not product_code or not store:
+        return "Código de producto o depósito no proporcionado.", 400
+
+    main_code = _resolve_main_code(product_code)
+
+    product_info = Product.query.filter_by(code=main_code).first()
+
+    if not product_info:
+        return "Producto no encontrado.", 404
+
+    store_info = Store.query.filter_by(code=store).first()
+    if not store_info:
+        return "Depósito no encontrado.", 404
+
+    product_params = ProductsFailure.query.filter_by(
+        product_code=main_code, store_code=store
+    ).first()
+
+    # Unidad principal para mostrar en el modal
+    unit_row = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
+    return render_template(
+        "partials/modal_product_parmams.html",
+        product_params=product_params,
+        product=product_info,
+        store=store_info,
+        unit=unit_row.unit1 if unit_row else None,
+    )
 
     

@@ -1,0 +1,32 @@
+<div id="product-modal" class="fixed inset-0 z-50 bg-gray-600/50 flex items-center justify-center p-4" hx-target="this" hx-swap="outerHTML" role="dialog" aria-modal="true">
+    <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white">
+        <div class="flex items-start justify-between mb-3">
+            <h2 class="text-lg font-semibold text-gray-900">Parametros del producto</h2>
+            <button type="button" class="text-gray-500 hover:text-gray-700" data-close-product-modal>Cerrar</button>
+        </div>
+
+        <div class="space-y-2 text-sm text-gray-700">
+            <p><strong>Codigo:</strong> {{ product.code if product else '-' }}</p>
+            <p><strong>Descripcion:</strong> {{ product.description if product else '-' }}</p>
+            <p><strong>Deposito:</strong> {{ store.description if store else '-' }}</p>
+            <p><strong>Unidad:</strong> {{ unit.description if unit else '-' }}</p>
+
+            <form id="product-params-form" action="{{ url_for("inventory.modal_product_params", product_code=product.code, store=store.code) }}" method="post">
+
+                <input type="text" name="product_code" value="{{ product.code if product else '' }}" hidden>
+                <input type="text" name="store_code" value="{{ store.code if store else '' }}" hidden>
+                <div>
+                    <label for="minimal_stock">Stock Minimo</label>
+                    <input type="number" id="minimal_stock" name="minimal_stock" value="{{ product_params.minimal_stock if product_params else 0 }}">
+                </div>
+                <div>
+                    <label for="maximum_stock">Stock Maximo</label>
+                    <input type="number" id="maximum_stock" name="maximum_stock" value="{{ product_params.maximum_stock if product_params else 0 }}">
+                </div>
+                <div>
+                    <button type="submit">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
