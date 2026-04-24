@@ -23,7 +23,7 @@
         </div>
         <form class="mt-4"
             hx-post="{{ url_for('inventory.update_count', operation_id=operation_id, product_code=detail.code_product, destination_store=destination_store) }}"
-            hx-target="#row-{{ detail.code_product }}" hx-swap="outerHTML"
+            hx-target="[id='row-{{ detail.code_product }}']" hx-swap="outerHTML"
             hx-on:htmx:after-request="if(event.detail.successful){const search=document.getElementById('product_code'); if(search){search.value=''; search.focus();} document.getElementById('productModal').remove();}">
 
             <label for="minimal_stock" class="block text-sm font-medium text-gray-700">Existencia Minima</label>

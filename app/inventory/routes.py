@@ -1242,7 +1242,7 @@ def search_product_in_transfer(operation_id):
 
 
 @inventory_bp.route(
-    "/check_transfer_operation/modal/<int:operation_id>/<product_code>", methods=["GET"]
+    "/check_transfer_operation/modal/<int:operation_id>/<path:product_code>", methods=["GET"]
 )
 @login_required
 def product_modal(operation_id, product_code):
@@ -1277,7 +1277,7 @@ def product_modal(operation_id, product_code):
 
 
 @inventory_bp.route(
-    "/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<destination_store>",
+    "/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<path:destination_store>",
     methods=["POST"],
 )
 @login_required

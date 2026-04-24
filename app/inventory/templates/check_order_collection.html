@@ -130,7 +130,7 @@
                     </td>
                     <td class="px-6 py-4 text-center">
                         <button type="button" hx-post="{{ url_for('inventory.delete_product_from_order') }}"
-                            hx-target="#row-{{ item.code_product }}" hx-swap="delete"
+                            hx-target="[id='row-{{ item.code_product }}']" hx-swap="delete"
                             hx-include="closest tr"
                             hx-confirm="¿Estás seguro de que quieres eliminar este producto de la orden?"
                             hx-on:htmx:afterRequest="const hidden=document.getElementById('hidden-counted-{{ item.code_product }}'); if(hidden){hidden.remove();} checkAllCounted()"
