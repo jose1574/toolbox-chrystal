@@ -22,9 +22,12 @@
                 detail.products_unit and detail.products_unit.unit1 else "" }}</p>
         </div>
         <form class="mt-4"
-            hx-post="{{ url_for('inventory.update_count', operation_id=operation_id, product_code=detail.code_product, destination_store=destination_store) }}"
+            hx-post="{{ url_for('inventory.update_count', operation_id=operation_id) }}"
             hx-target="[id='row-{{ detail.code_product }}']" hx-swap="outerHTML"
             hx-on:htmx:after-request="if(event.detail.successful){const search=document.getElementById('product_code'); if(search){search.value=''; search.focus();} document.getElementById('productModal').remove();}">
+
+            <input type="hidden" name="product_code" value="{{ detail.code_product }}">
+            <input type="hidden" name="destination_store" value="{{ destination_store }}">
 
             <label for="minimal_stock" class="block text-sm font-medium text-gray-700">Existencia Minima</label>
             <input type="number" id="minimal_stock" name="minimal_stock" step="0.01" value="{{ product_failure.minimal_stock if product_failure else 0 }}"

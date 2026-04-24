@@ -1197,7 +1197,9 @@ def search_product_in_transfer(operation_id):
         )
 
     # Resolver código alterno a código principal
-    products_code = ProductsCode.query.filter_by(other_code=product_code_input).first()
+    products_code = ProductsCode.query.filter(
+        func.upper(func.trim(ProductsCode.other_code)) == product_code_input
+    ).first()
     main_code = (
         (products_code.main_code if products_code else product_code_input)
         .strip()
@@ -1208,7 +1210,7 @@ def search_product_in_transfer(operation_id):
     detail = (
         InventoryOperationDetail.query.filter(
             InventoryOperationDetail.main_correlative == operation_id,
-            InventoryOperationDetail.code_product == main_code,
+            func.upper(func.trim(InventoryOperationDetail.code_product)) == main_code,
         )
         .options(
             joinedload(InventoryOperationDetail.product),
@@ -1246,10 +1248,12 @@ def search_product_in_transfer(operation_id):
 )
 @login_required
 def product_modal(operation_id, product_code):
+    product_code = _normalize_code(product_code)
     # Buscar el producto en la operación
     detail = (
-        InventoryOperationDetail.query.filter_by(
-            main_correlative=operation_id, code_product=product_code
+        InventoryOperationDetail.query.filter(
+            InventoryOperationDetail.main_correlative == operation_id,
+            func.upper(func.trim(InventoryOperationDetail.code_product)) == product_code,
         )
         .options(
             joinedload(InventoryOperationDetail.product),
@@ -1277,14 +1281,31 @@ def product_modal(operation_id, product_code):
 
 
 @inventory_bp.route(
+    "/check_transfer_operation/update_count/<int:operation_id>",
+    methods=["POST"],
+)
+@inventory_bp.route(
     "/check_transfer_operation/update_count/<int:operation_id>/<path:product_code>/<path:destination_store>",
     methods=["POST"],
 )
 @login_required
-def update_count(operation_id, product_code, destination_store):
+def update_count(operation_id, product_code=None, destination_store=None):
+    product_code = _normalize_code(product_code or request.form.get("product_code"))
+    destination_store = (destination_store or request.form.get("destination_store") or "").strip()
     counted_amount = request.form.get("counted_amount", type=float, default=0)
     minimal_stock = request.form.get("minimal_stock", type=float, default=0)
     maximum_stock = request.form.get("maximum_stock", type=float, default=0)
+
+    if not product_code or not destination_store:
+        error_payload = {
+            "counted-error": {
+                "message": "Datos incompletos para actualizar el producto.",
+                "focus_id": "countedAmount",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     # Validaciones
     if counted_amount < 0:
@@ -1299,8 +1320,9 @@ def update_count(operation_id, product_code, destination_store):
         )
 
     # Verificar que el producto existe en la operación
-    detail = InventoryOperationDetail.query.filter_by(
-        main_correlative=operation_id, code_product=product_code
+    detail = InventoryOperationDetail.query.filter(
+        InventoryOperationDetail.main_correlative == operation_id,
+        func.upper(func.trim(InventoryOperationDetail.code_product)) == product_code,
     ).first()
 
     if not detail:
@@ -1315,8 +1337,9 @@ def update_count(operation_id, product_code, destination_store):
         )
 
     ##actualiza products_failures
-    failure_info = ProductsFailure.query.filter_by(
-        product_code=product_code, store_code=destination_store
+    failure_info = ProductsFailure.query.filter(
+        func.upper(func.trim(ProductsFailure.product_code)) == product_code,
+        func.trim(ProductsFailure.store_code) == destination_store,
     ).first()
 
     if not failure_info:
