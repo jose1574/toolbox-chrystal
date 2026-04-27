@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Toolbox{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css', v='20260224') }}">
     <script>
         (function () {
             const savedTheme = localStorage.getItem('theme');
@@ -15,40 +16,33 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css', v='20260224') }}">
-     <!-- <link href="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.js"></script> -->
-
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <title>
-        {% block title %}Toolbox{% endblock %}
-    </title>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900">
-
-    <aside id="default-sidebar"
-        class="fixed top-0 left-0 z-40 w-16 h-screen transition-all duration-300"
-        aria-label="Sidenav">
-        <div class="overflow-y-auto py-5 px-3 h-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-            <ul class="space-y-2">
-                <li>
-                    <button id="sidebar-toggle" type="button" class="sidebar-item" aria-label="Alternar menú">
-                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
-                        </svg>
-                        <span class="sidebar-text hidden ml-3">Menú</span>
-                    </button>
-                </li>
-                <li>
-                    <a href="{{ url_for('main.index') }}" class="sidebar-item">
-                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
-                            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
-                        </svg>
-                        <span class="sidebar-text hidden">Inicio</span>
-                    </a>
-                </li>
+<body class="bg-gray-50 dark:bg-gray-900" id="main-content">
+    <nav>
+        <aside id="default-sidebar"
+            class="fixed top-0 left-0 z-40 w-16 h-screen transition-all duration-300"
+            aria-label="Sidenav">
+            <div class="overflow-y-auto py-5 px-3 h-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <ul class="space-y-2">
+                    <li>
+                        <button id="sidebar-toggle" type="button" class="sidebar-item" aria-label="Alternar menú">
+                            <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+                            </svg>
+                            <span class="sidebar-text hidden ml-3">Menú</span>
+                        </button>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.index') }}" class="sidebar-item">
+                            <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                                <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+                            </svg>
+                            <span class="sidebar-text hidden">Inicio</span>
+                        </a>
+                    </li>
 
                 <li>
                     <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-inventory" aria-expanded="false" aria-controls="dropdown-inventory">
@@ -101,38 +95,35 @@
                 </li>
             </ul>
 
-            <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
-                <li>
-                    <button id="theme-toggle" type="button" class="sidebar-item" aria-label="Cambiar tema">
-                        <svg id="theme-toggle-dark-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 6a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707A1 1 0 104.343 5.757l.707.707zM4 11a1 1 0 100-2H3a1 1 0 000 2h1zm1.343 4.657a1 1 0 001.414 0l.707-.707A1 1 0 106.05 13.536l-.707.707a1 1 0 000 1.414z"></path>
-                        </svg>
-                        <svg id="theme-toggle-light-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
-                        </svg>
-                        <span id="theme-toggle-label" class="sidebar-text hidden ml-3">Tema</span>
-                    </button>
-                </li>
-                <li>
-                    <a href="{{ url_for('auth.logout') }}" class="sidebar-item" aria-label="Cerrar sesión">
-                        <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" d="M3 4.5A1.5 1.5 0 014.5 3h7A1.5 1.5 0 0113 4.5V6a1 1 0 11-2 0v-.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V14a1 1 0 112 0v1.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 15.5v-11z" clip-rule="evenodd"></path>
-                            <path fill-rule="evenodd" d="M15.707 10.707a1 1 0 00-1.414-1.414L13.586 10H8a1 1 0 100 2h5.586l.707.707a1 1 0 001.414-1.414L14.414 11l1.293-1.293z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="sidebar-text hidden ml-3">Salir</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </aside>
+                <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
+                    <li>
+                        <button id="theme-toggle" type="button" class="sidebar-item" aria-label="Cambiar tema">
+                            <svg id="theme-toggle-dark-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 6a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707A1 1 0 104.343 5.757l.707.707zM4 11a1 1 0 100-2H3a1 1 0 000 2h1zm1.343 4.657a1 1 0 001.414 0l.707-.707A1 1 0 106.05 13.536l-.707.707a1 1 0 000 1.414z"></path>
+                            </svg>
+                            <svg id="theme-toggle-light-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                            </svg>
+                            <span id="theme-toggle-label" class="sidebar-text hidden ml-3">Tema</span>
+                        </button>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('auth.logout') }}" class="sidebar-item" aria-label="Cerrar sesión">
+                            <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M3 4.5A1.5 1.5 0 014.5 3h7A1.5 1.5 0 0113 4.5V6a1 1 0 11-2 0v-.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V14a1 1 0 112 0v1.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 15.5v-11z" clip-rule="evenodd"></path>
+                                <path fill-rule="evenodd" d="M15.707 10.707a1 1 0 00-1.414-1.414L13.586 10H8a1 1 0 100 2h5.586l.707.707a1 1 0 001.414-1.414L14.414 11l1.293-1.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="sidebar-text hidden ml-3">Salir</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
 
-    <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/40 z-30"></div>
+        <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/40 z-30"></div>
+    </nav>
 
-        <div id="main-content">
-        <div id="content-inner">
-            {% block content %}{% endblock %}
-        </div>
-    </div>
+    {% block content %}{% endblock %}
 
     <script src="{{ url_for('static', filename='js/document_manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
@@ -143,42 +134,41 @@
             const backdrop = document.getElementById('sidebar-backdrop');
             if (!sidebar || !toggle || !backdrop) return;
 
+            const textElements = document.querySelectorAll('.sidebar-text, .sidebar-arrow');
+            const itemElements = document.querySelectorAll('.sidebar-item');
+            const submenus = document.querySelectorAll('.sidebar-submenu');
+            const dropdownButtons = document.querySelectorAll('.sidebar-dropdown-trigger');
             let expanded = false;
+
+            function closeSubmenus() {
+                submenus.forEach((submenu) => submenu.classList.add('hidden'));
+                dropdownButtons.forEach((button) => button.setAttribute('aria-expanded', 'false'));
+            }
 
             function setExpandedState(value) {
                 expanded = value;
-
                 sidebar.classList.toggle('w-56', expanded);
                 sidebar.classList.toggle('w-16', !expanded);
+                sidebar.classList.toggle('shadow-2xl', expanded);
+                backdrop.classList.toggle('hidden', !expanded);
 
-                document.querySelectorAll('.sidebar-text, .sidebar-arrow').forEach((el) => {
-                    el.classList.toggle('hidden', !expanded);
-                });
-
-                document.querySelectorAll('.sidebar-item').forEach((el) => {
+                textElements.forEach((el) => el.classList.toggle('hidden', !expanded));
+                itemElements.forEach((el) => {
                     el.classList.toggle('justify-center', !expanded);
                     el.classList.toggle('justify-start', expanded);
                 });
 
-                if (!expanded) {
-                    document.querySelectorAll('.sidebar-submenu').forEach((submenu) => {
-                        submenu.classList.add('hidden');
-                    });
-                }
-
-                backdrop.classList.toggle('hidden', !expanded);
-                sidebar.classList.toggle('shadow-2xl', expanded);
+                if (!expanded) closeSubmenus();
             }
 
-            toggle.addEventListener('click', function () {
-                setExpandedState(!expanded);
+            toggle.addEventListener('click', () => setExpandedState(!expanded));
+            backdrop.addEventListener('click', () => setExpandedState(false));
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && expanded) setExpandedState(false);
             });
 
-            backdrop.addEventListener('click', function () {
-                setExpandedState(false);
-            });
-
-            sidebar.addEventListener('click', function (event) {
+            sidebar.addEventListener('click', (event) => {
                 const target = event.target.closest('a, button');
                 if (!target) return;
 
@@ -187,31 +177,30 @@
                     return;
                 }
 
-                if (expanded && target.tagName === 'A') {
-                    setExpandedState(false);
-                }
+                if (expanded && target.tagName === 'A') setExpandedState(false);
             });
 
-            document.querySelectorAll('.sidebar-dropdown-trigger').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
+            dropdownButtons.forEach((button) => {
+                button.addEventListener('click', (event) => {
                     if (!expanded) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    var id = btn.getAttribute('data-dropdown');
-                    var panel = id ? document.getElementById(id) : null;
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const id = button.getAttribute('data-dropdown');
+                    const panel = id ? document.getElementById(id) : null;
                     if (!panel) return;
-                    var isHidden = panel.classList.contains('hidden');
-                    document.querySelectorAll('.sidebar-submenu').forEach(function (sub) {
-                        sub.classList.add('hidden');
-                    });
-                    document.querySelectorAll('.sidebar-dropdown-trigger').forEach(function (b) {
-                        b.setAttribute('aria-expanded', 'false');
-                    });
-                    if (isHidden) {
+
+                    const willOpen = panel.classList.contains('hidden');
+                    closeSubmenus();
+                    if (willOpen) {
                         panel.classList.remove('hidden');
-                        btn.setAttribute('aria-expanded', 'true');
+                        button.setAttribute('aria-expanded', 'true');
                     }
                 });
+            });
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth < 1024 && expanded) setExpandedState(false);
             });
 
             setExpandedState(expanded);
@@ -226,19 +215,18 @@
 
             if (!toggleButton || !darkIcon || !lightIcon || !label) return;
 
-            function renderThemeState() {
-                const isDark = document.documentElement.classList.contains('dark');
+            function renderThemeState(isDark) {
                 darkIcon.classList.toggle('hidden', !isDark);
                 lightIcon.classList.toggle('hidden', isDark);
                 label.textContent = isDark ? 'Tema oscuro' : 'Tema claro';
             }
 
-            renderThemeState();
+            renderThemeState(document.documentElement.classList.contains('dark'));
 
-            toggleButton.addEventListener('click', function () {
+            toggleButton.addEventListener('click', () => {
                 const isDark = document.documentElement.classList.toggle('dark');
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                renderThemeState();
+                renderThemeState(isDark);
             });
         })();
     </script>
