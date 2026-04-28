@@ -21,8 +21,7 @@
             <span class="font-medium">Error:</span> {{ error|safe }}
         </div>
         {% endif %}
-        <form hx-post="{{ url_for('inventory.check_order') }}" hx-target="#main-content" hx-select="#main-content"
-            hx-swap="innerHTML" id="check-order-form" class="space-y-6">
+        <form action="{{ url_for('inventory.check_order') }}" method="post" id="check-order-form" class="space-y-6">
             <div>
                 <label for="order_id" class="block mb-2 text-sm font-medium text-heading">Ingrese Correlativo de la
                     orden</label>

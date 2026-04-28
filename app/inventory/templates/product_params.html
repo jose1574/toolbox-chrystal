@@ -23,11 +23,8 @@
     <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-md w-full mx-auto mt-6">
         <h1 class="text-2xl font-bold mb-6 text-gray-900">Parámetros de Producto</h1>
         <form
-            hx-post="{{ url_for('inventory.product_params') }}"
-            hx-target="#main-content"
-            hx-select="#main-content"
-            hx-swap="innerHTML"
-            hx-push-url="true"
+            action="{{ url_for('inventory.product_params') }}"
+            method="post"
             class="space-y-4">
             
             <div>
@@ -97,6 +94,7 @@
                 </button>
             </form>
         </div>
+        <div id=""></div>
 
         {% if product_params %}
         <div class="border-t border-gray-200 pt-6 mt-6">
