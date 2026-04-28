@@ -26,15 +26,14 @@
                     class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
                     Aplicar
                 </button>
-                <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content"
-                    hx-select="#main-content" hx-push-url="true"
+                <a href="{{ url_for('inventory.index') }}" 
                     class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
                     <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.8" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                     </svg>
                     Regresar
-                </button>
+                </a>
             </div>
         </form>
     </div>
@@ -57,11 +56,10 @@
                     class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
                     Guardar
                 </button>
-                <button type="button" hx-get="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
-                    hx-select="#main-content" hx-push-url="true"
+                <a href="{{ url_for('inventory.products_locations') }}" 
                     class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
                     Regresar
-                </button>
+                </a>
             </div>
         </form>
     </div>
