@@ -21,6 +21,7 @@ def generate_barcode(data, barcode_type='code128'):
             'font_size': 8,
             'text_distance': 3.0,
             'quiet_zone': 1.0,
+            'write_text': False,
         }
         
         # Buffer para guardar la imagen

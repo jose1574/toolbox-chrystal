@@ -5,7 +5,7 @@ from flask_login import login_required
 from sqlalchemy import func
 from app.reports.utils import generate_barcode, render_pdf_from_html_file
 
-from products_label import label_bp
+from app.products_label import label_bp
 
 from app.models import (
     Product,
@@ -80,16 +80,16 @@ def add_product_list():
         return "", 400
 
     return f"""
-        <tr>
-            <td>
+        <tr class="">
+            <td class="p-4">
                 {main_code}
                 <input type="hidden" name="main_code" value="{main_code}">
             </td>
-            <td>
+            <td class="p-4">
                 {description}
                 <input type="hidden" name="description" value="{description}">
             </td>
-            <td>
+            <td class="p-4">
                 {code}
                 <input type="hidden" name="code_printer" value="{code}">
             </td>
@@ -105,9 +105,6 @@ def print_labels():
     ]
     main_codes = request.form.getlist('main_code')
     descriptions = request.form.getlist('description')
-
-    print(f"Payload form recibido: {request.form.to_dict(flat=False)}")
-    print(f"Productos a imprimir: {products_list}")
 
     if not products_list:
         return "No se recibieron codigos para imprimir.", 400

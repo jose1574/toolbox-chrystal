@@ -6,7 +6,7 @@
 	<title>Etiquetas de Productos</title>
 	<style>
 		@page {
-			size: 56mm 44mm;
+			size: 57mm 44mm;
 			margin: 0;
 		}
 
@@ -14,7 +14,7 @@
 		body {
 			margin: 0;
 			padding: 0;
-			width: 56mm;
+			width: 57mm;
 			height: 44mm;
 			font-family: Arial, sans-serif;
 			color: #000;
@@ -22,11 +22,15 @@
 		}
 
 		.label {
-			width: 56mm;
+			width: 57mm;
 			height: 44mm;
 			border: 0.3mm solid #000;
 			box-sizing: border-box;
-			padding: 0.8mm;
+			padding: 0.6mm 0.8mm;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: stretch;
 			page-break-after: always;
 			overflow: hidden;
 		}
@@ -35,27 +39,14 @@
 			page-break-after: auto;
 		}
 
-		.main-code {
-			font-size: 11pt;
-			font-weight: 700;
-			text-align: center;
-			line-height: 1.1;
-			margin-bottom: 0.7mm;
-		}
+		
 
-		.description {
-			font-size: 7.4pt;
-			text-align: center;
-			min-height: 6.5mm;
-			max-height: 6.5mm;
-			overflow: hidden;
-			margin-bottom: 0.6mm;
-		}
+		
 
 		.barcode {
 			width: 100%;
 			text-align: center;
-			margin-top: 0;
+			margin: 0;
 		}
 
 		.barcode img {
@@ -66,11 +57,16 @@
 		}
 
 		.code-text {
-			font-size: 9pt;
+			font-size: 10.5mm;
 			font-weight: 700;
 			text-align: center;
-			letter-spacing: 0.4px;
-			margin-top: 0.8mm;
+			letter-spacing: -0.2mm;
+			margin: 0.6mm 0 0;
+			line-height: 1;
+			white-space: nowrap;
+			overflow: hidden;
+			transform: scaleX(0.96);
+			transform-origin: center;
 		}
 	</style>
 </head>
@@ -78,9 +74,6 @@
 <body>
 	{% for label in labels %}
 	<div class="label">
-		<div class="main-code">{{ label.main_code or '-' }}</div>
-		<div class="description">{{ label.description or 'SIN DESCRIPCION' }}</div>
-
 		<div class="barcode">
 			{% if label.barcode_base64 %}
 			<img src="data:image/png;base64,{{ label.barcode_base64 }}" alt="Barcode {{ label.code }}">
