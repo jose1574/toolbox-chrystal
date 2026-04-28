@@ -8,8 +8,7 @@
     {% if not store %}
     <div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
         <h2 class="text-lg font-semibold text-heading">Seleccionar Depósito</h2>
-        <form hx-post="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
-            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+        <form action="{{ url_for('inventory.products_locations') }}" method="post" class="space-y-4">
             <div>
                 <label for="store_code" class="block text-sm font-medium text-gray-700 mb-1">Depósito</label>
                 <select id="store_code" name="store_code"
@@ -42,8 +41,7 @@
     {% if store and not location %}
     <div class="bg-white shadow-sm p-6 rounded-lg space-y-4">
         <h2 class="text-lg font-semibold text-heading">Asignar ubicación</h2>
-        <form hx-post="{{ url_for('inventory.products_locations') }}" hx-target="#main-content"
-            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+        <form action="{{ url_for('inventory.products_locations') }}" method="post" class="space-y-4">
             <input type="hidden" name="store_code" value="{{ store.code }}">
             <div>
                 <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
@@ -99,8 +97,7 @@
 
         <input type="hidden" name="store_code" value="{{ store.code }}">
         <input type="hidden" name="location" value="{{ location }}">
-        <form hx-post="{{ url_for('inventory.update_product_location') }}" hx-target="#main-content"
-            hx-select="#main-content" hx-push-url="true" class="space-y-4">
+        <form action="{{ url_for('inventory.update_product_location') }}" method="post" class="space-y-4">
                      <button type="submit" 
                 class="inline-flex items-center justify-center text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
                 Guardar Ubicaciones

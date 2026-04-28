@@ -1680,6 +1680,7 @@ def update_product_location():
         # Redirigir con los parámetros de GET para mantener el estado
         return redirect(
             url_for(
+                flash(f"Ubicación actualizada los productos seleccionados: {products_count}", "success"),
                 "inventory.products_locations", store_code=store_code, location=location
             )
         )
