@@ -1941,16 +1941,17 @@ def remove_product_counter_row():
     return ""
 
 
-@inventory_bp.route("/product_counter/clear_counter", methods=["POST"])
+@inventory_bp.route("/product_counter/clear_counter")
 @login_required
 def clear_product_counter():
+    store_code = request.args.get("store_code")
     """Limpia todos los contadores de productos en sesión."""
     user_code = current_user.code
     all_counters = session.get("product_counter", {}) or {}
     if user_code in all_counters:
         all_counters.pop(user_code, None)
         session["product_counter"] = all_counters
-    return ""
+    return redirect(url_for("inventory.product_counter", store_code=store_code))
 
 
 @inventory_bp.route("/product_counter/save_counter/<store_code>", methods=["POST"])
@@ -2248,18 +2249,10 @@ def save_products_counter(store_code):
 
         session["product_counter"] = all_counters
 
-        # Si la petición viene por HTMX, devolvemos la vista limpia (selector de depósito)
-        # y disparamos el evento open-pdf para abrir el reporte del conteo en una nueva pestaña.
+        # Si la petición viene por HTMX, abrimos el reporte en una nueva ventana
+        # y refrescamos la vista actual para limpiar el conteo.
         if request.headers.get("HX-Request"):
-            resp = make_response(
-                render_template(
-                    "product_counter.html",
-                    stores=Store.query.all(),
-                    store=None,
-                    store_code=None,
-                    counter_rows_html="",
-                )
-            )
+            resp = make_response("", 204)
             resp.headers["HX-Trigger"] = json.dumps(
                 {
                     "open-pdf": {
@@ -2270,6 +2263,7 @@ def save_products_counter(store_code):
                     }
                 }
             )
+            resp.headers["HX-Refresh"] = "true"
             return resp
 
         # Flujo normal (no HTMX): redirigir directamente al PDF del conteo
