@@ -1,0 +1,14 @@
+{% extends "base.html" %} {% block content %}
+<div class="px-4 py-6 space-y-6 p-4 ml-[4.5rem]">
+  <nav>
+    <ul>
+      <li>
+        {# <a href="{{ url_for('products_label.product_label') }}">Imprimir etiqueta individual</a> #}
+      </li>
+       <li>
+        <a href="{{ url_for('products_label.product_label_list') }}">Imprimir listado de etiquetas</a>
+      </li>
+    </ul>
+  </nav>
+</div>
+{% endblock content %}

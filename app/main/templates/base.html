@@ -55,14 +55,79 @@
                         </svg>
                     </button>
                     <ul id="dropdown-inventory" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
-                        <li><a href="{{ url_for('inventory.index') }}" class="sidebar-subitem" role="menuitem">Panel de inventario</a></li>
-                        <li><a href="{{ url_for('inventory.auto_order_collection') }}" class="sidebar-subitem" role="menuitem">Orden de recolección</a></li>
-                        <li><a href="{{ url_for('inventory.check_order') }}" class="sidebar-subitem" role="menuitem">Chequeo de recolección</a></li>
-                        <li><a href="{{ url_for('inventory.check_transfer_operation') }}" class="sidebar-subitem" role="menuitem">Chequeo de traslado</a></li>
-                        <li><a href="{{ url_for('inventory.listado_productos') }}" class="sidebar-subitem" role="menuitem">Listado de productos</a></li>
-                        <li><a href="{{ url_for('inventory.product_params') }}" class="sidebar-subitem" role="menuitem">Parámetros de productos</a></li>
-                        <li><a href="{{ url_for('inventory.products_locations') }}" class="sidebar-subitem" role="menuitem">Ubicación de productos</a></li>
-                        <li><a href="{{ url_for('inventory.product_counter') }}" class="sidebar-subitem" role="menuitem">Contador de productos</a></li>
+                        <li>
+                            <a href="{{ url_for('inventory.index') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400 dark:text-sky-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                                    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+                                </svg>
+                                <span>Panel de inventario</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.auto_order_collection') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-amber-400 dark:text-amber-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 3a1 1 0 00-1 1v12a1 1 0 001.447.894L10 14.118l5.553 2.776A1 1 0 0017 16V4a1 1 0 00-1-1H4z"></path>
+                                </svg>
+                                <span>Orden de recolección</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.check_order') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-emerald-400 dark:text-emerald-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-3-3a1 1 0 011.414-1.414L9 11.586l6.293-6.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Chequeo de recolección</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.check_transfer_operation') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-orange-400 dark:text-orange-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3a1 1 0 010 2H5v10h3a1 1 0 110 2H5a2 2 0 01-2-2V5zm14.707 5.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L14.586 11H9a1 1 0 110-2h5.586l-1.293-1.293a1 1 0 011.414-1.414l3 3z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Chequeo de traslado</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.listado_productos') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-cyan-400 dark:text-cyan-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm2 3a1 1 0 100 2h8a1 1 0 100-2H6zm0 4a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Listado de productos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.product_params') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-rose-400 dark:text-rose-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.14.7a1 1 0 01-.75.77l-.73.18a1 1 0 00-.35 1.77l.62.43a1 1 0 01.41 1.07l-.16.71a1 1 0 001.48 1.08l.63-.38a1 1 0 011.06 0l.63.38a1 1 0 001.48-1.08l-.16-.71a1 1 0 01.41-1.07l.62-.43a1 1 0 00-.35-1.77l-.73-.18a1 1 0 01-.75-.77l-.14-.7zM10 13a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Parámetros de productos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.products_locations') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-fuchsia-400 dark:text-fuchsia-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M5.05 3.636a7 7 0 119.9 9.9L10 18.485l-4.95-4.95a7 7 0 010-9.9zM10 9a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Ubicación de productos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.product_counter') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-lime-400 dark:text-lime-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 7a1 1 0 011-1h2a1 1 0 110 2H8v1a1 1 0 11-2 0V9zm6 0a1 1 0 100 2h1v1a1 1 0 102 0V9a1 1 0 00-1-1h-2z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Contador de productos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('products_label.index') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
+                                <svg class="w-4 h-4 flex-shrink-0 text-violet-400 dark:text-violet-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M2 4a2 2 0 012-2h5.586a2 2 0 011.414.586l5.414 5.414a2 2 0 010 2.828l-4.414 4.414a2 2 0 01-2.828 0L3.172 8.828A2 2 0 012.586 7.414V4zm4 1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Etiquetas de Productos</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
 
