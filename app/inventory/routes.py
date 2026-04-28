@@ -1365,15 +1365,17 @@ def update_count(operation_id, product_code=None, destination_store=None):
     )
 
 
+
+
+
 @inventory_bp.route("/product_params", methods=["GET", "POST"])
 @login_required
 def product_params():
     stores = Store.query.all()
+    store_code = request.form.get("store_code") 
+    code_product = request.form.get("code-product") 
 
     if request.method == "POST":
-        store_code = request.form.get("store_code")
-        code_product = request.form.get("code-product")
-
         if store_code and not code_product:
             selected_store = Store.query.filter_by(code=store_code).first()
             return render_template(
@@ -1435,7 +1437,7 @@ def product_params():
                 stores=stores,
             )
 
-    return render_template("product_params.html", stores=stores, selected_store=None)
+    return render_template("product_params.html", stores=stores, selected_store=store_code)
 
 
 @inventory_bp.route("/product_params/save", methods=["POST"])
