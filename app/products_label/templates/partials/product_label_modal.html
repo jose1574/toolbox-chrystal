@@ -4,7 +4,7 @@
       <h3 class="text-lg font-medium text-gray-900">Etiqueta de producto</h3>
       <button
         type="button"
-        onclick="document.getElementById('modal-product-label').innerHTML = ''"
+        onclick="document.getElementById('modal-product-label').innerHTML = ''; const input = document.getElementById('product_code'); if (input) { input.focus(); }"
         class="text-gray-500 hover:text-gray-700 focus:outline-none"
       >
         Cerrar
@@ -38,7 +38,7 @@
             hx-target="#products-label-list"
             hx-swap="beforeend"
             hx-trigger="click"
-            hx-on:click="document.getElementById('modal-product-label').innerHTML = ''"
+            hx-on:click="document.getElementById('modal-product-label').innerHTML = ''; const input = document.getElementById('product_code'); if (input) { input.value = ''; input.focus(); }"
             class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50"
           >
             <a href="#" class="text-gray-900">{{ code.other_code }}</a>

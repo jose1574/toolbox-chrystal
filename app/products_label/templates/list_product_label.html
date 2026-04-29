@@ -103,6 +103,7 @@
             <th scope="col" class="px-4 py-3">Codigo principal</th>
             <th scope="col" class="px-4 py-3">Descripcion</th>
             <th scope="col" class="px-4 py-3">Codigo para etiqueta</th>
+            <th scope="col" class="px-4 py-3">Opcion</th>
           </tr>
         </thead>
         <tbody
@@ -113,4 +114,17 @@
     </form>
   </div>
 </div>
+
+<script>
+  function removeProductRow(button) {
+    if (!button) {
+      return;
+    }
+
+    const row = button.closest("tr");
+    if (row) {
+      row.remove();
+    }
+  }
+</script>
 {% endblock content %}

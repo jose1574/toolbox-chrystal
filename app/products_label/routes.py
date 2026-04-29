@@ -93,6 +93,11 @@ def add_product_list():
                 {code}
                 <input type="hidden" name="code_printer" value="{code}">
             </td>
+            <td class="p-4">
+                <button type="button" class="remove-row-btn text-red-500 hover:text-red-700" onclick="removeProductRow(this)">
+                    Eliminar
+                </button>
+            </td>
         </tr>
     """
 
