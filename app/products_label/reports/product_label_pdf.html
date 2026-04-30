@@ -57,16 +57,27 @@
 		}
 
 		.code-text {
-			font-size: 10.5mm;
+			font-size: 7.5mm;
 			font-weight: 700;
 			text-align: center;
-			letter-spacing: -0.2mm;
+			letter-spacing: -0.1mm;
 			margin: 0.6mm 0 0;
-			line-height: 1;
-			white-space: nowrap;
-			overflow: hidden;
-			transform: scaleX(0.96);
-			transform-origin: center;
+			line-height: 1.05;
+			white-space: normal;
+			word-break: break-all;
+			overflow-wrap: anywhere;
+			max-width: 100%;
+		}
+
+		.description-text {
+			font-size: 7pt;
+			text-align: center;
+			line-height: 1.2;
+			margin: 0.5mm 0 0.4mm;
+			white-space: normal;
+			word-break: break-word;
+			overflow-wrap: anywhere;
+			max-width: 100%;
 		}
 	</style>
 </head>
@@ -81,7 +92,7 @@
 			<div>[SIN CODIGO DE BARRAS]</div>
 			{% endif %}
 		</div>
-		<p>{{ label.description }}</p>
+		<p class="description-text">{{ label.description }}</p>
 
 		<div class="code-text">{{ label.code }}</div>
 	</div>
