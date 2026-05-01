@@ -68,6 +68,17 @@
             letter-spacing: 0.5px;
             margin-top: 1mm;
         }
+
+        .logo {
+            text-align: center;
+            margin-top: 1mm;
+        }
+
+        .logo img {
+            width: 20mm;
+            height: auto;
+            display: inline-block;
+        }
     </style>
 </head>
 
@@ -84,8 +95,12 @@
             <div>[SIN CODIGO DE BARRAS]</div>
             {% endif %}
         </div>
+        {% if logo_base64 %}
+        <div class="logo">
+            <img src="data:image/png;base64,{{ logo_base64 }}" alt="Logo">
+        </div>
+        {% endif %}
 
-        <div class="code-text">{{ label.code }}</div>
     </div>
     {% endfor %}
 </body>

@@ -39,6 +39,19 @@
 			page-break-after: auto;
 		}
 
+		.logo {
+			width: 100%;
+			text-align: center;
+			margin: 0 0 0.4mm;
+		}
+
+		.logo img {
+			display: inline-block;
+			max-width: 24mm;
+			max-height: 24mm;
+			object-fit: contain;
+		}
+
 		
 
 		
@@ -85,6 +98,11 @@
 <body>
 	{% for label in labels %}
 	<div class="label">
+		{% if logo_base64 %}
+		<div class="logo">
+			<img src="data:image/png;base64,{{ logo_base64 }}" alt="Logo">
+		</div>
+		{% endif %}
 		<div class="barcode">
 			{% if label.barcode_base64 %}
 			<img src="data:image/png;base64,{{ label.barcode_base64 }}" alt="Barcode {{ label.code }}">

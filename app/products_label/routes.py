@@ -1,4 +1,5 @@
 from flask import Response, render_template, request
+import base64
 from pathlib import Path
 
 from flask_login import login_required
@@ -23,6 +24,17 @@ def _resolve_main_code(code):
     ).first()
 
     return mapping.main_code if mapping else normalized
+
+
+def _load_logo_base64():
+    logo_path = Path(__file__).resolve().parent / 'images' / 'logo.png'
+    if not logo_path.exists():
+        return None
+
+    try:
+        return base64.b64encode(logo_path.read_bytes()).decode('utf-8')
+    except OSError:
+        return None
 
 
 @label_bp.route("/")
@@ -129,12 +141,15 @@ def print_labels():
             }
         )
 
+    logo_base64 = _load_logo_base64()
+
     html_source = Path(__file__).resolve().parent / 'reports' / 'product_label_pdf.html'
 
     pdf = render_pdf_from_html_file(
         html_source,
         {
             'labels': labels,
+            'logo_base64': logo_base64,
         },
         paper_format='Label56x44',
         orientation='Portrait',
