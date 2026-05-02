@@ -301,17 +301,35 @@ def auto_order_collection():
             new_order_id=new_order_id,
         )
 
-    stock_orig = aliased(ProductsStock)
-    stock_dst = aliased(ProductsStock)
+    stock_orig_totals = (
+        select(
+            ProductsStock.product_code.label("product_code"),
+            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+        )
+        .where(ProductsStock.store == store_origin)
+        .group_by(ProductsStock.product_code)
+        .subquery()
+    )
+
+    stock_dst_totals = (
+        select(
+            ProductsStock.product_code.label("product_code"),
+            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+        )
+        .where(ProductsStock.store == store_dst)
+        .group_by(ProductsStock.product_code)
+        .subquery()
+    )
+
     pf = aliased(ProductsFailure)
     m = aliased(Mark)
     d = aliased(Department)
     u = aliased(Unit)
     pu = aliased(ProductsUnit)
 
-    needed = pf.maximum_stock - func.coalesce(stock_dst.stock, 0)
+    needed = pf.maximum_stock - func.coalesce(stock_dst_totals.c.stock_total, 0)
     to_transfer = func.least(
-        func.coalesce(stock_orig.stock, 0), func.greatest(needed, 0)
+        func.coalesce(stock_orig_totals.c.stock_total, 0), func.greatest(needed, 0)
     ).label("to_transfer")
 
     stmt = (
@@ -322,21 +340,20 @@ def auto_order_collection():
             Product.department.label("department_code"),
             m.description.label("mark_description"),
             d.description.label("department_description"),
-            func.coalesce(stock_orig.stock, 0).label("stock_origin"),
+            func.coalesce(stock_orig_totals.c.stock_total, 0).label("stock_origin"),
             pf.minimal_stock.label("minimum_stock"),
             pf.maximum_stock.label("maximum_stock"),
-            func.coalesce(stock_dst.stock, 0).label("stock_destination"),
+            func.coalesce(stock_dst_totals.c.stock_total, 0).label("stock_destination"),
             u.description.label("unit_description"),
             to_transfer,
         )
         .join(
-            stock_orig,
-            (Product.code == stock_orig.product_code)
-            & (stock_orig.store == store_origin),
+            stock_orig_totals,
+            Product.code == stock_orig_totals.c.product_code,
         )
         .outerjoin(
-            stock_dst,
-            (Product.code == stock_dst.product_code) & (stock_dst.store == store_dst),
+            stock_dst_totals,
+            Product.code == stock_dst_totals.c.product_code,
         )
         .outerjoin(pf, (Product.code == pf.product_code) & (pf.store_code == store_dst))
         .join(pu, (Product.code == pu.product_code) & (pu.main_unit == True))
@@ -344,8 +361,8 @@ def auto_order_collection():
         .join(d, Product.department == d.code)
         .outerjoin(m, Product.mark == m.code)
         .where(
-            (stock_orig.stock > 0)
-            & (func.coalesce(stock_dst.stock, 0) < pf.minimal_stock)
+            (func.coalesce(stock_orig_totals.c.stock_total, 0) > 0)
+            & (func.coalesce(stock_dst_totals.c.stock_total, 0) < pf.minimal_stock)
             & (needed > 0)
         )
     )
