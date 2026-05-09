@@ -127,5 +127,13 @@
       row.remove();
     }
   }
+
+
+  function closeModal() {
+    const modalContainer = document.getElementById("modal-product-label");
+    if (modalContainer) {
+      modalContainer.innerHTML = "";
+    }
+  }
 </script>
 {% endblock content %}
