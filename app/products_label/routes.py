@@ -4,6 +4,7 @@ from pathlib import Path
 
 from flask_login import login_required
 from sqlalchemy import func
+from app import db
 from app.reports.utils import generate_barcode, render_pdf_from_html_file
 
 from app.products_label import label_bp
@@ -35,6 +36,30 @@ def _load_logo_base64():
         return base64.b64encode(logo_path.read_bytes()).decode('utf-8')
     except OSError:
         return None
+
+
+def _render_product_label_row(main_code, short_name, code):
+    return f"""
+        <tr class="">
+            <td class="p-4">
+                {main_code}
+                <input type="hidden" name="main_code" value="{main_code}">
+            </td>
+            <td class="p-4">
+                {short_name}
+                <input type="hidden" name="short_name" value="{short_name}">
+            </td>
+            <td class="p-4">
+                {code}
+                <input type="hidden" name="code_printer" value="{code}">
+            </td>
+            <td class="p-4">
+                <button type="button" class="remove-row-btn text-red-500 hover:text-red-700" onclick="removeProductRow(this)">
+                    Eliminar
+                </button>
+            </td>
+        </tr>
+    """
 
 
 @label_bp.route("/")
@@ -75,37 +100,80 @@ def product_label_modal():
     )
 
 
+@label_bp.route("/modal-actualizar-nombre-corto")
+@login_required
+def update_short_name_modal():
+    code = request.args.get("product_code", "")
+    label_code = (request.args.get("label_code") or "").strip()
+    main_code = _resolve_main_code(code)
+
+    product_info = None
+    if main_code:
+        product_info = Product.query.filter(
+            func.upper(func.trim(Product.code)) == main_code
+        ).first()
+
+    error_message = None
+    if not code.strip():
+        error_message = "Ingresa un codigo de producto."
+    elif not product_info:
+        error_message = f'No se encontro producto para el codigo "{code}".'
+
+    return render_template(
+        "partials/update_short_name_product.html",
+        product=product_info,
+        label_code=label_code or (product_info.code if product_info else ""),
+        error_message=error_message,
+    )
+
+
+@label_bp.route("/actualizar-nombre-corto", methods=["POST"])
+@login_required
+def update_short_name_product():
+    code = (request.form.get("product_code") or "").strip()
+    short_name = (request.form.get("short_name") or "").strip()
+    code_to_add = (request.form.get("code_to_add") or "").strip()
+
+    main_code = _resolve_main_code(code)
+    product_info = None
+    if main_code:
+        product_info = Product.query.filter(
+            func.upper(func.trim(Product.code)) == main_code
+        ).first()
+
+    if not product_info:
+        return (
+            render_template(
+                "partials/update_short_name_product.html",
+                product=None,
+                label_code=code_to_add,
+                error_message="No se encontro el producto a actualizar.",
+            ),
+            404,
+        )
+
+    product_info.short_name = short_name
+    db.session.add(product_info)
+    db.session.commit()
+
+    main_code = product_info.code
+    label_code = code_to_add or product_info.code
+    short_name = product_info.short_name or product_info.description or ""
+
+    return _render_product_label_row(main_code, short_name, label_code)
+
+
 @label_bp.route("/agregar-producto-listado-etiquetas", methods=["POST"])
 @login_required
 def add_product_list():
     code = (request.values.get("code") or "").strip()
-    description = (request.values.get("description") or "").strip()
+    short_name = (request.values.get("short_name") or "").strip()
     main_code = (request.values.get("main_code") or "").strip()
 
     if not code:
         return "", 400
 
-    return f"""
-        <tr class="">
-            <td class="p-4">
-                {main_code}
-                <input type="hidden" name="main_code" value="{main_code}">
-            </td>
-            <td class="p-4">
-                {description}
-                <input type="hidden" name="description" value="{description}">
-            </td>
-            <td class="p-4">
-                {code}
-                <input type="hidden" name="code_printer" value="{code}">
-            </td>
-            <td class="p-4">
-                <button type="button" class="remove-row-btn text-red-500 hover:text-red-700" onclick="removeProductRow(this)">
-                    Eliminar
-                </button>
-            </td>
-        </tr>
-    """
+    return _render_product_label_row(main_code, short_name, code)
 
 
 @label_bp.route('/imprimitir-etiquetas', methods=['POST'])
@@ -115,7 +183,7 @@ def print_labels():
         value.strip() for value in request.form.getlist('code_printer') if value.strip()
     ]
     main_codes = request.form.getlist('main_code')
-    descriptions = request.form.getlist('description')
+    short_names = request.form.getlist('short_name')
 
     if not products_list:
         return "No se recibieron codigos para imprimir.", 400
@@ -123,14 +191,14 @@ def print_labels():
     labels = []
     for index, code in enumerate(products_list):
         main_code = (main_codes[index].strip() if index < len(main_codes) else "")
-        description = (
-            descriptions[index].strip() if index < len(descriptions) else ""
+        short_name = (
+            short_names[index].strip() if index < len(short_names) else ""
         )
         labels.append(
             {
                 'code': code,
                 'main_code': main_code,
-                'description': description,
+                'description': short_name,  # El PDF espera 'description'
                 'barcode_base64': generate_barcode(code),
             }
         )
