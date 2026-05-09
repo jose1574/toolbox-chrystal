@@ -43,12 +43,6 @@ def index():
     return render_template("products_label.html")
 
 
-@label_bp.route("/listado-de-etiquetas")
-@login_required
-def product_label_list():
-    return render_template("list_product_label.html")
-
-
 @label_bp.route("/etiqueta-de-producto")
 @login_required
 def product_label_modal():
