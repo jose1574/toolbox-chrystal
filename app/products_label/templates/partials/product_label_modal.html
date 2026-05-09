@@ -35,10 +35,10 @@
           <td class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
             <form
               hx-get="{{ url_for('products_label.update_short_name_modal') }}"
-              hx-target="#modal-update-short-name-product"
+              hx-target="#modal"
               hx-swap="innerHTML"
               style="display:inline"
-              hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
+              hx-on:htmx:after-request="closeModal()"
             >
               <input type="hidden" name="product_code" value="{{ product.code }}" />
               <input type="hidden" name="label_code" value="{{ code.other_code }}" />
@@ -51,10 +51,10 @@
           <td class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
             <form
               hx-get="{{ url_for('products_label.update_short_name_modal') }}"
-              hx-target="#modal-update-short-name-product"
+              hx-target="#modal"
               hx-swap="innerHTML"
               style="display:inline"
-              hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
+              hx-on:htmx:after-request="closeModal()"
             >
               <input type="hidden" name="product_code" value="{{ product.code }}" />
               <input type="hidden" name="label_code" value="{{ product.code }}" />
