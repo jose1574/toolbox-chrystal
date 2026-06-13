@@ -172,6 +172,7 @@ def print_labels():
     ]
     main_codes = request.form.getlist('main_code')
     short_names = request.form.getlist('short_name')
+    label_format = (request.form.get('label_format') or '57x40').strip()
 
     if not products_list:
         return "No se recibieron codigos para imprimir.", 400
@@ -195,14 +196,33 @@ def print_labels():
 
     html_source = Path(__file__).resolve().parent / 'reports' / 'product_label_pdf.html'
 
+    paper_format = 'Label57x40'
+    page_width = '57mm'
+    page_height = '40mm'
+    barcode_height = '12mm'
+    logo_max_height = '22mm'
+    orientation = 'Portrait'
+
+    if label_format == '57x32':
+        paper_format = 'Label57x32'
+        page_width = '57mm'
+        page_height = '32mm'
+        barcode_height = '10mm'
+        logo_max_height = '18mm'
+        orientation = 'Portrait'
+
     pdf = render_pdf_from_html_file(
         html_source,
         {
             'labels': labels,
             'logo_base64': logo_base64,
+            'page_width': page_width,
+            'page_height': page_height,
+            'barcode_height': barcode_height,
+            'logo_max_height': logo_max_height,
         },
-        paper_format='Label56x44',
-        orientation='Portrait',
+        paper_format=paper_format,
+        orientation=orientation,
         extra_options={
             'margin-top': '0mm',
             'margin-right': '0mm',
@@ -214,6 +234,8 @@ def print_labels():
             'image-quality': 100,
             'zoom': 1,
             'print-media-type': None,
+            'page-width': page_width,
+            'page-height': page_height,
         },
     )
 

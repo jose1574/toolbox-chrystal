@@ -66,6 +66,14 @@ def render_pdf(
         'Label57x44': {
             'page-width': '57mm',
             'page-height': '44mm',
+        },
+        'Label57x40': {
+            'page-width': '57mm',
+            'page-height': '40mm',
+        },
+        'Label57x32': {
+            'page-width': '57mm',
+            'page-height': '32mm',
         }
     }
 
@@ -150,6 +158,14 @@ def render_pdf_from_html_file(
         'Label57x44': {
             'page-width': '57mm',
             'page-height': '44mm',
+        },
+        'Label57x40': {
+            'page-width': '57mm',
+            'page-height': '40mm',
+        },
+        'Label57x32': {
+            'page-width': '57mm',
+            'page-height': '32mm',
         }
     }
 
