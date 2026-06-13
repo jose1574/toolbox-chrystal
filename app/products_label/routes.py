@@ -1,4 +1,4 @@
-from flask import Response, render_template, request, flash
+from flask import Response, render_template, request
 import base64
 from pathlib import Path
 
@@ -105,25 +105,24 @@ def product_label_modal():
 def update_short_name_modal():
     code = request.args.get("product_code", "")
     label_code = (request.args.get("label_code") or "").strip()
+    main_code = _resolve_main_code(code)
 
     product_info = None
-    if code:
+    if main_code:
         product_info = Product.query.filter(
-            func.upper(func.trim(Product.code)) == code
+            func.upper(func.trim(Product.code)) == main_code
         ).first()
 
     error_message = None
     if not code.strip():
         error_message = "Ingresa un codigo de producto."
-        flash(error_message, "error")
     elif not product_info:
         error_message = f'No se encontro producto para el codigo "{code}".'
-        flash(error_message, "error")
 
     return render_template(
         "partials/update_short_name_product.html",
         product=product_info,
-        label_code=label_code,
+        label_code=label_code or (product_info.code if product_info else ""),
         error_message=error_message,
     )
 
@@ -162,6 +161,19 @@ def update_short_name_product():
     short_name = product_info.short_name or product_info.description or ""
 
     return _render_product_label_row(main_code, short_name, label_code)
+
+
+@label_bp.route("/agregar-producto-listado-etiquetas", methods=["POST"])
+@login_required
+def add_product_list():
+    code = (request.values.get("code") or "").strip()
+    short_name = (request.values.get("short_name") or "").strip()
+    main_code = (request.values.get("main_code") or "").strip()
+
+    if not code:
+        return "", 400
+
+    return _render_product_label_row(main_code, short_name, code)
 
 
 @label_bp.route('/imprimitir-etiquetas', methods=['POST'])
