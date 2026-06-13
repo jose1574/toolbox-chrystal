@@ -150,6 +150,10 @@ def render_pdf_from_html_file(
         'Label57x44': {
             'page-width': '57mm',
             'page-height': '44mm',
+        },
+        'label_56mmx32mm': {
+            'page-width': '56mm',
+            'page-height': '32mm',
         }
     }
 

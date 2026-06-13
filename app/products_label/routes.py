@@ -193,7 +193,7 @@ def print_labels():
 
     logo_base64 = _load_logo_base64()
 
-    html_source = Path(__file__).resolve().parent / 'reports' / 'product_label_pdf.html'
+    html_source = Path(__file__).resolve().parent / 'templates' / 'reports' / 'product_label_pdf.html'
 
     pdf = render_pdf_from_html_file(
         html_source,
@@ -201,7 +201,7 @@ def print_labels():
             'labels': labels,
             'logo_base64': logo_base64,
         },
-        paper_format='Label56x44',
+        paper_format='label_56mmx32mm',
         orientation='Portrait',
         extra_options={
             'margin-top': '0mm',
