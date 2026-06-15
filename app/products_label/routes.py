@@ -1,4 +1,4 @@
-from flask import Response, render_template, request, flash
+from flask import Response, render_template, request
 import base64
 from pathlib import Path
 
@@ -105,25 +105,24 @@ def product_label_modal():
 def update_short_name_modal():
     code = request.args.get("product_code", "")
     label_code = (request.args.get("label_code") or "").strip()
+    main_code = _resolve_main_code(code)
 
     product_info = None
-    if code:
+    if main_code:
         product_info = Product.query.filter(
-            func.upper(func.trim(Product.code)) == code
+            func.upper(func.trim(Product.code)) == main_code
         ).first()
 
     error_message = None
     if not code.strip():
         error_message = "Ingresa un codigo de producto."
-        flash(error_message, "error")
     elif not product_info:
         error_message = f'No se encontro producto para el codigo "{code}".'
-        flash(error_message, "error")
 
     return render_template(
         "partials/update_short_name_product.html",
         product=product_info,
-        label_code=label_code,
+        label_code=label_code or (product_info.code if product_info else ""),
         error_message=error_message,
     )
 
@@ -164,6 +163,19 @@ def update_short_name_product():
     return _render_product_label_row(main_code, short_name, label_code)
 
 
+@label_bp.route("/agregar-producto-listado-etiquetas", methods=["POST"])
+@login_required
+def add_product_list():
+    code = (request.values.get("code") or "").strip()
+    short_name = (request.values.get("short_name") or "").strip()
+    main_code = (request.values.get("main_code") or "").strip()
+
+    if not code:
+        return "", 400
+
+    return _render_product_label_row(main_code, short_name, code)
+
+
 @label_bp.route('/imprimitir-etiquetas', methods=['POST'])
 @login_required 
 def print_labels():
@@ -172,6 +184,7 @@ def print_labels():
     ]
     main_codes = request.form.getlist('main_code')
     short_names = request.form.getlist('short_name')
+    label_format = (request.form.get('label_format') or '57x40').strip()
 
     if not products_list:
         return "No se recibieron codigos para imprimir.", 400
@@ -195,14 +208,33 @@ def print_labels():
 
     html_source = Path(__file__).resolve().parent / 'templates' / 'reports' / 'product_label_pdf.html'
 
+    paper_format = 'Label57x40'
+    page_width = '57mm'
+    page_height = '40mm'
+    barcode_height = '12mm'
+    logo_max_height = '22mm'
+    orientation = 'Portrait'
+
+    if label_format == '57x32':
+        paper_format = 'Label57x32'
+        page_width = '57mm'
+        page_height = '32mm'
+        barcode_height = '10mm'
+        logo_max_height = '18mm'
+        orientation = 'Portrait'
+
     pdf = render_pdf_from_html_file(
         html_source,
         {
             'labels': labels,
             'logo_base64': logo_base64,
+            'page_width': page_width,
+            'page_height': page_height,
+            'barcode_height': barcode_height,
+            'logo_max_height': logo_max_height,
         },
-        paper_format='label_56mmx32mm',
-        orientation='Portrait',
+        paper_format=paper_format,
+        orientation=orientation,
         extra_options={
             'margin-top': '0mm',
             'margin-right': '0mm',
@@ -214,6 +246,8 @@ def print_labels():
             'image-quality': 100,
             'zoom': 1,
             'print-media-type': None,
+            'page-width': page_width,
+            'page-height': page_height,
         },
     )
 

@@ -6,7 +6,7 @@
 	<title>Etiquetas de Productos</title>
 	<style>
 		@page {
-			size: 57mm 32mm;
+			size: {{ page_width }} {{ page_height }};
 			margin: 0;
 		}
 
@@ -14,16 +14,16 @@
 		body {
 			margin: 0;
 			padding: 0;
-			width: 57mm;
-			height: 32mm;
+			width: {{ page_width }};
+			height: {{ page_height }};
 			font-family: Arial, sans-serif;
 			color: #000;
 			font-size: 8.5pt;
 		}
 
 		.label {
-			width: 57mm;
-			height: 32mm;
+			width: {{ page_width }};
+			height: {{ page_height }};
 			border: 0.3mm solid #000;
 			box-sizing: border-box;
 			padding: 0.6mm 0.8mm;

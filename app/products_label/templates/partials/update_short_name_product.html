@@ -4,7 +4,7 @@
       <h3 class="text-lg font-medium text-gray-900">Editar nombre corto del producto</h3>
       <button
         type="button"
-        onclick="closeModal()"
+        onclick="closeUpdateShortNameModal()"
         class="text-gray-500 hover:text-gray-700 focus:outline-none"
       >
         Cerrar
@@ -26,8 +26,8 @@
     <form
       hx-post="{{ url_for('products_label.update_short_name_product') }}"
       hx-target="#products-label-list"
-      hx-swap="afterend"
-      hx-on:htmx:after-request="if(event.detail.successful){closeModal();}"
+      hx-swap="beforeend"
+      hx-on:htmx:after-request="if(event.detail.successful){closeUpdateShortNameModal(true);}"
       class="space-y-3"
     >
       <input type="hidden" name="product_code" value="{{ product.code }}" />
@@ -53,7 +53,7 @@
       <div class="flex justify-end gap-2 pt-2">
         <button
           type="button"
-          onclick="closeModal()"
+          onclick="closeUpdateShortNameModal()"
           class="px-3 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300"
         >
           Cancelar
@@ -69,3 +69,33 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+  function closeUpdateShortNameModal(clearProductCodeInput) {
+    const modalContainer = document.getElementById("modal-update-short-name-product");
+    if (modalContainer) {
+      modalContainer.innerHTML = "";
+    }
+
+    const input = document.getElementById("product_code");
+    if (input) {
+      if (clearProductCodeInput) {
+        input.value = "";
+      }
+      input.focus();
+      if (input.select) {
+        input.select();
+      }
+    }
+  }
+
+  setTimeout(function () {
+    const shortNameInput = document.getElementById("short_name");
+    if (shortNameInput) {
+      shortNameInput.focus();
+      if (shortNameInput.select) {
+        shortNameInput.select();
+      }
+    }
+  }, 100);
+</script>
