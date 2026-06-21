@@ -8,6 +8,7 @@ from flask import (
     make_response,
     session,
     send_file,
+    jsonify,
 )
 import json
 from io import BytesIO
@@ -865,6 +866,223 @@ def auto_order_collection():
     )
 
 
+def _get_product_for_manual_order(product_code, store_origin):
+    main_code = _resolve_main_code(product_code)
+    if not main_code or not store_origin:
+        return None
+
+    stock_totals = (
+        select(
+            ProductsStock.product_code.label("product_code"),
+            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+        )
+        .where(ProductsStock.store == store_origin)
+        .group_by(ProductsStock.product_code)
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            Product.code,
+            Product.description,
+            Product.referenc,
+            Unit.description.label("unit_description"),
+            Mark.description.label("mark_description"),
+            Department.description.label("department_description"),
+            func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+        )
+        .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
+        .join(Unit, Unit.code == ProductsUnit.unit)
+        .outerjoin(Mark, Mark.code == Product.mark)
+        .outerjoin(Department, Department.code == Product.department)
+        .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+        .where(func.upper(func.trim(Product.code)) == main_code)
+    )
+    return db.session.execute(stmt).first()
+
+
+def _search_products_for_manual_order(store_origin, query, page=1, per_page=10):
+    query = (query or "").strip()
+    if not store_origin:
+        return [], 0, 1, 1
+
+    page = max(page or 1, 1)
+    per_page = max(min(per_page or 10, 50), 1)
+
+    stock_totals = (
+        select(
+            ProductsStock.product_code.label("product_code"),
+            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+        )
+        .where(ProductsStock.store == store_origin)
+        .group_by(ProductsStock.product_code)
+        .subquery()
+    )
+
+    filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
+    if query:
+        search_value = f"%{query}%"
+        filters.append(
+            (Product.code.ilike(search_value))
+            | (Product.description.ilike(search_value))
+            | (Product.referenc.ilike(search_value))
+        )
+
+    base_stmt = (
+        select(
+            Product.code,
+            Product.description,
+            Product.referenc,
+            Unit.description.label("unit_description"),
+            Mark.description.label("mark_description"),
+            Department.description.label("department_description"),
+            func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+        )
+        .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
+        .join(Unit, Unit.code == ProductsUnit.unit)
+        .outerjoin(Mark, Mark.code == Product.mark)
+        .outerjoin(Department, Department.code == Product.department)
+        .join(stock_totals, stock_totals.c.product_code == Product.code)
+        .where(*filters)
+        .order_by(Product.code.asc())
+    )
+
+    count_stmt = select(func.count()).select_from(base_stmt.alias("manual_products"))
+    total = db.session.execute(count_stmt).scalar() or 0
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+    products = db.session.execute(
+        base_stmt.limit(per_page).offset((page - 1) * per_page)
+    ).all()
+    return products, total, total_pages, page
+
+
+def _create_order_collection_operation(store_origin, store_dst, selected_items, source_label):
+    if not store_origin or not store_dst:
+        raise ValueError("Debes seleccionar depósito origen y destino.")
+
+    if store_origin == store_dst:
+        raise ValueError("El depósito origen y destino no pueden ser el mismo.")
+
+    store_origen_obj = Store.query.filter_by(code=store_origin).first()
+    store_dst_obj = Store.query.filter_by(code=store_dst).first()
+
+    if not store_origen_obj or not store_dst_obj:
+        raise ValueError("Depósitos inválidos.")
+
+    normalized_items = {}
+    for item in selected_items:
+        main_code = _resolve_main_code(item.get("code"))
+        try:
+            quantity = float(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            quantity = 0
+
+        if main_code and quantity > 0:
+            normalized_items[main_code] = normalized_items.get(main_code, 0) + quantity
+
+    if not normalized_items:
+        raise ValueError("No se han seleccionado productos.")
+
+    header_params = {
+        "p_correlative": None,
+        "p_operation_type": "TRANSFER",
+        "p_document_no": None,
+        "p_emission_date": datetime.now().date(),
+        "p_wait": True,
+        "p_description": f"Traslado {source_label} {store_origen_obj.description} -> {store_dst_obj.description}",
+        "p_user_code": current_user.code,
+        "p_station": "00",
+        "p_store": store_origin,
+        "p_locations": "00",
+        "p_destination_store": store_dst,
+        "p_destination_location": "00",
+        "p_operation_comments": f"Generado desde Toolbox {source_label}",
+        "p_total_amount": 0.0,
+        "p_total_net": 0.0,
+        "p_total_tax": 0.0,
+        "p_total": 0.0,
+        "p_coin_code": "02",
+        "p_internal_use": False,
+    }
+
+    sql_header = text(
+        """
+        SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no,
+        :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations,
+        :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount,
+        :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
+    """
+    )
+
+    document_no = db.session.execute(sql_header, header_params).scalar()
+    if not document_no:
+        raise RuntimeError("La DB no devolvió ID de operación.")
+
+    sql_detail = text(
+        """
+        SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product,
+        :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations,
+        :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type,
+        :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code,
+        :p_change_price)
+    """
+    )
+
+    for code, quantity in normalized_items.items():
+        data_row = (
+            db.session.query(ProductsUnit, Product, Tax)
+            .join(Product, ProductsUnit.product_code == Product.code)
+            .outerjoin(Tax, Product.buy_tax == Tax.code)
+            .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
+            .first()
+        )
+
+        if not data_row:
+            raise ValueError(f"El producto {code} no tiene unidad principal configurada.")
+
+        product_stock = (
+            db.session.query(func.sum(func.coalesce(ProductsStock.stock, 0)))
+            .filter(ProductsStock.product_code == code, ProductsStock.store == store_origin)
+            .scalar()
+            or 0
+        )
+        if float(quantity) > float(product_stock):
+            raise ValueError(
+                f"El producto {code} supera el stock disponible en origen ({product_stock})."
+            )
+
+        pu, prod, tax = data_row
+        detail_params = {
+            "p_main_correlative": document_no,
+            "p_line": 0,
+            "p_code_product": code,
+            "p_description_product": prod.description or "Producto agregado desde Toolbox",
+            "p_referenc": prod.referenc,
+            "p_mark": prod.mark,
+            "p_model": prod.model,
+            "p_amount": float(quantity),
+            "p_store": store_origin,
+            "p_locations": "00",
+            "p_destination_store": store_dst,
+            "p_destination_location": "00",
+            "p_unit": int(pu.correlative),
+            "p_conversion_factor": 0.0,
+            "p_unit_type": 0,
+            "p_unitary_cost": 0.0,
+            "p_buy_tax": prod.buy_tax,
+            "p_aliquot": tax.aliquot if tax else 0.0,
+            "p_total_cost": 0.0,
+            "p_total_tax": 0.0,
+            "p_total": 0.0,
+            "p_coin_code": "02",
+            "p_change_price": False,
+        }
+        db.session.execute(sql_detail, detail_params)
+
+    return document_no
+
+
 @inventory_bp.route("/auto_order_collection/save", methods=["POST"])
 @login_required
 def save_auto_order_collection():
@@ -914,100 +1132,9 @@ def save_auto_order_collection():
         )
 
     try:
-        # 1. Cabecera: Parámetros nombrados para compatibilidad con SQLAlchemy
-        header_params = {
-            "p_correlative": None,
-            "p_operation_type": "TRANSFER",
-            "p_document_no": None,
-            "p_emission_date": datetime.now().date(),
-            "p_wait": True,
-            "p_description": f"Traslado Automatico {store_origen_obj.description} -> {store_dst_obj.description}",
-            "p_user_code": current_user.code,
-            "p_station": "00",
-            "p_store": store_origin,
-            "p_locations": "00",
-            "p_destination_store": store_dst,
-            "p_destination_location": "00",
-            "p_operation_comments": "Generado desde Toolbox Auto Order",
-            "p_total_amount": 0.0,
-            "p_total_net": 0.0,
-            "p_total_tax": 0.0,
-            "p_total": 0.0,
-            "p_coin_code": "02",
-            "p_internal_use": False,
-        }
-
-        sql_header = text(
-            """
-            SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no, 
-            :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations, 
-            :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount, 
-            :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
-        """
+        document_no = _create_order_collection_operation(
+            store_origin, store_dst, selected_items, "Automatico"
         )
-
-        document_no = db.session.execute(sql_header, header_params).scalar()
-        if not document_no:
-            raise Exception("La DB no devolvió ID de operación.")
-
-        print(f"Nuevo ID de operación: {document_no}")
-        # 2. Detalles
-        sql_detail = text(
-            """
-            SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product, 
-            :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations, 
-            :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type, 
-            :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code, 
-            :p_change_price)
-        """
-        )
-
-        for item in selected_items:
-            # Obtener datos: Unidad Principal, Producto, Impuesto
-            data_row = (
-                db.session.query(ProductsUnit, Product, Tax)
-                .join(Product, ProductsUnit.product_code == Product.code)
-                .outerjoin(Tax, Product.buy_tax == Tax.code)
-                .filter(
-                    ProductsUnit.product_code == item["code"],
-                    ProductsUnit.main_unit == True,
-                )
-                .first()
-            )
-
-            if not data_row:
-                print(f"OMITIDO: {item['code']} falta info maestra.")
-                continue
-
-            pu, prod, tax = data_row
-
-            detail_params = {
-                "p_main_correlative": document_no,
-                "p_line": 0,  # INOUT Integer (Enviar 0 para evitar error de tipos)
-                "p_code_product": item["code"],
-                "p_description_product": "comentario automatico, ToolBox",
-                "p_referenc": prod.referenc,
-                "p_mark": prod.mark,
-                "p_model": prod.model,
-                "p_amount": float(item["quantity"]),
-                "p_store": store_origin,
-                "p_locations": "00",
-                "p_destination_store": store_dst,
-                "p_destination_location": "00",
-                "p_unit": int(pu.correlative),
-                "p_conversion_factor": 0.0,
-                "p_unit_type": 0,  # Integer requerido (antes 0.0)
-                "p_unitary_cost": 0.0,
-                "p_buy_tax": prod.buy_tax,
-                "p_aliquot": tax.aliquot if tax else 0.0,
-                "p_total_cost": 0.0,
-                "p_total_tax": 0.0,
-                "p_total": 0.0,
-                "p_coin_code": "02",
-                "p_change_price": False,
-            }
-            db.session.execute(sql_detail, detail_params)
-
         db.session.commit()
         register_flow_step1(document_no, current_user.code)
         flash(f"Operación #{document_no} guardada correctamente.", "success")
@@ -1041,6 +1168,134 @@ def save_auto_order_collection():
         return redirect(
             url_for(
                 "inventory.auto_order_collection",
+                store_origin=store_origin,
+                store_dst=store_dst,
+            )
+        )
+
+
+@inventory_bp.route("/manual_order_collection", methods=["GET"])
+@login_required
+def manual_order_collection():
+    stores = Store.query.order_by(Store.description.asc()).all()
+    new_order_id = request.args.get("new_order_id")
+    store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
+
+    if store_origin and store_dst and store_origin == store_dst:
+        flash("El depósito origen y destino no pueden ser el mismo.", "warning")
+        store_origin = None
+        store_dst = None
+
+    store_origin_obj = Store.query.filter_by(code=store_origin).first() if store_origin else None
+    store_dst_obj = Store.query.filter_by(code=store_dst).first() if store_dst else None
+
+    return render_template(
+        "manual_order_collection.html",
+        stores=stores,
+        store_origin=store_origin,
+        store_dst=store_dst,
+        store_origin_name=store_origin_obj.description if store_origin_obj else "",
+        store_dst_name=store_dst_obj.description if store_dst_obj else "",
+        new_order_id=new_order_id,
+    )
+
+
+@inventory_bp.route("/manual_order_collection/product_lookup", methods=["GET"])
+@login_required
+def manual_order_product_lookup():
+    store_origin = request.args.get("store_origin")
+    code = request.args.get("code")
+    entered_code = _normalize_code(code)
+    main_code = _resolve_main_code(code)
+    product = _get_product_for_manual_order(code, store_origin)
+
+    if not product or float(product.stock_origin or 0) <= 0:
+        return jsonify({"ok": False, "message": "Producto no encontrado o sin stock en origen."}), 404
+
+    return jsonify(
+        {
+            "ok": True,
+            "product": {
+                "code": product.code,
+                "entered_code": entered_code,
+                "main_code": main_code,
+                "resolved_from_alternate": bool(entered_code and entered_code != main_code),
+                "description": product.description or "",
+                "unit_description": product.unit_description or "",
+                "mark_description": product.mark_description or "",
+                "department_description": product.department_description or "",
+                "stock_origin": float(product.stock_origin or 0),
+            },
+        }
+    )
+
+
+@inventory_bp.route("/manual_order_collection/products", methods=["GET"])
+@login_required
+def manual_order_products_modal():
+    store_origin = request.args.get("store_origin")
+    query = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
+    products, total_products, total_pages, current_page = _search_products_for_manual_order(
+        store_origin, query, page=page, per_page=10
+    )
+    return render_template(
+        "partials/manual_order_product_modal.html",
+        products=products,
+        query=query,
+        store_origin=store_origin,
+        page=current_page,
+        total_pages=total_pages,
+        total_products=total_products,
+    )
+
+
+@inventory_bp.route("/manual_order_collection/save", methods=["POST"])
+@login_required
+def save_manual_order_collection():
+    store_origin = request.form.get("store_origin")
+    store_dst = request.form.get("store_dst")
+    product_codes = request.form.getlist("product_code[]")
+    quantities = request.form.getlist("quantity[]")
+    selected_items = [
+        {"code": code, "quantity": quantity}
+        for code, quantity in zip(product_codes, quantities)
+    ]
+
+    try:
+        document_no = _create_order_collection_operation(
+            store_origin, store_dst, selected_items, "Manual"
+        )
+        db.session.commit()
+        register_flow_step1(document_no, current_user.code)
+        flash(f"Orden manual #{document_no} guardada correctamente.", "success")
+
+        if request.headers.get("HX-Request"):
+            resp = make_response("", 200)
+            resp.headers["HX-Redirect"] = url_for(
+                "inventory.manual_order_collection", new_order_id=document_no
+            )
+            resp.headers["HX-Trigger"] = json.dumps(
+                {
+                    "open-pdf": {
+                        "url": url_for(
+                            "inventory.order_collection_report", order_id=document_no
+                        )
+                    }
+                }
+            )
+            return resp
+
+        return redirect(
+            url_for("inventory.order_collection_report", order_id=document_no)
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(
+            url_for(
+                "inventory.manual_order_collection",
                 store_origin=store_origin,
                 store_dst=store_dst,
             )

@@ -1,0 +1,90 @@
+<div id="manual-product-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-700/60 p-4" role="dialog" aria-modal="true">
+    <div class="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div class="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Seleccionar producto</h2>
+                <p class="text-xs text-gray-500">Solo se muestran productos con stock disponible en el deposito origen.</p>
+            </div>
+            <button type="button" data-close-manual-product-modal class="text-sm font-medium text-gray-500 hover:text-gray-800">
+                Cerrar
+            </button>
+        </div>
+
+        <form id="manual-product-search-form" class="border-b border-gray-200 bg-gray-50 px-5 py-3">
+            <input type="hidden" name="store_origin" value="{{ store_origin }}">
+            <div class="flex gap-2">
+                <input type="text" name="q" value="{{ query }}" autocomplete="off" placeholder="Buscar por codigo, referencia o descripcion"
+                    class="block h-10 w-full rounded-md border border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <button type="submit" class="inline-flex h-10 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-800">
+                    Buscar
+                </button>
+            </div>
+        </form>
+
+        <div class="border-b border-gray-100 px-5 py-2 text-xs text-gray-500">
+            {{ total_products }} producto(s) disponible(s). Página {{ page }} de {{ total_pages }}.
+        </div>
+
+        <div class="overflow-y-auto">
+            <table class="w-full min-w-[760px] text-left text-sm text-gray-600">
+                <thead class="sticky top-0 bg-white text-xs uppercase text-gray-700 shadow-sm">
+                    <tr>
+                        <th class="px-4 py-3">Codigo</th>
+                        <th class="px-4 py-3">Descripcion</th>
+                        <th class="px-4 py-3">Unidad</th>
+                        <th class="px-4 py-3">Stock origen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for product in products %}
+                    <tr class="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                        tabindex="0"
+                        data-select-manual-product
+                        data-code="{{ product.code }}"
+                        data-description="{{ product.description or '' }}"
+                        data-unit="{{ product.unit_description or '' }}"
+                        data-mark="{{ product.mark_description or '' }}"
+                        data-department="{{ product.department_description or '' }}"
+                        data-stock="{{ product.stock_origin or 0 }}">
+                        <td class="px-4 py-3 font-semibold text-gray-900">{{ product.code }}</td>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-gray-900">{{ product.description or '-' }}</div>
+                            <div class="text-xs text-gray-500">{{ product.mark_description or '-' }} | {{ product.department_description or '-' }}</div>
+                        </td>
+                        <td class="px-4 py-3">{{ product.unit_description or '-' }}</td>
+                        <td class="px-4 py-3">{{ '%.2f'|format(product.stock_origin or 0) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500 italic">
+                            {% if query %}
+                            No se encontraron productos para la busqueda indicada.
+                            {% else %}
+                            No hay productos con stock disponible en este deposito.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-5 py-3">
+            <button type="button"
+                data-manual-product-page="{{ page - 1 }}"
+                data-query="{{ query }}"
+                {% if page <= 1 %}disabled{% endif %}
+                class="inline-flex h-9 w-24 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50">
+                Anterior
+            </button>
+            <div class="text-xs text-gray-500">Haz click sobre una fila para agregar el producto.</div>
+            <button type="button"
+                data-manual-product-page="{{ page + 1 }}"
+                data-query="{{ query }}"
+                {% if page >= total_pages %}disabled{% endif %}
+                class="inline-flex h-9 w-24 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50">
+                Siguiente
+            </button>
+        </div>
+    </div>
+</div>

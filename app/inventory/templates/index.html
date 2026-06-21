@@ -112,6 +112,29 @@
 						</a>
 					</div>
 
+
+					<div
+						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-cyan-50 border border-cyan-100">
+						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-cyan-100 text-cyan-600">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
+								stroke="currentColor" class="w-7 h-7">
+								<path stroke-linecap="round" stroke-linejoin="round"
+									d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+							</svg>
+						</div>
+						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Orden manual de recolección</h5>
+						<p class="mb-6 text-gray-600">Agrega productos uno por uno y define cantidades antes de generar la orden.</p>
+						<a href="{{ url_for('inventory.manual_order_collection') }}"
+							class="cursor-pointer inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
+							Abrir
+							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+								width="24" height="24" fill="none" viewBox="0 0 24 24">
+								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
+							</svg>
+						</a>
+					</div>
+
 					<!-- Card: Configurar parámetros de productos -->
 					<div
 						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-amber-50 border border-amber-100">
@@ -139,6 +162,8 @@
 							</svg>
 						</a>
 					</div>
+
+					
 
 					<!-- Card: Configurar ubicación de productos -->
 					<div

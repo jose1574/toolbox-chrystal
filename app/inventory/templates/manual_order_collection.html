@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% block title %}Orden manual de recoleccion - Toolbox{% endblock %}
+{% block content %}
+<div class="p-4 ml-[4.5rem]">
+    <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Orden manual de recoleccion</h1>
+            <p class="text-sm text-gray-500">Selecciona depositos y agrega productos como un carrito de traslado.</p>
+        </div>
+        <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
+            class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+            Regresar
+        </button>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-4 py-3 rounded border text-sm {% if category == 'success' %}bg-green-50 text-green-800 border-green-200{% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border-yellow-200{% elif category == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-gray-50 text-gray-800 border-gray-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if not store_origin or not store_dst %}
+    <div class="mx-auto max-w-2xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Seleccionar depositos</h2>
+        <form method="get" action="{{ url_for('inventory.manual_order_collection') }}" hx-get="{{ url_for('inventory.manual_order_collection') }}"
+            hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                    <label for="store_origin" class="mb-1 block text-sm font-medium text-gray-700">Deposito origen</label>
+                    <select id="store_origin" name="store_origin" required
+                        class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">-- Seleccionar --</option>
+                        {% for store in stores %}
+                        <option value="{{ store.code }}" {% if store.code == store_origin %}selected{% endif %}>{{ store.description }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="store_dst" class="mb-1 block text-sm font-medium text-gray-700">Deposito destino</label>
+                    <select id="store_dst" name="store_dst" required
+                        class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">-- Seleccionar --</option>
+                        {% for store in stores %}
+                        <option value="{{ store.code }}" {% if store.code == store_dst %}selected{% endif %}>{{ store.description }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-800">
+                    Continuar
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+                <div><span class="font-semibold">Origen:</span> {{ store_origin_name }} ({{ store_origin }})</div>
+                <div><span class="font-semibold">Destino:</span> {{ store_dst_name }} ({{ store_dst }})</div>
+            </div>
+            <a href="{{ url_for('inventory.manual_order_collection') }}" hx-get="{{ url_for('inventory.manual_order_collection') }}"
+                hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="text-sm font-medium text-blue-700 hover:underline">
+                Cambiar depositos
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[380px_1fr]">
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900">Agregar producto</h2>
+            <div class="mt-4 space-y-3">
+                <div>
+                    <label for="manual-product-code" class="mb-1 block text-sm font-medium text-gray-700">Codigo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="manual-product-code" autocomplete="off" placeholder="Codigo de producto"
+                            class="block h-10 w-full rounded-md border border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <button type="button" id="manual-code-add"
+                            class="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-800">
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+                <button type="button" id="open-product-modal"
+                    class="inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                    Buscar en catalogo
+                </button>
+                <p id="manual-order-message" class="hidden rounded-md px-3 py-2 text-sm"></p>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-2 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Productos agregados</h2>
+                    <p class="text-xs text-gray-500">Ajusta cantidades antes de generar la orden.</p>
+                </div>
+                <div class="text-sm text-gray-600">Items: <span id="cart-count">0</span></div>
+            </div>
+            <form id="manual-order-form" method="post" action="{{ url_for('inventory.save_manual_order_collection') }}"
+                hx-post="{{ url_for('inventory.save_manual_order_collection') }}" hx-target="#main-content" hx-swap="innerHTML" hx-trigger="submit">
+                <input type="hidden" name="store_origin" value="{{ store_origin }}">
+                <input type="hidden" name="store_dst" value="{{ store_dst }}">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[760px] text-left text-sm text-gray-600">
+                        <thead class="bg-gray-50 text-xs uppercase text-gray-700">
+                            <tr>
+                                <th class="px-4 py-3">Codigo</th>
+                                <th class="px-4 py-3">Descripcion</th>
+                                <th class="px-4 py-3">Unidad</th>
+                                <th class="px-4 py-3">Stock origen</th>
+                                <th class="px-4 py-3">Cantidad</th>
+                                <th class="px-4 py-3 text-right">Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manual-cart-body">
+                            <tr id="empty-cart-row">
+                                <td colspan="6" class="px-4 py-8 text-center text-gray-500 italic">Aun no hay productos agregados.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-xs text-gray-500">La orden quedara en espera para chequeo de recoleccion.</p>
+                    <button type="submit" id="create-manual-order" disabled
+                        class="inline-flex items-center justify-center rounded-md bg-green-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300">
+                        Crear orden de recoleccion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div id="manual-product-modal"></div>
+
+{% if store_origin and store_dst %}
+<script>
+    (function () {
+        if (!window.__openPdfListenerAttached) {
+            window.addEventListener('open-pdf', function (e) {
+                if (e.detail && e.detail.url) {
+                    window.open(e.detail.url, '_blank');
+                }
+            });
+            window.__openPdfListenerAttached = true;
+        }
+
+        const storeOrigin = {{ store_origin|tojson }};
+        const cartBody = document.getElementById('manual-cart-body');
+        const emptyRow = document.getElementById('empty-cart-row');
+        const codeInput = document.getElementById('manual-product-code');
+        const addCodeButton = document.getElementById('manual-code-add');
+        const openModalButton = document.getElementById('open-product-modal');
+        const createButton = document.getElementById('create-manual-order');
+        const manualOrderForm = document.getElementById('manual-order-form');
+        const cartCount = document.getElementById('cart-count');
+        const messageBox = document.getElementById('manual-order-message');
+        const cart = new Map();
+
+        function showMessage(message, type) {
+            messageBox.textContent = message;
+            messageBox.className = 'rounded-md px-3 py-2 text-sm ' + (type === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200');
+        }
+
+        function clearMessage() {
+            messageBox.textContent = '';
+            messageBox.className = 'hidden rounded-md px-3 py-2 text-sm';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>'"]/g, function (char) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char];
+            });
+        }
+
+        function renderCart() {
+            cartBody.innerHTML = '';
+            if (cart.size === 0) {
+                cartBody.appendChild(emptyRow);
+            } else {
+                cart.forEach(product => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b bg-white hover:bg-gray-50';
+                    tr.dataset.code = product.code;
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-medium text-gray-900">
+                            ${escapeHtml(product.code)}
+                            <input type="hidden" name="product_code[]" value="${escapeHtml(product.code)}">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-gray-900">${escapeHtml(product.description)}</div>
+                            <div class="text-xs text-gray-500">${escapeHtml(product.mark_description)} ${escapeHtml(product.department_description)}</div>
+                        </td>
+                        <td class="px-4 py-3">${escapeHtml(product.unit_description)}</td>
+                        <td class="px-4 py-3">${Number(product.stock_origin || 0).toFixed(2)}</td>
+                        <td class="px-4 py-3">
+                            <input type="number" name="quantity[]" min="0.01" step="0.01" max="${Number(product.stock_origin || 0)}" value="${Number(product.quantity || 1)}"
+                                class="manual-qty block h-9 w-28 rounded-md border border-gray-300 px-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <button type="button" class="remove-cart-item rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">Quitar</button>
+                        </td>
+                    `;
+                    cartBody.appendChild(tr);
+                });
+            }
+
+            cartCount.textContent = cart.size.toString();
+            createButton.disabled = cart.size === 0;
+        }
+
+        function addProduct(product, quantity) {
+            const stock = Number(product.stock_origin || 0);
+            const requested = Number(quantity || 1);
+            if (!product.code) {
+                showMessage('Producto invalido.', 'error');
+                return;
+            }
+            if (stock <= 0) {
+                showMessage('El producto no tiene stock disponible en origen.', 'error');
+                return;
+            }
+            if (requested <= 0) {
+                showMessage('La cantidad debe ser mayor a cero.', 'error');
+                return;
+            }
+
+            const existing = cart.get(product.code);
+            const nextQuantity = existing ? Number(existing.quantity || 0) + requested : requested;
+            if (nextQuantity > stock) {
+                showMessage('La cantidad supera el stock disponible en origen.', 'error');
+                return;
+            }
+
+            cart.set(product.code, { ...product, quantity: nextQuantity });
+            renderCart();
+            if (product.resolved_from_alternate && product.entered_code) {
+                showMessage(`Codigo alterno ${product.entered_code} agregado como ${product.code}.`, 'success');
+            } else {
+                clearMessage();
+            }
+            codeInput.value = '';
+            codeInput.focus();
+        }
+
+        async function lookupByCode() {
+            const code = codeInput.value.trim();
+            if (!code) {
+                showMessage('Ingresa un codigo de producto.', 'error');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({ store_origin: storeOrigin, code });
+                const response = await fetch(`{{ url_for('inventory.manual_order_product_lookup') }}?${params.toString()}`, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    showMessage(data.message || 'No se encontro el producto.', 'error');
+                    return;
+                }
+                addProduct(data.product, 1);
+            } catch (err) {
+                showMessage('No se pudo buscar el producto.', 'error');
+            }
+        }
+
+        async function openProductModal(query, page) {
+            try {
+                const params = new URLSearchParams({
+                    store_origin: storeOrigin,
+                    q: query || '',
+                    page: page || 1,
+                });
+                const response = await fetch(`{{ url_for('inventory.manual_order_products_modal') }}?${params.toString()}`, {
+                    credentials: 'same-origin',
+                    headers: { 'HX-Request': 'true' },
+                });
+                document.getElementById('manual-product-modal').outerHTML = await response.text();
+            } catch (err) {
+                showMessage('No se pudo abrir el catalogo de productos.', 'error');
+            }
+        }
+
+        addCodeButton.addEventListener('click', lookupByCode);
+        codeInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lookupByCode();
+            }
+        });
+        manualOrderForm.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+        openModalButton.addEventListener('click', function () {
+            openProductModal(codeInput.value.trim());
+        });
+
+        document.addEventListener('click', function (e) {
+            const closeModal = e.target.closest('[data-close-manual-product-modal]');
+            if (closeModal || e.target.id === 'manual-product-modal') {
+                document.getElementById('manual-product-modal').outerHTML = '<div id="manual-product-modal"></div>';
+                return;
+            }
+
+            const selectProduct = e.target.closest('[data-select-manual-product]');
+            if (selectProduct) {
+                addProduct({
+                    code: selectProduct.dataset.code,
+                    description: selectProduct.dataset.description,
+                    unit_description: selectProduct.dataset.unit,
+                    mark_description: selectProduct.dataset.mark,
+                    department_description: selectProduct.dataset.department,
+                    stock_origin: Number(selectProduct.dataset.stock || 0),
+                }, 1);
+                document.getElementById('manual-product-modal').outerHTML = '<div id="manual-product-modal"></div>';
+                return;
+            }
+
+            const pageButton = e.target.closest('[data-manual-product-page]');
+            if (pageButton) {
+                openProductModal(pageButton.dataset.query || '', Number(pageButton.dataset.manualProductPage || 1));
+                return;
+            }
+
+            const removeButton = e.target.closest('.remove-cart-item');
+            if (removeButton) {
+                const row = removeButton.closest('tr');
+                cart.delete(row.dataset.code);
+                renderCart();
+            }
+        });
+
+        document.addEventListener('submit', function (e) {
+            const searchForm = e.target.closest('#manual-product-search-form');
+            if (!searchForm) return;
+            e.preventDefault();
+            const formData = new FormData(searchForm);
+            openProductModal(formData.get('q') || '', 1);
+        });
+
+        cartBody.addEventListener('input', function (e) {
+            if (!e.target.classList.contains('manual-qty')) return;
+            const row = e.target.closest('tr');
+            const product = cart.get(row.dataset.code);
+            const quantity = Number(e.target.value || 0);
+            const stock = Number(product.stock_origin || 0);
+            if (quantity > stock) {
+                e.target.value = stock;
+                product.quantity = stock;
+                showMessage('La cantidad fue ajustada al stock disponible.', 'error');
+            } else {
+                product.quantity = quantity;
+            }
+        });
+
+        renderCart();
+    })();
+</script>
+{% endif %}
+{% endblock %}
