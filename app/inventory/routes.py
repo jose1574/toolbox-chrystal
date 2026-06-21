@@ -47,10 +47,258 @@ def index():
     return render_template("index.html")
 
 
+def _parse_date_filter(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _build_transfer_traceability_filters():
+    status = (request.args.get("status") or "").strip().upper()
+    if status not in TRANSFER_STATUS_LABELS:
+        status = ""
+
+    date_from_raw = (request.args.get("date_from") or "").strip()
+    date_to_raw = (request.args.get("date_to") or "").strip()
+    query = (request.args.get("q") or "").strip()
+
+    return {
+        "status": status,
+        "date_from": date_from_raw,
+        "date_to": date_to_raw,
+        "q": query,
+        "date_from_value": _parse_date_filter(date_from_raw),
+        "date_to_value": _parse_date_filter(date_to_raw),
+    }
+
+
+def _get_transfer_traceability_rows(filters):
+    sql = text(
+        """
+        SELECT f.operation_correlative,
+               f.current_status,
+               f.recollection_issued_user,
+               issued_user.description AS recollection_issued_user_name,
+               f.recollection_issued_at,
+               f.checking_user,
+               checking_user.description AS checking_user_name,
+               f.checked_at,
+               f.in_transit_user,
+               transit_user.description AS in_transit_user_name,
+               f.in_transit_at,
+               f.receiving_user,
+               receiving_user.description AS receiving_user_name,
+               f.received_at,
+               io.document_no,
+               io.emission_date,
+               io.description,
+               io.store,
+               origin_store.description AS store_description,
+               io.destination_store,
+               destination_store.description AS destination_store_description,
+               io.wait
+          FROM toolbox.inventory_operation_flow f
+          JOIN public.inventory_operation io
+            ON io.correlative = f.operation_correlative
+          LEFT JOIN public.store origin_store
+            ON origin_store.code = io.store
+          LEFT JOIN public.store destination_store
+            ON destination_store.code = io.destination_store
+          LEFT JOIN public.users issued_user
+            ON issued_user.code = f.recollection_issued_user
+          LEFT JOIN public.users checking_user
+            ON checking_user.code = f.checking_user
+          LEFT JOIN public.users transit_user
+            ON transit_user.code = f.in_transit_user
+          LEFT JOIN public.users receiving_user
+            ON receiving_user.code = f.receiving_user
+         WHERE io.operation_type = 'TRANSFER'
+           AND (:status = '' OR f.current_status = :status)
+           AND (:date_from IS NULL OR io.emission_date >= :date_from)
+           AND (:date_to IS NULL OR io.emission_date <= :date_to)
+           AND (
+                :q = ''
+                OR CAST(f.operation_correlative AS VARCHAR) ILIKE :q_like
+                OR COALESCE(io.document_no, '') ILIKE :q_like
+                OR COALESCE(io.description, '') ILIKE :q_like
+                OR COALESCE(origin_store.description, '') ILIKE :q_like
+                OR COALESCE(destination_store.description, '') ILIKE :q_like
+           )
+         ORDER BY io.emission_date DESC NULLS LAST,
+                  f.operation_correlative DESC
+        """
+    )
+    params = {
+        "status": filters["status"],
+        "date_from": filters["date_from_value"],
+        "date_to": filters["date_to_value"],
+        "q": filters["q"],
+        "q_like": f"%{filters['q']}%",
+    }
+    return db.session.execute(sql, params).mappings().all()
+
+
+@inventory_bp.route("/transfer_traceability", methods=["GET"])
+@login_required
+def transfer_traceability():
+    filters = _build_transfer_traceability_filters()
+    transfers = _get_transfer_traceability_rows(filters)
+    return render_template(
+        "transfer_traceability.html",
+        transfers=transfers,
+        filters=filters,
+        flow_steps=TRANSFER_FLOW_STEPS,
+        status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@inventory_bp.route("/transfer_traceability/pdf", methods=["GET"])
+@login_required
+def transfer_traceability_pdf():
+    filters = _build_transfer_traceability_filters()
+    transfers = _get_transfer_traceability_rows(filters)
+    pdf = render_pdf(
+        "reports/transfer_traceability_pdf.html",
+        {
+            "transfers": transfers,
+            "filters": filters,
+            "flow_steps": TRANSFER_FLOW_STEPS,
+            "status_labels": TRANSFER_STATUS_LABELS,
+            "now": datetime.now(),
+            "user": current_user,
+        },
+        paper_format="Letter",
+        orientation="Landscape",
+    )
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "inline; filename=trazabilidad_traslados.pdf"},
+    )
+
+
+@inventory_bp.route("/transfer_traceability/excel", methods=["GET"])
+@login_required
+def transfer_traceability_excel():
+    filters = _build_transfer_traceability_filters()
+    transfers = _get_transfer_traceability_rows(filters)
+
+    output = BytesIO()
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet("Trazabilidad")
+
+    header_style = xlwt.easyxf(
+        "font: bold on; pattern: pattern solid, fore_colour gray25;"
+    )
+    text_style = xlwt.easyxf(num_format_str="@")
+    date_style = xlwt.easyxf(num_format_str="DD/MM/YYYY HH:MM")
+
+    columns = [
+        "Correlativo",
+        "Documento",
+        "Fecha emisión",
+        "Descripción",
+        "Depósito origen",
+        "Depósito destino",
+        "Estado",
+        "Orden usuario",
+        "Orden fecha",
+        "Chequeo usuario",
+        "Chequeo fecha",
+        "Carga usuario",
+        "Carga fecha",
+        "Recepción usuario",
+        "Recepción fecha",
+    ]
+
+    for col_idx, title in enumerate(columns):
+        ws.write(0, col_idx, title, header_style)
+
+    def write_value(row_idx, col_idx, value):
+        if isinstance(value, datetime):
+            ws.write(row_idx, col_idx, value, date_style)
+        else:
+            ws.write(row_idx, col_idx, "" if value is None else str(value), text_style)
+
+    for row_idx, transfer in enumerate(transfers, start=1):
+        values = [
+            transfer.operation_correlative,
+            transfer.document_no,
+            transfer.emission_date,
+            transfer.description,
+            f"{transfer.store_description or ''} ({transfer.store or ''})",
+            f"{transfer.destination_store_description or ''} ({transfer.destination_store or ''})",
+            TRANSFER_STATUS_LABELS.get(transfer.current_status, transfer.current_status),
+            transfer.recollection_issued_user_name or transfer.recollection_issued_user,
+            transfer.recollection_issued_at,
+            transfer.checking_user_name or transfer.checking_user,
+            transfer.checked_at,
+            transfer.in_transit_user_name or transfer.in_transit_user,
+            transfer.in_transit_at,
+            transfer.receiving_user_name or transfer.receiving_user,
+            transfer.received_at,
+        ]
+        for col_idx, value in enumerate(values):
+            write_value(row_idx, col_idx, value)
+
+    for col_idx, title in enumerate(columns):
+        ws.col(col_idx).width = min(max(len(title) + 4, 14), 45) * 256
+
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="trazabilidad_traslados.xls",
+        mimetype="application/vnd.ms-excel",
+    )
+
+
 FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
 FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"
 FLOW_IN_TRANSIT = "IN_TRANSIT"
 FLOW_RECEIVED = "RECEIVED"
+
+TRANSFER_FLOW_STEPS = [
+    {
+        "key": "recollection_issued",
+        "label": "Orden de recolección",
+        "user_field": "recollection_issued_user",
+        "user_name_field": "recollection_issued_user_name",
+        "date_field": "recollection_issued_at",
+    },
+    {
+        "key": "checked",
+        "label": "Chequeo de orden de recolección",
+        "user_field": "checking_user",
+        "user_name_field": "checking_user_name",
+        "date_field": "checked_at",
+    },
+    {
+        "key": "in_transit",
+        "label": "Firma digital del responsable de carga",
+        "user_field": "in_transit_user",
+        "user_name_field": "in_transit_user_name",
+        "date_field": "in_transit_at",
+    },
+    {
+        "key": "received",
+        "label": "Recepción de traslado procesada",
+        "user_field": "receiving_user",
+        "user_name_field": "receiving_user_name",
+        "date_field": "received_at",
+    },
+]
+
+TRANSFER_STATUS_LABELS = {
+    FLOW_RECOLLECTION_ISSUED: "Orden emitida",
+    FLOW_RECOLLECTION_CHECKED: "Orden chequeada",
+    FLOW_IN_TRANSIT: "En tránsito",
+    FLOW_RECEIVED: "Recepcionado y procesado",
+}
 
 
 def register_flow_step1(operation_correlative, user_code):

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trazabilidad de traslados</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #111; margin: 0; padding: 10px; }
+        h1 { font-size: 18px; margin: 0 0 4px; text-transform: uppercase; }
+        .meta { color: #444; margin-bottom: 12px; }
+        .matrix { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .matrix th { color: #fff; padding: 7px; border: 1px solid #111; text-align: left; font-size: 9px; text-transform: uppercase; }
+        .matrix td { padding: 7px; border: 1px solid #555; vertical-align: top; }
+        .operation-head { background: #1f2937; width: 22%; }
+        .step-1 { background: #0369a1; }
+        .step-2 { background: #0f766e; }
+        .step-3 { background: #1e3a8a; }
+        .step-4 { background: #ea580c; }
+        .operation-cell { background: #f8fafc; }
+        .done { background: #e8f5e9; }
+        .pending { background: #fee2e2; color: #555; }
+        .badge { display: inline-block; padding: 2px 5px; border-radius: 8px; font-size: 8px; font-weight: bold; }
+        .status-done { background: #15803d; color: #fff; }
+        .status-pending { background: #dc2626; color: #fff; }
+        .step-label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .step-number { display: inline-block; width: 15px; height: 15px; line-height: 15px; text-align: center; border-radius: 50%; background: rgba(255,255,255,.25); margin-right: 3px; }
+        .small { font-size: 9px; line-height: 1.35; }
+        .footer { margin-top: 12px; font-size: 9px; text-align: center; color: #555; }
+    </style>
+</head>
+
+<body>
+    <h1>Trazabilidad de traslados</h1>
+    <div class="meta">
+        Generado por: {{ user.description if user else 'Sistema' }} | {{ now.strftime('%d/%m/%Y %H:%M:%S') }}
+    </div>
+
+    <table class="matrix">
+        <thead>
+            <tr>
+                <th class="operation-head">Operación</th>
+                {% for step in flow_steps %}
+                <th class="step-{{ loop.index }}"><span class="step-number">{{ loop.index }}</span>{{ step.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for transfer in transfers %}
+            <tr>
+                <td class="operation-cell">
+                    <strong>Traslado #{{ transfer.operation_correlative }}</strong><br>
+                    Estado: {{ status_labels.get(transfer.current_status, transfer.current_status) }}<br>
+                    Documento: {{ transfer.document_no or '-' }}<br>
+                    Fecha: {{ transfer.emission_date or '-' }}<br>
+                    Origen: {{ transfer.store_description or '-' }} ({{ transfer.store or '-' }})<br>
+                    Destino: {{ transfer.destination_store_description or '-' }} ({{ transfer.destination_store or '-' }})
+                </td>
+                {% for step in flow_steps %}
+                {% set completed = transfer[step.date_field] is not none %}
+                <td class="{{ 'done' if completed else 'pending' }}">
+                    <span class="badge {{ 'status-done' if completed else 'status-pending' }}">{{ '✓' if completed else '×' }}</span>
+                    <span class="step-label">{{ 'Completado' if completed else 'Pendiente' }}</span>
+                    <div class="small">Usuario: {{ transfer[step.user_name_field] or transfer[step.user_field] or '-' }}</div>
+                    <div class="small">Fecha: {{ transfer[step.date_field].strftime('%d/%m/%Y %H:%M') if transfer[step.date_field] else '-' }}</div>
+                </td>
+                {% endfor %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">No hay traslados para los filtros seleccionados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">Toolbox - Trazabilidad de operaciones de inventario</div>
+</body>
+
+</html>
