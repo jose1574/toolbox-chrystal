@@ -11,7 +11,7 @@
             <p><strong>Deposito:</strong> {{ store.description if store else '-' }}</p>
             <p><strong>Unidad:</strong> {{ unit.description if unit else '-' }}</p>
 
-            <form id="product-params-form" action="{{ url_for("inventory.modal_product_params", product_code=product.code, store=store.code) }}" method="post">
+            <form id="product-params-form" action="{{ url_for('inventory.modal_product_params') }}" method="post">
 
                 <input type="text" name="product_code" value="{{ product.code if product else '' }}" hidden>
                 <input type="text" name="store_code" value="{{ store.code if store else '' }}" hidden>

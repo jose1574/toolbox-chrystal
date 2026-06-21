@@ -17,7 +17,7 @@
             <p><span class="font-medium">Código:</span> {{ detail.code_product }}</p>
             <p><span class="font-medium">Descripción:</span> {{ detail.description_product }}</p>
             <p><span class="font-medium">Referencia:</span> {{ detail.referenc }}</p>
-            <p><span class="font-medium">Cantidad Esperada:</span> {{ detail.amount }}</p>
+            <p><span class="font-medium">Cantidad Esperada:</span> {{ expected_amount|default(detail.amount) }}</p>
             <p><span class="font-medium">Unidad:</span> {{ detail.products_unit.unit1.description if
                 detail.products_unit and detail.products_unit.unit1 else "" }}</p>
         </div>

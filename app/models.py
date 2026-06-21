@@ -1,7 +1,7 @@
 # coding: utf-8
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from sqlalchemy import and_
+from sqlalchemy import and_, text
 from sqlalchemy.orm import foreign
 import json
 
@@ -2390,6 +2390,90 @@ class InventoryOperation(db.Model):
         primaryjoin="InventoryOperation.correlative == InventoryOperationDetail.main_correlative",
         lazy="selectin",
         overlaps="inventory_operation_details,inventory_operation",
+    )
+
+
+class InventoryOperationFlow(db.Model):
+    __tablename__ = "inventory_operation_flow"
+    __table_args__ = {"schema": "toolbox", "extend_existing": True}
+
+    operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    )
+    current_status = db.Column(
+        db.String(25), nullable=False, server_default="RECOLLECTION_ISSUED"
+    )
+    recollection_issued_user = db.Column(db.String(50), nullable=False)
+    recollection_issued_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    checking_user = db.Column(db.String(50))
+    checked_at = db.Column(db.DateTime)
+    in_transit_user = db.Column(db.String(50))
+    in_transit_at = db.Column(db.DateTime)
+    receiving_user = db.Column(db.String(50))
+    received_at = db.Column(db.DateTime)
+
+    inventory_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="InventoryOperationFlow.operation_correlative == InventoryOperation.correlative",
+        backref=db.backref("operation_flow", uselist=False),
+    )
+
+
+class InventoryOperationReceptionDifference(db.Model):
+    __tablename__ = "inventory_operation_reception_differences"
+    __table_args__ = (
+        db.UniqueConstraint("operation_correlative", "detail_line"),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+    )
+    detail_line = db.Column(db.Integer, nullable=False)
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    original_amount = db.Column(db.Double(53), nullable=False)
+    counted_amount = db.Column(db.Double(53), nullable=False)
+    difference = db.Column(db.Double(53), nullable=False)
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    detected_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = db.Column(db.DateTime)
+
+    inventory_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="InventoryOperationReceptionDifference.operation_correlative == InventoryOperation.correlative",
+        backref="reception_differences",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="InventoryOperationReceptionDifference.product_code == Product.code",
+        backref="inventory_reception_differences",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationReceptionDifference.user_code == User.code",
+        backref="inventory_reception_differences",
     )
 
 

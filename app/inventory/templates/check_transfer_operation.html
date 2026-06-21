@@ -1,13 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Chequeo de Traslado de Inventario{% endblock %}
+{% block title %}Recepción de traslado{% endblock %}
 
 {% set show_products = show_products|default(false) %}
 {% set operation = operation|default(None) %}
+{% set flow_status = flow_status|default('') %}
+{% set reception_differences = reception_differences|default({}) %}
 
 {% block content %}
 <div class="px-4 py-6 space-y-6 p-4 ml-[4.5rem]">
 	<div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
-		<h1 class="text-2xl font-bold text-gray-900 mb-4">Chequeo de Traslado de Inventario</h1>
+		<h1 class="text-2xl font-bold text-gray-900 mb-4">Recepción de traslado</h1>
+
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+		<div class="mb-4 space-y-2">
+			{% for category, message in messages %}
+			<div class="p-3 rounded-lg border text-sm {% if category == 'success' %}bg-green-50 border-green-200 text-green-800{% elif category == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+				{{ message }}
+			</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+		{% endwith %}
+
+		{% if message %}
+		<div class="mb-4 p-3 text-sm text-blue-800 rounded-lg bg-blue-50 border border-blue-200">
+			{{ message }}
+		</div>
+		{% endif %}
 
 		{% if not show_products %}
 		<div class="max-w-md">
@@ -34,6 +54,12 @@
 			<div>
 				<h2 class="text-xl font-semibold text-gray-900">Traslado #{{ operation.correlative }}</h2>
 				<p class="text-gray-600 text-sm mt-1">Fecha: {{ operation.emission_date }} | {{ operation.description }}</p>
+				<p class="text-sm mt-1">
+					Estado:
+					<span class="font-semibold {% if flow_status == 'IN_TRANSIT' %}text-blue-700{% else %}text-green-700{% endif %}">
+						{{ flow_status }}
+					</span>
+				</p>
 			</div>
 			<div class="flex space-x-3">
 				<a href="{{ url_for('inventory.check_transfer_operation') }}"
@@ -51,10 +77,26 @@
 			</div>
 		</div>
 
-		<div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-			<strong>Nota:</strong> Esta herramienta es solo para ayudarte a contar físicamente los productos. Las cantidades contadas no se guardan y se reinician al recargar la página.
-		</div>
 
+		{% if flow_status == 'RECOLLECTION_CHECKED' %}
+		<div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
+			La orden ya fue chequeada en recolección. Confirme cuando la mercancía esté cargada y lista para salir.
+		</div>
+		<div class="mt-4">
+			<form method="post" action="{{ url_for('inventory.start_transfer_operation', operation_id=operation.correlative) }}"
+				onsubmit="return confirm('¿Iniciar traslado de esta operación?');">
+				<button type="submit"
+					class="inline-flex items-center justify-center bg-blue-700 text-white px-5 py-2.5 rounded-md hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+					Iniciar Traslado
+				</button>
+			</form>
+		</div>
+		{% endif %}
+
+		{% if flow_status == 'IN_TRANSIT' %}
+		<div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+			Cuente la mercancía recibida en el depósito destino. Al completar todos los productos podrá cerrar la recepción.
+		</div>
 		<div>
 			<label for="product_code" class="block text-sm font-medium text-gray-700 mb-2">Buscar producto por código</label>
 			<form hx-post="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative) }}"
@@ -71,14 +113,20 @@
 		</div>
 
 		<div id="modal-container"></div>
+		{% endif %}
 
 		<div class="overflow-x-auto shadow-xl rounded-xl border border-gray-200 bg-white mt-4">
+			{% if flow_status == 'IN_TRANSIT' %}
 			<div class="flex items-center justify-end px-6 pt-4 pb-2">
-				<button type="button" id="report-button" disabled
+				<form id="receive-form" method="post" action="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
+					onsubmit="return confirm('¿Cerrar y recepcionar este traslado?');">
+					<button type="submit" id="receive-button" disabled
 				        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-gray-100 text-gray-400 px-4 py-2 text-sm font-medium shadow-sm cursor-not-allowed">
-					<span>Generar reporte</span>
-				</button>
+						<span>Cerrar y Recepcionar</span>
+					</button>
+				</form>
 			</div>
+			{% endif %}
 			<table class="w-full text-sm text-left text-gray-500">
 				<thead class="text-xs text-gray-700 uppercase bg-gray-100 font-black tracking-wider border-b border-gray-200">
 					<tr>
@@ -92,17 +140,24 @@
 				</thead>
 				<tbody class="divide-y divide-gray-200 bg-white" id="products-table">
 					{% for detail in details %}
-					{% set has_diff = (0 != detail.amount) %}
-					<tr id="row-{{ detail.code_product }}" data-counted="false"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
+					{% set reception_difference = reception_differences.get(detail.line) %}
+					{% set expected_amount = reception_difference.original_amount if reception_difference else detail.amount %}
+					{% set counted_display = reception_difference.counted_amount if reception_difference else 0 %}
+					{% set difference_display = reception_difference.difference if reception_difference else 0 %}
+					{% set has_diff = (reception_difference and reception_difference.difference != 0) %}
+					<tr id="row-{{ detail.code_product }}" data-counted="{% if flow_status == 'IN_TRANSIT' and not reception_difference %}false{% else %}true{% endif %}"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
 						<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">{{ detail.code_product }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.description_product }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.referenc }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">{{ detail.amount }}</td>
+						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">{{ expected_amount }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}" id="counted-{{ detail.code_product }}">
-							0
+							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ counted_display if flow_status == 'IN_TRANSIT' else detail.amount }}{% endif %}
 						</td>
 						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}" id="diff-{{ detail.code_product }}">
-							{{ -detail.amount }}
+							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ difference_display if flow_status == 'IN_TRANSIT' else 0 }}{% endif %}
+							{% if has_diff %}
+							<span class="ml-1 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">Dif.</span>
+							{% endif %}
 						</td>
 					</tr>
 					{% endfor %}
@@ -137,11 +192,9 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 	}
 });
 
-// Abrir el PDF cuando todos los productos estén contados
+// Habilitar cierre de recepcion cuando todos los productos esten contados
 (function() {
-	const reportUrl = "{{ url_for('inventory.transfer_operation_report', order_id=operation.correlative) if show_products and operation else '' }}";
-	const reportBtn = document.getElementById('report-button');
-	let reportShown = false;
+	const receiveBtn = document.getElementById('receive-button');
 
 	function allRowsCounted() {
 		const rows = document.querySelectorAll('#products-table tr[id^="row-"]');
@@ -154,32 +207,18 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		return true;
 	}
 
-	function updateReportButton() {
-		if (!reportBtn) return;
-		const enabled = allRowsCounted() && !!reportUrl;
-		reportBtn.disabled = !enabled;
-		reportBtn.classList.toggle('cursor-not-allowed', !enabled);
-		reportBtn.classList.toggle('bg-gray-100', !enabled);
-		reportBtn.classList.toggle('text-gray-400', !enabled);
-		reportBtn.classList.toggle('border-gray-300', !enabled);
-		reportBtn.classList.toggle('bg-green-600', enabled);
-		reportBtn.classList.toggle('text-white', enabled);
-		reportBtn.classList.toggle('border-green-700', enabled);
-		reportBtn.classList.toggle('hover:bg-green-700', enabled);
-	}
-
-	function maybeOpenReport(auto) {
-		if (!reportUrl) return;
-		if (auto && reportShown) return;
-		if (!allRowsCounted()) return;
-		reportShown = true;
-		window.open(reportUrl, '_blank');
-	}
-
-	if (reportBtn) {
-		reportBtn.addEventListener('click', function() {
-			maybeOpenReport(false);
-		});
+	function updateReceiveButton() {
+		if (!receiveBtn) return;
+		const enabled = allRowsCounted();
+		receiveBtn.disabled = !enabled;
+		receiveBtn.classList.toggle('cursor-not-allowed', !enabled);
+		receiveBtn.classList.toggle('bg-gray-100', !enabled);
+		receiveBtn.classList.toggle('text-gray-400', !enabled);
+		receiveBtn.classList.toggle('border-gray-300', !enabled);
+		receiveBtn.classList.toggle('bg-green-600', enabled);
+		receiveBtn.classList.toggle('text-white', enabled);
+		receiveBtn.classList.toggle('border-green-700', enabled);
+		receiveBtn.classList.toggle('hover:bg-green-700', enabled);
 	}
 
 	document.body.addEventListener('htmx:afterSwap', function(evt) {
@@ -189,13 +228,12 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		if (isProductRow) {
 			// Marcar la fila como contada si viene de un update
 			target.setAttribute('data-counted', 'true');
-			updateReportButton();
-			maybeOpenReport(true);
+			updateReceiveButton();
 		}
 	});
 
 	window.addEventListener('DOMContentLoaded', function() {
-		updateReportButton();
+		updateReceiveButton();
 	});
 })();
 </script>

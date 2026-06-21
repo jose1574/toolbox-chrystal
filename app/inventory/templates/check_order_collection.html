@@ -156,7 +156,7 @@
             {% endfor %}
             <button id="save-button" type="button" onclick="generateOrder()"
                 class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
-                Generar Orden
+                Confirmar Chequeo
             </button>
         </form>
     </div>
@@ -194,7 +194,7 @@
             });
 
             if (allCounted && !autoSubmitted) {
-                const confirmed = confirm('Se contaron todos los productos. ¿Desea generar el reporte y finalizar?');
+                const confirmed = confirm('Se contaron todos los productos. ¿Desea confirmar el chequeo de recolección?');
                 if (!confirmed) return;
                 autoSubmitted = true;
                 submitCheckOrder();
@@ -211,7 +211,7 @@
                 }
             });
             if (allCounted) {
-                const confirmed = confirm('¿Confirmar generación de orden?');
+                const confirmed = confirm('¿Confirmar chequeo de recolección?');
                 if (confirmed) {
                     submitCheckOrder();
                 }

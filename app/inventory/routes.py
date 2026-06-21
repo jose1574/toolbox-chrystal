@@ -32,6 +32,7 @@ from app.models import (
     Tax,
     InventoryOperation,
     InventoryOperationDetail,
+    InventoryOperationReceptionDifference,
     ProductsCode,
     ProductsCounterHistory,
 )
@@ -43,6 +44,187 @@ from app.reports.utils import render_pdf, generate_barcode
 @login_required
 def index():
     return render_template("index.html")
+
+
+FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
+FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"
+FLOW_IN_TRANSIT = "IN_TRANSIT"
+FLOW_RECEIVED = "RECEIVED"
+
+
+def register_flow_step1(operation_correlative, user_code):
+    conn = None
+    cursor = None
+    try:
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        sql = """
+            INSERT INTO toolbox.inventory_operation_flow (
+                operation_correlative,
+                current_status,
+                recollection_issued_user
+            ) VALUES (%s, %s, %s)
+        """
+        data = (
+            operation_correlative,
+            FLOW_RECOLLECTION_ISSUED,
+            user_code,
+        )
+        cursor.execute(sql, data)
+        conn.commit()
+        return True
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def register_flow_step2(operation_correlative, user_code):
+    conn = None
+    cursor = None
+    try:
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        sql = """
+            UPDATE toolbox.inventory_operation_flow
+               SET current_status = %s,
+                   checking_user = %s,
+                   checked_at = CURRENT_TIMESTAMP
+             WHERE operation_correlative = %s
+               AND current_status = %s
+        """
+        data = (
+            FLOW_RECOLLECTION_CHECKED,
+            user_code,
+            operation_correlative,
+            FLOW_RECOLLECTION_ISSUED,
+        )
+        cursor.execute(sql, data)
+        if cursor.rowcount != 1:
+            raise ValueError("La orden no esta en estado de recoleccion emitida.")
+        conn.commit()
+        return True
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def register_flow_step3(operation_correlative, user_code):
+    conn = None
+    cursor = None
+    try:
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        sql = """
+            UPDATE toolbox.inventory_operation_flow
+               SET current_status = %s,
+                   in_transit_user = %s,
+                   in_transit_at = CURRENT_TIMESTAMP
+             WHERE operation_correlative = %s
+               AND current_status = %s
+        """
+        data = (
+            FLOW_IN_TRANSIT,
+            user_code,
+            operation_correlative,
+            FLOW_RECOLLECTION_CHECKED,
+        )
+        cursor.execute(sql, data)
+        if cursor.rowcount != 1:
+            raise ValueError("La orden no esta chequeada para iniciar traslado.")
+        conn.commit()
+        return True
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def register_flow_step4(operation_correlative, user_code):
+    conn = None
+    cursor = None
+    try:
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        sql = """
+            UPDATE toolbox.inventory_operation_flow
+               SET current_status = %s,
+                   receiving_user = %s,
+                   received_at = CURRENT_TIMESTAMP
+             WHERE operation_correlative = %s
+               AND current_status = %s
+        """
+        data = (
+            FLOW_RECEIVED,
+            user_code,
+            operation_correlative,
+            FLOW_IN_TRANSIT,
+        )
+        cursor.execute(sql, data)
+        if cursor.rowcount != 1:
+            raise ValueError("La orden no esta en transito para recepcionar.")
+        conn.commit()
+        return True
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+def _get_inventory_operation_flow(operation_correlative):
+    sql = text(
+        """
+        SELECT current_status,
+               recollection_issued_user,
+               recollection_issued_at,
+               checking_user,
+               checked_at,
+               in_transit_user,
+               in_transit_at,
+               receiving_user,
+               received_at
+          FROM toolbox.inventory_operation_flow
+         WHERE operation_correlative = :operation_correlative
+        """
+    )
+    return db.session.execute(
+        sql, {"operation_correlative": operation_correlative}
+    ).mappings().first()
+
+
+def _get_reception_difference_map(operation_correlative):
+    differences = InventoryOperationReceptionDifference.query.filter_by(
+        operation_correlative=operation_correlative
+    ).all()
+    return {difference.detail_line: difference for difference in differences}
+
+
+def _get_reception_difference(operation_correlative, detail_line):
+    return InventoryOperationReceptionDifference.query.filter_by(
+        operation_correlative=operation_correlative,
+        detail_line=detail_line,
+    ).first()
 
 
 def _normalize_code(code: str) -> str:
@@ -540,6 +722,7 @@ def save_auto_order_collection():
             db.session.execute(sql_detail, detail_params)
 
         db.session.commit()
+        register_flow_step1(document_no, current_user.code)
         flash(f"Operación #{document_no} guardada correctamente.", "success")
 
         # HTMX: redirigir a la vista y abrir el PDF en nueva pestaña
@@ -648,6 +831,21 @@ def check_order():
 
         if not order_entity:
             error = f"No se encontró la orden con ID {order_id}"
+            return render_template(
+                "check_order_collection.html", order=None, details=[], error=error
+            )
+
+        flow = _get_inventory_operation_flow(order_id)
+        if not flow:
+            error = f"La orden {order_id} no tiene bitácora de flujo registrada."
+            return render_template(
+                "check_order_collection.html", order=None, details=[], error=error
+            )
+        if flow["current_status"] != FLOW_RECOLLECTION_ISSUED:
+            error = (
+                f"La orden {order_id} no está disponible para chequeo. "
+                f"Estado actual: {flow['current_status']}."
+            )
             return render_template(
                 "check_order_collection.html", order=None, details=[], error=error
             )
@@ -1108,6 +1306,13 @@ def save_order_check():
     # Actualizar descripción de cabecera para reflejar el chequeo
     order.description = "orden de recoleccion chequeada"
 
+    try:
+        register_flow_step2(order_id, current_user.code)
+    except Exception as exc:
+        db.session.rollback()
+        flash(f"No se pudo registrar el chequeo de recolección: {exc}", "error")
+        return redirect(url_for("inventory.check_order"))
+
     db.session.commit()
 
     flash("Orden de recolección chequeada correctamente.", "success")
@@ -1150,18 +1355,37 @@ def check_transfer_operation():
                 message=message,
             )
 
-        # Buscar la operación de traslado procesada
         operation = InventoryOperation.query.filter_by(
             correlative=int(correlative),
-            operation_type="TRANSFER",  # Tipo de operación para traslados
-            wait=False,
+            operation_type="TRANSFER",
         ).first()
 
         if not operation:
             return render_template(
                 "check_transfer_operation.html",
                 show_products=False,
-                error_message="No se encontró una operación de traslado procesado con ese correlativo.",
+                error_message="No se encontró una operación de traslado con ese correlativo.",
+            )
+
+        flow = _get_inventory_operation_flow(operation.correlative)
+        if not flow:
+            return render_template(
+                "check_transfer_operation.html",
+                show_products=False,
+                error_message="La operación no tiene bitácora de flujo registrada.",
+            )
+
+        if flow["current_status"] not in (
+            FLOW_RECOLLECTION_CHECKED,
+            FLOW_IN_TRANSIT,
+        ):
+            return render_template(
+                "check_transfer_operation.html",
+                show_products=False,
+                error_message=(
+                    "La operación no está lista para carga o recepción. "
+                    f"Estado actual: {flow['current_status']}."
+                ),
             )
 
         # Obtener detalles con productos
@@ -1177,11 +1401,15 @@ def check_transfer_operation():
             )
             .all()
         )
+        reception_differences = _get_reception_difference_map(operation.correlative)
 
         return render_template(
             "check_transfer_operation.html",
             operation=operation,
             details=details,
+            reception_differences=reception_differences,
+            flow=flow,
+            flow_status=flow["current_status"],
             show_products=True,
             message=message,
         )
@@ -1193,12 +1421,74 @@ def check_transfer_operation():
     )
 
 
+@inventory_bp.route("/transfer_operation/<int:operation_id>/start", methods=["POST"])
+@login_required
+def start_transfer_operation(operation_id):
+    operation = InventoryOperation.query.filter_by(
+        correlative=operation_id,
+        operation_type="TRANSFER",
+    ).first()
+    if not operation:
+        flash("No se encontró la operación de traslado.", "error")
+        return redirect(url_for("inventory.check_transfer_operation"))
+
+    try:
+        register_flow_step3(operation_id, current_user.code)
+        flash("Traslado iniciado correctamente.", "success")
+    except Exception as exc:
+        flash(f"No se pudo iniciar el traslado: {exc}", "error")
+
+    return redirect(
+        url_for(
+            "inventory.check_transfer_operation",
+            message=f"Traslado #{operation_id} actualizado.",
+        )
+    )
+
+
+@inventory_bp.route("/transfer_operation/<int:operation_id>/receive", methods=["POST"])
+@login_required
+def receive_transfer_operation(operation_id):
+    operation = InventoryOperation.query.filter_by(
+        correlative=operation_id,
+        operation_type="TRANSFER",
+    ).first()
+    if not operation:
+        flash("No se encontró la operación de traslado.", "error")
+        return redirect(url_for("inventory.check_transfer_operation"))
+
+    try:
+        register_flow_step4(operation_id, current_user.code)
+        operation.wait = False
+        db.session.commit()
+        flash("Traslado recepcionado correctamente.", "success")
+    except Exception as exc:
+        db.session.rollback()
+        flash(f"No se pudo recepcionar el traslado: {exc}", "error")
+
+    return redirect(url_for("inventory.check_transfer_operation"))
+
+
 @inventory_bp.route(
     "/check_transfer_operation/search_product/<int:operation_id>",
     methods=["GET", "POST"],
 )
 @login_required
 def search_product_in_transfer(operation_id):
+    flow = _get_inventory_operation_flow(operation_id)
+    if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
+        error_payload = {
+            "search-error": {
+                "message": "La operación debe estar en tránsito para contar recepción.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response(
+            "",
+            status=409,
+            headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
+        )
+
     product_code_input = (request.values.get("product_code") or "").strip().upper()
     if not product_code_input:
         error_payload = {
@@ -1265,6 +1555,10 @@ def search_product_in_transfer(operation_id):
 )
 @login_required
 def product_modal(operation_id, product_code):
+    flow = _get_inventory_operation_flow(operation_id)
+    if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
+        return "La operación debe estar en tránsito para contar recepción.", 409
+
     product_code = _normalize_code(product_code)
     # Buscar el producto en la operación
     detail = (
@@ -1284,6 +1578,11 @@ def product_modal(operation_id, product_code):
     if not detail:
         return "Producto no encontrado", 404
 
+    reception_difference = _get_reception_difference(operation_id, detail.line)
+    expected_amount = (
+        reception_difference.original_amount if reception_difference else detail.amount
+    )
+
     failure_info = ProductsFailure.query.filter_by(
         product_code=product_code, store_code=detail.destination_store
     ).first()
@@ -1291,6 +1590,7 @@ def product_modal(operation_id, product_code):
     return render_template(
         "partials/product_modal.html",
         detail=detail,
+        expected_amount=expected_amount,
         operation_id=operation_id,
         product_failure=failure_info,
         destination_store=detail.destination_store,
@@ -1307,6 +1607,18 @@ def product_modal(operation_id, product_code):
 )
 @login_required
 def update_count(operation_id, product_code=None, destination_store=None):
+    flow = _get_inventory_operation_flow(operation_id)
+    if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
+        error_payload = {
+            "counted-error": {
+                "message": "La operación debe estar en tránsito para actualizar recepción.",
+                "focus_id": "countedAmount",
+            }
+        }
+        return Response(
+            "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     product_code = _normalize_code(product_code or request.form.get("product_code"))
     destination_store = (destination_store or request.form.get("destination_store") or "").strip()
     counted_amount = request.form.get("counted_amount", type=float, default=0)
@@ -1372,6 +1684,38 @@ def update_count(operation_id, product_code=None, destination_store=None):
         failure_info.minimal_stock = minimal_stock or 0
         failure_info.maximum_stock = maximum_stock or 0
 
+    existing_difference = _get_reception_difference(operation_id, detail.line)
+    original_amount = (
+        float(existing_difference.original_amount)
+        if existing_difference
+        else float(detail.amount or 0)
+    )
+    difference_amount = float(counted_amount) - original_amount
+
+    if difference_amount != 0:
+        if not existing_difference:
+            existing_difference = InventoryOperationReceptionDifference(
+                operation_correlative=operation_id,
+                detail_line=detail.line,
+                product_code=detail.code_product,
+                original_amount=original_amount,
+                counted_amount=float(counted_amount),
+                difference=difference_amount,
+                user_code=current_user.code,
+            )
+            db.session.add(existing_difference)
+        else:
+            existing_difference.counted_amount = float(counted_amount)
+            existing_difference.difference = difference_amount
+            existing_difference.user_code = current_user.code
+            existing_difference.updated_at = datetime.now()
+
+        detail.amount = float(counted_amount)
+    else:
+        if existing_difference:
+            detail.amount = original_amount
+            db.session.delete(existing_difference)
+
     db.session.commit()
 
     # Devolver siempre la fila actualizada (aunque no haya diferencia) para permitir re-conteos posteriores
@@ -1379,6 +1723,8 @@ def update_count(operation_id, product_code=None, destination_store=None):
         "partials/table_row.html",
         detail=detail,
         counted_amount=counted_amount,
+        expected_amount=original_amount,
+        difference_amount=difference_amount,
     )
 
 
@@ -2410,9 +2756,17 @@ def product_counter_report(count_batch_id):
     }
 
 
+@inventory_bp.route(
+    "/modal_product_params",
+    methods=["GET", "POST"],
+    defaults={"product_code": None, "store": None},
+)
 @inventory_bp.route("/modal_product_params/<product_code>/<store>", methods=["GET", "POST"])
 @login_required
-def modal_product_params(product_code, store):
+def modal_product_params(product_code=None, store=None):
+    product_code = product_code or request.values.get("product_code")
+    store = store or request.values.get("store")
+
     if request.method == "POST":
         form_product_code = _normalize_code(request.form.get("product_code") or product_code)
         form_store_code = (request.form.get("store_code") or store or "").strip()

@@ -203,7 +203,7 @@
                                 class="product-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                         </td>
                         <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                            <a href="{{ url_for('inventory.modal_product_params', product_code=product.code, store=store_dst) }}"
+                            <a href="{{ url_for('inventory.modal_product_params') }}?product_code={{ product.code|urlencode }}&store={{ store_dst|urlencode }}"
                                 class="product-link inline-flex items-center text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                                 data-product-code="{{ product.code }}"
                                 data-store="{{ store_dst }}"
