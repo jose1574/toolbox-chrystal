@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Traslados con diferencias{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 space-y-6 p-4 ml-[4.5rem]">
+    <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Traslados con diferencias</h1>
+                <p class="mt-1 text-sm text-gray-500">Listado de recepciones donde la cantidad contada no coincide con la cantidad esperada.</p>
+            </div>
+            <div class="rounded-md bg-red-50 px-4 py-3 text-red-800 ring-1 ring-red-200">
+                <div class="text-xs font-medium uppercase tracking-wide">Total con diferencias</div>
+                <div class="mt-1 text-2xl font-bold">{{ transfers|length }}</div>
+            </div>
+        </div>
+
+        <form method="get" action="{{ url_for('inventory.transfer_differences') }}" class="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3">
+            <div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <div class="flex items-center gap-2">
+                    <label for="q" class="w-14 shrink-0 text-xs font-medium text-gray-600">Buscar</label>
+                    <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Correlativo, documento, depósito..."
+                        class="block h-9 w-full rounded-md border border-gray-300 px-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <div class="flex items-center gap-2">
+                        <label for="date_from" class="w-12 shrink-0 text-xs font-medium text-gray-600">Desde</label>
+                        <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}"
+                            class="block h-9 w-full rounded-md border border-gray-300 px-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="date_to" class="w-12 shrink-0 text-xs font-medium text-gray-600">Hasta</label>
+                        <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}"
+                            class="block h-9 w-full rounded-md border border-gray-300 px-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="inline-flex h-9 w-24 items-center justify-center rounded-md bg-blue-700 px-3 text-sm font-medium text-white shadow-sm hover:bg-blue-800">
+                        Filtrar
+                    </button>
+                    <a href="{{ url_for('inventory.transfer_differences') }}" class="inline-flex h-9 w-24 items-center justify-center rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div class="border-b border-gray-200 px-5 py-4">
+            <h2 class="text-lg font-semibold text-gray-900">Recepciones con diferencias registradas</h2>
+            <p class="mt-1 text-xs text-gray-500">Selecciona un traslado para abrir su reporte PDF de diferencias.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[1060px] text-left text-sm text-gray-600">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3">Traslado</th>
+                        <th class="px-4 py-3">Fecha</th>
+                        <th class="px-4 py-3">Origen</th>
+                        <th class="px-4 py-3">Destino</th>
+                        <th class="px-4 py-3 text-center">Líneas</th>
+                        <th class="px-4 py-3 text-right">Esperada</th>
+                        <th class="px-4 py-3 text-right">Contada</th>
+                        <th class="px-4 py-3 text-right">Diferencia</th>
+                        <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3 text-right">Reporte</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for transfer in transfers %}
+                    <tr class="hover:bg-red-50/50">
+                        <td class="px-4 py-3">
+                            <div class="font-bold text-gray-900">#{{ transfer.operation_correlative }}</div>
+                            <div class="text-xs text-gray-500">Doc: {{ transfer.document_no or '-' }}</div>
+                        </td>
+                        <td class="px-4 py-3">{{ transfer.emission_date or '-' }}</td>
+                        <td class="px-4 py-3">{{ transfer.store_description or transfer.store or '-' }}</td>
+                        <td class="px-4 py-3">{{ transfer.destination_store_description or transfer.destination_store or '-' }}</td>
+                        <td class="px-4 py-3 text-center font-semibold text-gray-900">{{ transfer.difference_lines }}</td>
+                        <td class="px-4 py-3 text-right">{{ '%.2f'|format(transfer.expected_total or 0) }}</td>
+                        <td class="px-4 py-3 text-right">{{ '%.2f'|format(transfer.counted_total or 0) }}</td>
+                        <td class="px-4 py-3 text-right font-bold {% if transfer.difference_total < 0 %}text-red-700{% else %}text-green-700{% endif %}">
+                            {{ '%.2f'|format(transfer.difference_total or 0) }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold {% if transfer.current_status == 'RECEIVED' %}bg-green-100 text-green-800{% elif transfer.current_status == 'IN_TRANSIT' %}bg-blue-100 text-blue-800{% elif transfer.current_status == 'RECOLLECTION_CHECKED' %}bg-amber-100 text-amber-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ status_labels.get(transfer.current_status, transfer.current_status) }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{{ url_for('inventory.transfer_reception_differences_report', order_id=transfer.operation_correlative) }}" target="_blank"
+                                class="inline-flex items-center justify-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-red-700">
+                                Ver PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="px-4 py-10 text-center text-gray-500 italic">No hay traslados con diferencias para los filtros seleccionados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

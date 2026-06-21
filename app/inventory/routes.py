@@ -142,6 +142,78 @@ def _get_transfer_traceability_rows(filters):
     return db.session.execute(sql, params).mappings().all()
 
 
+def _build_transfer_differences_filters():
+        date_from_raw = (request.args.get("date_from") or "").strip()
+        date_to_raw = (request.args.get("date_to") or "").strip()
+        query = (request.args.get("q") or "").strip()
+        return {
+                "date_from": date_from_raw,
+                "date_to": date_to_raw,
+                "q": query,
+                "date_from_value": _parse_date_filter(date_from_raw),
+                "date_to_value": _parse_date_filter(date_to_raw),
+        }
+
+
+def _get_transfer_differences_rows(filters):
+        sql = text(
+                """
+                SELECT io.correlative AS operation_correlative,
+                             io.document_no,
+                             io.emission_date,
+                             io.description,
+                             io.store,
+                             origin_store.description AS store_description,
+                             io.destination_store,
+                             destination_store.description AS destination_store_description,
+                             COALESCE(f.current_status, 'SIN_FLUJO') AS current_status,
+                             COUNT(d.correlative) AS difference_lines,
+                             SUM(d.original_amount) AS expected_total,
+                             SUM(d.counted_amount) AS counted_total,
+                             SUM(d.difference) AS difference_total,
+                             MAX(COALESCE(d.updated_at, d.detected_at)) AS last_difference_at
+                    FROM toolbox.inventory_operation_reception_differences d
+                    JOIN public.inventory_operation io
+                        ON io.correlative = d.operation_correlative
+                    LEFT JOIN toolbox.inventory_operation_flow f
+                        ON f.operation_correlative = io.correlative
+                    LEFT JOIN public.store origin_store
+                        ON origin_store.code = io.store
+                    LEFT JOIN public.store destination_store
+                        ON destination_store.code = io.destination_store
+                 WHERE io.operation_type = 'TRANSFER'
+                     AND (:date_from IS NULL OR io.emission_date >= :date_from)
+                     AND (:date_to IS NULL OR io.emission_date <= :date_to)
+                     AND (
+                                :q = ''
+                                OR CAST(io.correlative AS VARCHAR) ILIKE :q_like
+                                OR COALESCE(io.document_no, '') ILIKE :q_like
+                                OR COALESCE(io.description, '') ILIKE :q_like
+                                OR COALESCE(origin_store.description, '') ILIKE :q_like
+                                OR COALESCE(destination_store.description, '') ILIKE :q_like
+                     )
+                 GROUP BY io.correlative,
+                                    io.document_no,
+                                    io.emission_date,
+                                    io.description,
+                                    io.store,
+                                    origin_store.description,
+                                    io.destination_store,
+                                    destination_store.description,
+                                    f.current_status
+                 ORDER BY last_difference_at DESC NULLS LAST,
+                                    io.correlative DESC
+                """
+        )
+        params = {
+                "date_from": filters["date_from_value"],
+                "date_to": filters["date_to_value"],
+                "q": filters["q"],
+                "q_like": f"%{filters['q']}%",
+        }
+        return db.session.execute(sql, params).mappings().all()
+
+
 @inventory_bp.route("/transfer_traceability", methods=["GET"])
 @login_required
 def transfer_traceability():
@@ -152,6 +224,19 @@ def transfer_traceability():
         transfers=transfers,
         filters=filters,
         flow_steps=TRANSFER_FLOW_STEPS,
+        status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@inventory_bp.route("/transfer_differences", methods=["GET"])
+@login_required
+def transfer_differences():
+    filters = _build_transfer_differences_filters()
+    transfers = _get_transfer_differences_rows(filters)
+    return render_template(
+        "transfer_differences.html",
+        transfers=transfers,
+        filters=filters,
         status_labels=TRANSFER_STATUS_LABELS,
     )
 
@@ -2066,6 +2151,12 @@ def receive_transfer_operation(operation_id):
         process_inventory_operation(operation_id)
         operation.wait = False
         db.session.commit()
+        has_reception_differences = (
+            InventoryOperationReceptionDifference.query.filter_by(
+                operation_correlative=operation_id
+            ).count()
+            > 0
+        )
         flash("Traslado recepcionado y procesado correctamente.", "success")
     except Exception as exc:
         db.session.rollback()
@@ -2080,17 +2171,20 @@ def receive_transfer_operation(operation_id):
                 )
             }
         }
+        if has_reception_differences:
+            trigger_payload["open-differences-pdf"] = {
+                "url": url_for(
+                    "inventory.transfer_reception_differences_report",
+                    order_id=operation_id,
+                )
+            }
         resp = make_response(
-            render_template(
-                "check_transfer_operation.html",
-                show_products=False,
-                message="Traslado recepcionado y procesado correctamente.",
-            )
+            render_template("index.html")
         )
         resp.headers["HX-Trigger"] = json.dumps(trigger_payload)
         return resp
 
-    return transfer_operation_report(operation_id)
+    return redirect(url_for("inventory.index"))
 
 
 @inventory_bp.route(
@@ -2584,6 +2678,50 @@ def transfer_operation_report(order_id):
         mimetype="application/pdf",
         headers={
             "Content-Disposition": f"inline; filename=chequeo_traslado_{order.correlative}.pdf"
+        },
+    )
+
+
+@inventory_bp.route("/transfer_operation/reception_differences_report/<int:order_id>")
+@login_required
+def transfer_reception_differences_report(order_id):
+    user = current_user
+    order = InventoryOperation.query.options(
+        joinedload(InventoryOperation.store1),
+        joinedload(InventoryOperation.store2),
+        joinedload(InventoryOperation.user),
+    ).get_or_404(order_id)
+    differences = (
+        InventoryOperationReceptionDifference.query.filter_by(
+            operation_correlative=order_id
+        )
+        .options(
+            joinedload(InventoryOperationReceptionDifference.product),
+            joinedload(InventoryOperationReceptionDifference.user),
+        )
+        .order_by(InventoryOperationReceptionDifference.detail_line.asc())
+        .all()
+    )
+
+    barcode_base64 = generate_barcode(order.correlative)
+
+    return Response(
+        render_pdf(
+            "reports/transfer_reception_differences_pdf.html",
+            {
+                "order": order,
+                "differences": differences,
+                "title": f"Diferencias de recepción de traslado {order.correlative}",
+                "now": datetime.now(),
+                "barcode_base64": barcode_base64,
+                "user": user,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=diferencias_traslado_{order.correlative}.pdf"
         },
     )
 

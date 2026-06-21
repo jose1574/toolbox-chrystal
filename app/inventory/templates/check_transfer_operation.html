@@ -234,6 +234,12 @@ if (!window.__transferCheckPdfHandlerAdded) {
 			window.open(detail.url, '_blank');
 		}
 	});
+	document.addEventListener('open-differences-pdf', (event) => {
+		const detail = event.detail || {};
+		if (detail.url) {
+			window.open(detail.url, '_blank');
+		}
+	});
 }
 </script>
 {% endblock %}
