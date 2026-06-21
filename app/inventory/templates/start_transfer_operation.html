@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Inicio de traslado{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 space-y-6 p-4 ml-[4.5rem]">
+    <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Inicio de traslado</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mb-4 space-y-2">
+            {% for category, message in messages %}
+            <div class="p-3 rounded-lg border text-sm {% if category == 'success' %}bg-green-50 border-green-200 text-green-800{% elif category == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if error_message %}
+        <div class="mb-4 p-3 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="max-w-md space-y-3">
+            <input type="hidden" name="action" value="search">
+            <label for="correlative" class="block text-sm font-medium text-gray-700">Correlativo del traslado chequeado</label>
+            <input type="number" id="correlative" name="correlative" value="{{ correlative or '' }}" required
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <button type="submit"
+                class="w-full inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">
+                Buscar traslado
+            </button>
+        </form>
+
+        {% if operation and flow and flow.current_status == 'RECOLLECTION_CHECKED' %}
+        <div class="mt-6 border-t border-gray-200 pt-5 space-y-5">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-900">Traslado #{{ operation.correlative }}</h2>
+                <p class="text-gray-600 text-sm mt-1">{{ operation.description }}</p>
+                <p class="text-gray-600 text-sm mt-1">
+                    Estado: <span class="font-semibold text-green-700">{{ flow.current_status }}</span>
+                </p>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3">Código</th>
+                            <th class="px-4 py-3">Descripción</th>
+                            <th class="px-4 py-3 text-center">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                        {% for detail in details %}
+                        <tr>
+                            <td class="px-4 py-3 font-medium text-gray-900">{{ detail.code_product }}</td>
+                            <td class="px-4 py-3 text-gray-600">{{ detail.description_product }}</td>
+                            <td class="px-4 py-3 text-center text-gray-700">{{ detail.amount }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-3 text-center text-gray-500 italic">La operación no contiene productos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="max-w-lg space-y-4"
+                onsubmit="return confirm('¿Iniciar traslado de esta operación?');">
+                <input type="hidden" name="action" value="start">
+                <input type="hidden" name="correlative" value="{{ operation.correlative }}">
+
+                <div class="p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-900">
+                    El responsable puede firmar ingresando usuario y clave. Si se dejan vacíos, el traslado quedará asociado al usuario conectado.
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="responsible_user" class="block text-sm font-medium text-gray-700">Usuario responsable</label>
+                        <input type="text" id="responsible_user" name="responsible_user" autocomplete="username"
+                            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 uppercase"
+                            oninput="this.value = this.value.toUpperCase();">
+                    </div>
+                    <div>
+                        <label for="responsible_password" class="block text-sm font-medium text-gray-700">Clave</label>
+                        <input type="password" id="responsible_password" name="responsible_password" autocomplete="current-password"
+                            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="inline-flex items-center justify-center bg-green-600 text-white px-5 py-2.5 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    Iniciar traslado
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

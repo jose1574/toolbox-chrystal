@@ -35,6 +35,7 @@ from app.models import (
     InventoryOperationReceptionDifference,
     ProductsCode,
     ProductsCounterHistory,
+    User,
 )
 
 from app.reports.utils import render_pdf, generate_barcode
@@ -225,6 +226,22 @@ def _get_reception_difference(operation_correlative, detail_line):
         operation_correlative=operation_correlative,
         detail_line=detail_line,
     ).first()
+
+
+def _validate_transfer_responsible(username, password):
+    username = _normalize_code(username)
+    password = password or ""
+
+    if not username and not password:
+        return current_user.code, None
+    if not username or not password:
+        return None, "Debe ingresar usuario y clave del responsable, o dejar ambos campos vacíos."
+
+    user = User.query.filter_by(code=username).first()
+    if not user or user.user_password != password:
+        return None, "Usuario o clave del responsable incorrectos."
+
+    return user.code, None
 
 
 def _normalize_code(code: str) -> str:
@@ -1375,15 +1392,12 @@ def check_transfer_operation():
                 error_message="La operación no tiene bitácora de flujo registrada.",
             )
 
-        if flow["current_status"] not in (
-            FLOW_RECOLLECTION_CHECKED,
-            FLOW_IN_TRANSIT,
-        ):
+        if flow["current_status"] != FLOW_IN_TRANSIT:
             return render_template(
                 "check_transfer_operation.html",
                 show_products=False,
                 error_message=(
-                    "La operación no está lista para carga o recepción. "
+                    "La operación no está lista para recepción. "
                     f"Estado actual: {flow['current_status']}."
                 ),
             )
@@ -1421,28 +1435,89 @@ def check_transfer_operation():
     )
 
 
-@inventory_bp.route("/transfer_operation/<int:operation_id>/start", methods=["POST"])
+@inventory_bp.route("/start_transfer_operation", methods=["GET", "POST"])
 @login_required
-def start_transfer_operation(operation_id):
-    operation = InventoryOperation.query.filter_by(
-        correlative=operation_id,
-        operation_type="TRANSFER",
-    ).first()
-    if not operation:
-        flash("No se encontró la operación de traslado.", "error")
-        return redirect(url_for("inventory.check_transfer_operation"))
+def start_transfer_operation():
+    operation = None
+    details = []
+    flow = None
+    error_message = None
+    correlative = request.values.get("correlative", type=int)
 
-    try:
-        register_flow_step3(operation_id, current_user.code)
-        flash("Traslado iniciado correctamente.", "success")
-    except Exception as exc:
-        flash(f"No se pudo iniciar el traslado: {exc}", "error")
+    if request.method == "POST":
+        action = request.form.get("action", "search")
+        correlative = request.form.get("correlative", type=int)
 
-    return redirect(
-        url_for(
-            "inventory.check_transfer_operation",
-            message=f"Traslado #{operation_id} actualizado.",
+        if not correlative:
+            error_message = "Por favor, ingrese un correlativo válido."
+        else:
+            operation = InventoryOperation.query.filter_by(
+                correlative=correlative,
+                operation_type="TRANSFER",
+            ).first()
+
+            if not operation:
+                error_message = "No se encontró una operación de traslado con ese correlativo."
+            else:
+                flow = _get_inventory_operation_flow(operation.correlative)
+                if not flow:
+                    error_message = "La operación no tiene bitácora de flujo registrada."
+                elif flow["current_status"] != FLOW_RECOLLECTION_CHECKED:
+                    error_message = (
+                        "La operación no está lista para iniciar traslado. "
+                        f"Estado actual: {flow['current_status']}."
+                    )
+                elif action == "start":
+                    responsible_user, validation_error = _validate_transfer_responsible(
+                        request.form.get("responsible_user"),
+                        request.form.get("responsible_password"),
+                    )
+                    if validation_error:
+                        error_message = validation_error
+                    else:
+                        try:
+                            register_flow_step3(operation.correlative, responsible_user)
+                            flash(
+                                f"Traslado #{operation.correlative} iniciado correctamente.",
+                                "success",
+                            )
+                            return redirect(
+                                url_for(
+                                    "inventory.check_transfer_operation",
+                                    message=f"Traslado #{operation.correlative} en tránsito.",
+                                )
+                            )
+                        except Exception as exc:
+                            error_message = f"No se pudo iniciar el traslado: {exc}"
+
+    elif correlative:
+        operation = InventoryOperation.query.filter_by(
+            correlative=correlative,
+            operation_type="TRANSFER",
+        ).first()
+        flow = _get_inventory_operation_flow(correlative) if operation else None
+
+    if operation:
+        details = (
+            InventoryOperationDetail.query.filter_by(
+                main_correlative=operation.correlative
+            )
+            .options(
+                joinedload(InventoryOperationDetail.product),
+                joinedload(InventoryOperationDetail.products_unit).joinedload(
+                    ProductsUnit.unit1
+                ),
+            )
+            .all()
         )
+
+    return render_template(
+        "start_transfer_operation.html",
+        operation=operation,
+        details=details,
+        flow=flow,
+        error_message=error_message,
+        correlative=correlative,
     )
 
 
@@ -1465,8 +1540,27 @@ def receive_transfer_operation(operation_id):
     except Exception as exc:
         db.session.rollback()
         flash(f"No se pudo recepcionar el traslado: {exc}", "error")
+        return redirect(url_for("inventory.check_transfer_operation"))
 
-    return redirect(url_for("inventory.check_transfer_operation"))
+    if request.headers.get("HX-Request"):
+        trigger_payload = {
+            "open-pdf": {
+                "url": url_for(
+                    "inventory.transfer_operation_report", order_id=operation_id
+                )
+            }
+        }
+        resp = make_response(
+            render_template(
+                "check_transfer_operation.html",
+                show_products=False,
+                message="Traslado recepcionado correctamente.",
+            )
+        )
+        resp.headers["HX-Trigger"] = json.dumps(trigger_payload)
+        return resp
+
+    return transfer_operation_report(operation_id)
 
 
 @inventory_bp.route(
