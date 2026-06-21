@@ -244,6 +244,28 @@ def _validate_transfer_responsible(username, password):
     return user.code, None
 
 
+def process_inventory_operation(operation_correlative):
+    conn = None
+    cursor = None
+    try:
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        sql = "SELECT save_inventory_operation(%s)"
+        data = (operation_correlative,)
+        cursor.execute(sql, data)
+        conn.commit()
+        return True
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 def _normalize_code(code: str) -> str:
     return (code or "").strip().upper()
 
@@ -1532,14 +1554,19 @@ def receive_transfer_operation(operation_id):
         flash("No se encontró la operación de traslado.", "error")
         return redirect(url_for("inventory.check_transfer_operation"))
 
+    if operation.wait is False:
+        flash("La operación de traslado ya fue procesada.", "warning")
+        return redirect(url_for("inventory.check_transfer_operation"))
+
     try:
         register_flow_step4(operation_id, current_user.code)
+        process_inventory_operation(operation_id)
         operation.wait = False
         db.session.commit()
-        flash("Traslado recepcionado correctamente.", "success")
+        flash("Traslado recepcionado y procesado correctamente.", "success")
     except Exception as exc:
         db.session.rollback()
-        flash(f"No se pudo recepcionar el traslado: {exc}", "error")
+        flash(f"No se pudo recepcionar o procesar el traslado: {exc}", "error")
         return redirect(url_for("inventory.check_transfer_operation"))
 
     if request.headers.get("HX-Request"):
@@ -1554,7 +1581,7 @@ def receive_transfer_operation(operation_id):
             render_template(
                 "check_transfer_operation.html",
                 show_products=False,
-                message="Traslado recepcionado correctamente.",
+                message="Traslado recepcionado y procesado correctamente.",
             )
         )
         resp.headers["HX-Trigger"] = json.dumps(trigger_payload)
