@@ -121,3 +121,52 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Un solo event listener para manejar todos los clics del modal
+    document.addEventListener('click', function(event) {
+        
+        // ==========================================
+        // 1. ACCIÓN: Cuando se hace clic en un PRODUCTO
+        // ==========================================
+        const productItem = event.target.closest('[data-select-product-stock]');
+        if (productItem) {
+            // A. Pasar el código al input principal de la pantalla
+            const productCode = productItem.getAttribute('data-code');
+            const mainInput = document.getElementById('product-code-input');
+            if (mainInput) {
+                mainInput.value = productCode;
+            }
+            
+            // B. Limpiar el input del buscador del modal
+            const searchInput = document.querySelector('#product-stock-search-form input[name="q"]');
+            if (searchInput) {
+                searchInput.value = ''; 
+            }
+            
+            // C. Cerrar el modal (eliminándolo del DOM o agregándole clase hidden)
+            const modal = document.getElementById('product-stock-modal');
+            if (modal) {
+                modal.classList.add('hidden'); // Oculta el modal usando Tailwind
+            }
+        }
+    
+        // ==========================================
+        // 2. ACCIÓN: Cuando se hace clic en CERRAR
+        // ==========================================
+        const closeBtn = event.target.closest('[data-close-product-stock-modal]');
+        if (closeBtn) {
+            // A. Limpiar el input antes de cerrar
+            const searchInput = document.querySelector('#product-stock-search-form input[name="q"]');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // B. Cerrar el modal
+            const modal = document.getElementById('product-stock-modal');
+            if (modal) {
+                modal.classList.add('hidden'); // Oculta el modal usando Tailwind
+            }
+        }
+    });
+    </script>
