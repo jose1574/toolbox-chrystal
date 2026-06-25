@@ -95,13 +95,23 @@ def _search_products_for_stock_report(query, page=1, per_page=10):
 
     filters = []
     if query:
-        search_value = f"%{query}%"
-        filters.append(
-            (Product.code.ilike(search_value))
-            | (Product.description.ilike(search_value))
-            | (Product.referenc.ilike(search_value))
-            | (ProductsCode.other_code.ilike(search_value))
-        )
+        # 1. Reemplazamos los asteriscos por espacios para normalizar la búsqueda
+        # Ejemplo: "*busing*1/4" -> " busing 1/4" -> ["busing", "1/4"]
+        clean_query = query.replace('*', ' ')
+        tokens = [token for token in clean_query.split() if token]
+
+        # 2. Por cada palabra clave, exigimos que coincida con ALGUNO de los campos (OR)
+        for token in tokens:
+            search_value = f"%{token}%"
+            # Este bloque evalúa una sola palabra contra todas las columnas
+            token_filter = (
+                (Product.code.ilike(search_value))
+                | (Product.description.ilike(search_value))
+                | (Product.referenc.ilike(search_value))
+                | (ProductsCode.other_code.ilike(search_value))
+            )
+            # Al hacer append, SQLAlchemy las unirá con AND en el .where()
+            filters.append(token_filter)
 
     base_stmt = (
         select(
@@ -123,10 +133,13 @@ def _search_products_for_stock_report(query, page=1, per_page=10):
         .outerjoin(Department, Department.code == Product.department)
         .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
     )
+    
     if filters:
+        # *filters aplicará (FiltroToken1 AND FiltroToken2 AND FiltroToken3...)
         base_stmt = base_stmt.outerjoin(
             ProductsCode, ProductsCode.main_code == Product.code
         ).where(*filters)
+        
     base_stmt = base_stmt.distinct(Product.code).order_by(Product.code.asc())
 
     if filters:
@@ -150,6 +163,7 @@ def _search_products_for_stock_report(query, page=1, per_page=10):
     products = db.session.execute(
         base_stmt.limit(per_page).offset((page - 1) * per_page)
     ).all()
+    
     return products, total, total_pages, page
 
 
