@@ -1,71 +1,76 @@
-<div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-  <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white" style="max-height: 85vh; overflow-y: auto;">
-    <div class="flex items-start justify-between mb-3">
-      <h3 class="text-lg font-medium text-gray-900">Etiqueta de producto</h3>
-      <button
-        type="button"
-        onclick="closeModal()"
-        class="text-gray-500 hover:text-gray-700 focus:outline-none"
-      >
-        Cerrar
-      </button>
-    </div>
+<div class="modal fade show d-block" tabindex="-1" aria-hidden="true" role="dialog" aria-modal="true" style="background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow">
+      <div class="modal-header">
+        <h3 class="modal-title h5 mb-0">Etiqueta de producto</h3>
+        <button type="button" class="btn-close" aria-label="Cerrar" onclick="closeModal()"></button>
+      </div>
+      <div class="modal-body">
 
-    {% if error_message %}
-    <div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-      {{ error_message }}
+      {% if error_message %}
+      <div class="alert alert-danger mb-3" role="alert">
+        {{ error_message }}
+      </div>
+      {% endif %}
+
+      {% if product %}
+      <div class="mb-3">
+        <p class="mb-1"><span class="fw-semibold">Código principal:</span> {{ product.code }}</p>
+        <p class="mb-0"><span class="fw-semibold">Descripción:</span> {{ product.description }}</p>
+      </div>
+      <hr />
+      <h4 class="h6 fw-semibold mb-3">Códigos alternos para este producto</h4>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Códigos del producto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for code in product_codes %}
+            <tr>
+              <td>
+                <form
+                  hx-get="{{ url_for('products_label.update_short_name_modal') }}"
+                  hx-target="#modal-update-short-name-product"
+                  hx-swap="innerHTML"
+                  class="d-inline"
+                  hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
+                >
+                  <input type="hidden" name="product_code" value="{{ product.code }}" />
+                  <input type="hidden" name="label_code" value="{{ code.other_code }}" />
+                  <button type="submit" class="btn btn-link p-0 text-decoration-none text-body">
+                    {{ code.other_code }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td>
+                <form
+                  hx-get="{{ url_for('products_label.update_short_name_modal') }}"
+                  hx-target="#modal-update-short-name-product"
+                  hx-swap="innerHTML"
+                  class="d-inline"
+                  hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
+                >
+                  <input type="hidden" name="product_code" value="{{ product.code }}" />
+                  <input type="hidden" name="label_code" value="{{ product.code }}" />
+                  <button type="submit" class="btn btn-link p-0 text-decoration-none text-body">
+                    {{ product.code }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      </div>
     </div>
-    {% endif %}
-    {% if product %}
-    <div class="mt-2 px-1 space-y-2 text-sm text-gray-700">
-      <p><span class="font-medium">Codigo principal:</span> {{ product.code }}</p>
-      <p><span class="font-medium">Descripcion:</span> {{ product.description }}</p>
-    </div>
-    <hr class="my-3" />
-    <h4 class="text-sm font-medium text-gray-900 mb-2">Codigos alternos para este producto</h4>
-    <table class="w-full text-sm text-left text-gray-700" style="border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th class="border border-gray-200 px-3 py-2 bg-gray-50">Codigos del producto</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for code in product_codes %}
-        <tr>
-          <td class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
-            <form
-              hx-get="{{ url_for('products_label.update_short_name_modal') }}"
-              hx-target="#modal-update-short-name-product"
-              hx-swap="innerHTML"
-              style="display:inline"
-              hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
-            >
-              <input type="hidden" name="product_code" value="{{ product.code }}" />
-              <input type="hidden" name="label_code" value="{{ code.other_code }}" />
-              <button type="submit" class="text-gray-900 w-full text-left bg-transparent border-0 p-0 m-0 cursor-pointer">{{ code.other_code }}</button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td class="border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
-            <form
-              hx-get="{{ url_for('products_label.update_short_name_modal') }}"
-              hx-target="#modal-update-short-name-product"
-              hx-swap="innerHTML"
-              style="display:inline"
-              hx-on:htmx:after-request="document.getElementById('modal-product-label').innerHTML = '';"
-            >
-              <input type="hidden" name="product_code" value="{{ product.code }}" />
-              <input type="hidden" name="label_code" value="{{ product.code }}" />
-              <button type="submit" class="text-gray-900 w-full text-left bg-transparent border-0 p-0 m-0 cursor-pointer">{{ product.code }}</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
   </div>
 </div>
 

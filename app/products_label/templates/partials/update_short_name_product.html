@@ -1,72 +1,72 @@
-<div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-  <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white" style="max-height: 85vh; overflow-y: auto;">
-    <div class="flex items-start justify-between mb-3">
-      <h3 class="text-lg font-medium text-gray-900">Editar nombre corto del producto</h3>
-      <button
-        type="button"
-        onclick="closeUpdateShortNameModal()"
-        class="text-gray-500 hover:text-gray-700 focus:outline-none"
-      >
-        Cerrar
-      </button>
-    </div>
-
-    {% if error_message %}
-    <div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-      {{ error_message }}
-    </div>
-    {% endif %}
-    {% if product %}
-    <div class="mt-2 px-1 space-y-2 text-sm text-gray-700">
-      <p><span class="font-medium">Codigo principal:</span> {{ product.code }}</p>
-      <p><span class="font-medium">Descripcion:</span> {{ product.description }}</p>
-    </div>
-    <hr class="my-3" />
-
-    <form
-      hx-post="{{ url_for('products_label.update_short_name_product') }}"
-      hx-target="#products-label-list"
-      hx-swap="beforeend"
-      hx-on:htmx:after-request="if(event.detail.successful){closeUpdateShortNameModal(true);}"
-      class="space-y-3"
-    >
-      <input type="hidden" name="product_code" value="{{ product.code }}" />
-      <input type="hidden" name="code_to_add" value="{{ label_code or product.code }}" />
-
-      <label for="short_name" class="block text-sm font-medium text-gray-900">
-        Nombre corto
-      </label>
-      <input
-        type="text"
-        id="short_name"
-        name="short_name"
-        value="{{ product.short_name or '' }}"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
-        maxlength="120"
-        autocomplete="off"
-      />
-
-      <p class="text-xs text-gray-600">
-        Codigo para etiqueta: <span class="font-medium">{{ label_code or product.code }}</span>
-      </p>
-
-      <div class="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onclick="closeUpdateShortNameModal()"
-          class="px-3 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          class="px-3 py-2 rounded-md bg-blue-700 text-white text-sm hover:bg-blue-800"
-        >
-          Guardar
-        </button>
+<div class="modal fade show d-block" tabindex="-1" aria-hidden="true" role="dialog" aria-modal="true" style="background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow">
+      <div class="modal-header">
+        <h3 class="modal-title h5 mb-0">Editar nombre corto del producto</h3>
+        <button type="button" class="btn-close" aria-label="Cerrar" onclick="closeUpdateShortNameModal()"></button>
       </div>
-    </form>
-    {% endif %}
+      <div class="modal-body">
+
+      {% if error_message %}
+      <div class="alert alert-danger mb-3" role="alert">
+        {{ error_message }}
+      </div>
+      {% endif %}
+      {% if product %}
+      <div class="mb-3">
+        <p class="mb-1"><span class="fw-semibold">Código principal:</span> {{ product.code }}</p>
+        <p class="mb-0"><span class="fw-semibold">Descripción:</span> {{ product.description }}</p>
+      </div>
+      <hr />
+
+      <form
+        hx-post="{{ url_for('products_label.update_short_name_product') }}"
+        hx-target="#products-label-list"
+        hx-swap="beforeend"
+        hx-on:htmx:after-request="if(event.detail.successful){closeUpdateShortNameModal(true);}"
+        class="vstack gap-3"
+      >
+        <input type="hidden" name="product_code" value="{{ product.code }}" />
+        <input type="hidden" name="code_to_add" value="{{ label_code or product.code }}" />
+
+        <div>
+          <label for="short_name" class="form-label fw-semibold">
+            Nombre corto
+          </label>
+          <input
+            type="text"
+            id="short_name"
+            name="short_name"
+            value="{{ product.short_name or '' }}"
+            class="form-control"
+            maxlength="120"
+            autocomplete="off"
+          />
+        </div>
+
+        <p class="text-body-secondary small mb-0">
+          Código para etiqueta: <span class="fw-semibold">{{ label_code or product.code }}</span>
+        </p>
+
+        <div class="d-flex justify-content-end gap-2 pt-2">
+          <button
+            type="button"
+            onclick="closeUpdateShortNameModal()"
+            class="btn btn-outline-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Guardar
+          </button>
+        </div>
+      </form>
+      {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 
