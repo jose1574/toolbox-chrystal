@@ -6,7 +6,7 @@
   <div class="mb-4 d-grid gap-2 mx-auto" style="max-width: 64rem;">
     {% for category, message in messages %}
     <div
-      class="px-4 py-3 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-light text-dark border-secondary-subtle{% endif %}"
+      class="px-4 py-3 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-body-tertiary text-body border-secondary-subtle{% endif %}"
     >
       {{ message }}
     </div>
@@ -14,10 +14,10 @@
   </div>
   {% endif %} {% endwith %} {% if not selected_store %}
   <div
-    class="p-4 bg-white border border-secondary-subtle rounded shadow-sm w-100 mx-auto mt-3"
+    class="p-4 bg-body border border-secondary-subtle rounded shadow-sm w-100 mx-auto mt-3"
     style="max-width: 32rem;"
   >
-    <h1 class="h3 fw-bold mb-4 text-dark">
+    <h1 class="h3 fw-bold mb-4 text-body">
       Parámetros de Producto
     </h1>
     <form
@@ -28,7 +28,7 @@
       <div>
         <label
           for="store_code"
-          class="form-label small fw-semibold text-secondary"
+          class="form-label small fw-semibold text-body-secondary"
           >Selecciona el Depósito</label
         >
         <select
@@ -75,11 +75,11 @@
   </div>
   {% endif %} {% if selected_store %}
   <div
-    class="p-4 bg-white border border-secondary-subtle rounded shadow-sm w-100 mx-auto mt-3"
+    class="p-4 bg-body border border-secondary-subtle rounded shadow-sm w-100 mx-auto mt-3"
     style="max-width: 64rem;"
   >
     <div class="d-flex align-items-center justify-content-between mb-4">
-      <h1 class="h3 fw-bold text-dark mb-0">Parámetros de Producto</h1>
+      <h1 class="h3 fw-bold text-body mb-0">Parámetros de Producto</h1>
       <a
         href="{{ url_for('inventory.product_params') }}"
         class="small text-primary text-decoration-none"
@@ -87,8 +87,8 @@
       >
     </div>
 
-    <div class="mb-4 p-3 bg-light rounded border border-secondary-subtle">
-      <p class="small text-secondary mb-0">
+    <div class="mb-4 p-3 bg-body-tertiary rounded border border-secondary-subtle">
+      <p class="small text-body-secondary mb-0">
         <span class="fw-semibold">Depósito seleccionado:</span> {{
         selected_store.description }}
       </p>
@@ -96,7 +96,7 @@
 
     <!-- SEARCH FORM -->
     <div class="mb-4">
-      <h2 class="h5 fw-semibold text-dark mb-3">Buscar Producto</h2>
+      <h2 class="h5 fw-semibold text-body mb-3">Buscar Producto</h2>
       <form
         action="{{ url_for('inventory.product_params') }}"
         method="post"
@@ -111,7 +111,7 @@
         <div class="col-12 col-md">
           <label
             for="code-product"
-            class="form-label small fw-semibold text-secondary"
+            class="form-label small fw-semibold text-body-secondary"
             >Código de Producto</label
           >
           <input
@@ -131,31 +131,31 @@
 
     {% if product_params %}
     <div class="border-top border-secondary-subtle pt-4 mt-4">
-      <h2 class="h5 fw-bold text-dark mb-3">
+      <h2 class="h5 fw-bold text-body mb-3">
         {{ product_params.description }}
       </h2>
 
       <div
-        class="row g-2 mb-4 small text-secondary"
+        class="row g-2 mb-4 small text-body-secondary"
       >
         <p class="col-12 col-md-6 mb-0">
-          <span class="fw-semibold text-dark">Código:</span> {{
+          <span class="fw-semibold text-body">Código:</span> {{
           product_params.code }}
         </p>
         <p class="col-12 col-md-6 mb-0">
-          <span class="fw-semibold text-dark">Referencia:</span> {{
+          <span class="fw-semibold text-body">Referencia:</span> {{
           product_params.referenc }}
         </p>
         <p class="col-12 col-md-6 mb-0">
-          <span class="fw-semibold text-dark">Marca:</span> {{
+          <span class="fw-semibold text-body">Marca:</span> {{
           product_params.mark }}
         </p>
         <p class="col-12 col-md-6 mb-0">
-          <span class="fw-semibold text-dark">Modelo:</span> {{
+          <span class="fw-semibold text-body">Modelo:</span> {{
           product_params.model }}
         </p>
         <p class="col-12 col-md-6 mb-0">
-          <span class="fw-semibold text-dark">Stock actual:</span> {{
+          <span class="fw-semibold text-body">Stock actual:</span> {{
           product_params.stock }}
         </p>
       </div>
@@ -180,7 +180,7 @@
           <div>
             <label
               for="minimal_stock"
-              class="form-label small fw-semibold text-secondary"
+              class="form-label small fw-semibold text-body-secondary"
               >Existencia Mínima</label
             >
             <input
@@ -195,7 +195,7 @@
           <div>
             <label
               for="maximum_stock"
-              class="form-label small fw-semibold text-secondary"
+              class="form-label small fw-semibold text-body-secondary"
               >Existencia Máxima</label
             >
             <input
@@ -210,7 +210,7 @@
           <div>
             <label
               for="location"
-              class="form-label small fw-semibold text-secondary"
+              class="form-label small fw-semibold text-body-secondary"
               >Ubicación</label
             >
             <input

@@ -1,10 +1,10 @@
 
 
     <tr>
-        <td class="px-4 py-3 text-nowrap small fw-semibold text-dark" style="width: 16%;">
+        <td class="px-4 py-3 text-nowrap small fw-semibold text-body" style="width: 16%;">
             <input type="hidden" name="products_codes" value="{{ product.code }}">
             {{ product.code }}
         </td>
-        <td class="px-4 py-3 text-nowrap small text-secondary" style="width: 68%;">{{ product.description }}</td>
-        <td class="px-4 py-3 text-nowrap small text-secondary text-center" style="width: 16%;">{{ pf.location if pf else 'Sin ubicación' }}</td>
+        <td class="px-4 py-3 text-nowrap small text-body-secondary" style="width: 68%;">{{ product.description }}</td>
+        <td class="px-4 py-3 text-nowrap small text-body-secondary text-center" style="width: 16%;">{{ pf.location if pf else 'Sin ubicación' }}</td>
     </tr>

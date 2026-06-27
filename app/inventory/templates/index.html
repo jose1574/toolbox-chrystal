@@ -6,14 +6,14 @@
   <section>
     <div class="card border-0 shadow-sm">
       <div class="card-body p-4 p-lg-5">
-        <h2 class="h3 fw-semibold text-dark">Operaciones de inventarios</h2>
+        <h2 class="h3 fw-semibold text-body">Operaciones de inventarios</h2>
 
         <div class="row g-3 mt-1">
           <div class="col-12 col-md-6 col-xl-3">
             <div class="card h-100 border-info-subtle bg-info-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Orden de recolección</h5>
-                <p class="card-text text-secondary flex-grow-1">Selecciona depósitos y productos para generar una orden de traslado en espera.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Selecciona depósitos y productos para generar una orden de traslado en espera.</p>
                 <a href="{{ url_for('inventory.auto_order_collection') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -23,17 +23,17 @@
             <div class="card h-100 border-primary-subtle bg-primary-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Chequeo de orden de recolección</h5>
-                <p class="card-text text-secondary flex-grow-1">Escanea productos, concilia cantidades y valida la orden de recolección.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Escanea productos, concilia cantidades y valida la orden de recolección.</p>
                 <a href="{{ url_for('inventory.check_order') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
           </div>
 
           <div class="col-12 col-md-6 col-xl-3">
-            <div class="card h-100 border-secondary-subtle bg-light">
+            <div class="card h-100 border-secondary-subtle bg-body-tertiary">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Inicio de traslado</h5>
-                <p class="card-text text-secondary flex-grow-1">Confirma la carga y registra el responsable que retira la mercancía.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Confirma la carga y registra el responsable que retira la mercancía.</p>
                 <a href="{{ url_for('inventory.start_transfer_operation') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -43,7 +43,7 @@
             <div class="card h-100 border-success-subtle bg-success-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Recepción de traslado</h5>
-                <p class="card-text text-secondary flex-grow-1">Herramienta para contar físicamente productos de traslados.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Herramienta para contar físicamente productos de traslados.</p>
                 <a href="{{ url_for('inventory.check_transfer_operation') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -53,7 +53,7 @@
             <div class="card h-100 border-info-subtle bg-info-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Orden manual de recolección</h5>
-                <p class="card-text text-secondary flex-grow-1">Agrega productos uno por uno y define cantidades antes de generar la orden.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Agrega productos uno por uno y define cantidades antes de generar la orden.</p>
                 <a href="{{ url_for('inventory.manual_order_collection') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -63,7 +63,7 @@
             <div class="card h-100 border-warning-subtle bg-warning-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Parámetros de Productos</h5>
-                <p class="card-text text-secondary flex-grow-1">Edita existencias mínima y máxima y otros parámetros por depósito.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Edita existencias mínima y máxima y otros parámetros por depósito.</p>
                 <a href="{{ url_for('inventory.product_params') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -73,7 +73,7 @@
             <div class="card h-100 border-danger-subtle bg-danger-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Ubicación de Productos</h5>
-                <p class="card-text text-secondary flex-grow-1">Asigna y actualiza ubicaciones por depósito para agilizar la recolección.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Asigna y actualiza ubicaciones por depósito para agilizar la recolección.</p>
                 <a href="{{ url_for('inventory.products_locations') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
@@ -83,7 +83,7 @@
             <div class="card h-100 border-danger-subtle bg-danger-subtle">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Contador de Productos</h5>
-                <p class="card-text text-secondary flex-grow-1">Visualiza y gestiona el conteo de productos en cada depósito.</p>
+                <p class="card-text text-body-secondary flex-grow-1">Visualiza y gestiona el conteo de productos en cada depósito.</p>
                 <a href="{{ url_for('inventory.product_counter') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
               </div>
             </div>

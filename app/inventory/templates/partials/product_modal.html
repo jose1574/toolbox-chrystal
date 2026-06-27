@@ -1,8 +1,8 @@
 <!-- Modal para detalles del producto -->
 <div id="productModal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center" style="z-index: 1055;">
-    <div class="p-3 border w-100 shadow rounded bg-white" style="max-width: 32rem;">
+    <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 32rem;">
         <div class="d-flex align-items-start justify-content-between">
-            <h3 class="h5 fw-semibold text-dark mb-0">Detalles del Producto</h3>
+            <h3 class="h5 fw-semibold text-body mb-0">Detalles del Producto</h3>
             <button type="button" onclick="document.getElementById('productModal').remove()"
                 class="btn btn-link btn-sm text-decoration-none p-0" aria-label="Cerrar">
                 <svg width="16" height="16" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -12,7 +12,7 @@
                 </svg>
             </button>
         </div>
-        <div class="mt-2 px-1 d-grid gap-1 small text-secondary">
+        <div class="mt-2 px-1 d-grid gap-1 small text-body-secondary">
             <p><span class="fw-semibold">Código:</span> {{ detail.code_product }}</p>
             <p><span class="fw-semibold">Descripción:</span> {{ detail.description_product }}</p>
             <p><span class="fw-semibold">Referencia:</span> {{ detail.referenc }}</p>
@@ -28,13 +28,13 @@
             <input type="hidden" name="product_code" value="{{ detail.code_product }}">
             <input type="hidden" name="destination_store" value="{{ destination_store }}">
 
-            <label for="minimal_stock" class="form-label small fw-semibold text-secondary">Existencia Minima</label>
+            <label for="minimal_stock" class="form-label small fw-semibold text-body-secondary">Existencia Minima</label>
             <input type="number" id="minimal_stock" name="minimal_stock" step="0.01" value="{{ product_failure.minimal_stock if product_failure else 0 }}"
                 class="form-control form-control-sm mt-1"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('maximum_stock').focus();}"
                 required>
 
-            <label for="maximum_stock" class="form-label small fw-semibold text-secondary mt-2">Existencia Máxima</label>
+            <label for="maximum_stock" class="form-label small fw-semibold text-body-secondary mt-2">Existencia Máxima</label>
             <input type="number" id="maximum_stock" name="maximum_stock" step="0.01" value="{{ product_failure.maximum_stock if product_failure else 0 }}"
                 class="form-control form-control-sm mt-1"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('countedAmount').focus();}"
@@ -48,7 +48,7 @@
 
 
 
-            <label for="countedAmount" class="form-label small fw-semibold text-secondary mt-2">Cantidad Contada</label>
+            <label for="countedAmount" class="form-label small fw-semibold text-body-secondary mt-2">Cantidad Contada</label>
             <input type="number" id="countedAmount" name="counted_amount" step="0.01" min="0"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); this.form.requestSubmit();}"
                 class="form-control form-control-sm mt-1"
@@ -62,7 +62,7 @@
                     class="btn btn-outline-secondary btn-sm flex-fill">Cancelar</button>
             </div>
         </form>
-        <p class="small text-secondary px-1 mb-0">Las cantidades contadas no se guardan y se reinician al recargar la
+        <p class="small text-body-secondary px-1 mb-0">Las cantidades contadas no se guardan y se reinician al recargar la
             página.</p>
     </div>
 </div>

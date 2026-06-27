@@ -1,16 +1,16 @@
 <div id="manual-product-modal" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 p-3" style="z-index: 1055;" role="dialog" aria-modal="true">
-    <div class="d-flex flex-column overflow-hidden rounded bg-white shadow w-100" style="max-width: 72rem; max-height: 88vh;">
+    <div class="d-flex flex-column overflow-hidden rounded bg-body shadow w-100" style="max-width: 72rem; max-height: 88vh;">
         <div class="d-flex align-items-start justify-content-between border-bottom border-secondary-subtle px-4 py-3">
             <div>
-                <h2 class="h5 fw-semibold text-dark mb-1">Seleccionar producto</h2>
-                <p class="small text-secondary mb-0">Solo se muestran productos con stock disponible en el deposito origen.</p>
+                <h2 class="h5 fw-semibold text-body mb-1">Seleccionar producto</h2>
+                <p class="small text-body-secondary mb-0">Solo se muestran productos con stock disponible en el deposito origen.</p>
             </div>
             <button type="button" data-close-manual-product-modal class="btn btn-link btn-sm text-decoration-none p-0">
                 Cerrar
             </button>
         </div>
 
-        <form id="manual-product-search-form" class="border-bottom border-secondary-subtle bg-light px-4 py-3">
+        <form id="manual-product-search-form" class="border-bottom border-secondary-subtle bg-body-tertiary px-4 py-3">
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <div class="d-flex gap-2">
                 <input type="text" name="q" value="{{ query }}" autocomplete="off" placeholder="Buscar por codigo, referencia o descripcion"
@@ -21,13 +21,13 @@
             </div>
         </form>
 
-        <div class="border-bottom border-secondary-subtle px-4 py-2 small text-secondary">
+        <div class="border-bottom border-secondary-subtle px-4 py-2 small text-body-secondary">
             {{ total_products }} producto(s) disponible(s). Página {{ page }} de {{ total_pages }}.
         </div>
 
         <div class="overflow-y-auto">
             <table class="table table-sm align-middle mb-0" style="min-width: 760px;">
-                <thead class="table-light small text-uppercase">
+                <thead class="bg-body-tertiary small text-uppercase">
                     <tr>
                         <th class="px-4 py-3">Codigo</th>
                         <th class="px-4 py-3">Descripcion</th>
@@ -35,7 +35,7 @@
                         <th class="px-4 py-3">Stock origen</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody>
                     {% for product in products %}
                     <tr class="cursor-pointer"
                         tabindex="0"
@@ -46,17 +46,17 @@
                         data-mark="{{ product.mark_description or '' }}"
                         data-department="{{ product.department_description or '' }}"
                         data-stock="{{ product.stock_origin or 0 }}">
-                        <td class="px-4 py-3 fw-semibold text-dark">{{ product.code }}</td>
+                        <td class="px-4 py-3 fw-semibold text-body">{{ product.code }}</td>
                         <td class="px-4 py-3">
-                            <div class="fw-semibold text-dark">{{ product.description or '-' }}</div>
-                            <div class="small text-secondary">{{ product.mark_description or '-' }} | {{ product.department_description or '-' }}</div>
+                            <div class="fw-semibold text-body">{{ product.description or '-' }}</div>
+                            <div class="small text-body-secondary">{{ product.mark_description or '-' }} | {{ product.department_description or '-' }}</div>
                         </td>
                         <td class="px-4 py-3">{{ product.unit_description or '-' }}</td>
                         <td class="px-4 py-3">{{ '%.2f'|format(product.stock_origin or 0) }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="px-4 py-4 text-center text-muted fst-italic">
+                        <td colspan="4" class="px-4 py-4 text-center text-body-secondary fst-italic">
                             {% if query %}
                             No se encontraron productos para la busqueda indicada.
                             {% else %}
@@ -69,7 +69,7 @@
             </table>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between border-top border-secondary-subtle bg-light px-4 py-3">
+        <div class="d-flex align-items-center justify-content-between border-top border-secondary-subtle bg-body-tertiary px-4 py-3">
             <button type="button"
                 data-manual-product-page="{{ page - 1 }}"
                 data-query="{{ query }}"
@@ -77,7 +77,7 @@
                 class="btn btn-outline-secondary btn-sm" style="min-width: 6rem;">
                 Anterior
             </button>
-            <div class="small text-secondary">Haz click sobre una fila para agregar el producto.</div>
+            <div class="small text-body-secondary">Haz click sobre una fila para agregar el producto.</div>
             <button type="button"
                 data-manual-product-page="{{ page + 1 }}"
                 data-query="{{ query }}"

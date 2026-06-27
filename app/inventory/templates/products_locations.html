@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-4 ms-5">
-    <h1 class="h3 fw-bold text-heading mb-3">Ubicación de Productos</h1>
+    <h1 class="h3 fw-bold text-body mb-3">Ubicación de Productos</h1>
 
     {% if not store %}
-    <div class="bg-white shadow-sm p-4 rounded border border-secondary-subtle">
-        <h2 class="h5 fw-semibold text-heading">Seleccionar Depósito</h2>
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle">
+        <h2 class="h5 fw-semibold text-body">Seleccionar Depósito</h2>
         <form action="{{ url_for('inventory.products_locations') }}" method="post" class="d-grid gap-3">
             <div>
-                <label for="store_code" class="form-label small fw-semibold text-secondary">Depósito</label>
+                <label for="store_code" class="form-label small fw-semibold text-body-secondary">Depósito</label>
                 <select id="store_code" name="store_code"
                     class="form-select form-select-sm">
                     <option value="">-- Seleccionar depósito --</option>
@@ -38,12 +38,12 @@
     {% endif %}
 
     {% if store and not location %}
-    <div class="bg-white shadow-sm p-4 rounded border border-secondary-subtle mt-3">
-        <h2 class="h5 fw-semibold text-heading">Asignar ubicación</h2>
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle mt-3">
+        <h2 class="h5 fw-semibold text-body">Asignar ubicación</h2>
         <form action="{{ url_for('inventory.products_locations') }}" method="post" class="d-grid gap-3">
             <input type="hidden" name="store_code" value="{{ store.code }}">
             <div>
-                <label for="location" class="form-label small fw-semibold text-secondary">Ubicación</label>
+                <label for="location" class="form-label small fw-semibold text-body-secondary">Ubicación</label>
                 <input type="text" name="location" id="location" placeholder="A-1"
                     oninput="this.value = this.value.toUpperCase().replace(/\s/g, '')"
                     class="form-control form-control-sm">
@@ -64,13 +64,13 @@
 
     {% if store and location %}
 
-    <div class="small text-secondary mb-2">
+    <div class="small text-body-secondary mb-2">
         <p class="mb-1"><span class="fw-semibold">Depósito:</span> {{ store.description }}</p>
         <p class="mb-0"><span class="fw-semibold">Nueva Ubicación:</span> {{ location }}</p>
     </div>
 
-    <div class="bg-white shadow-sm p-4 rounded border border-secondary-subtle">
-        <h2 class="h5 fw-semibold text-heading">Buscar y Seleccionar Productos</h2>
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle">
+        <h2 class="h5 fw-semibold text-body">Buscar y Seleccionar Productos</h2>
         <div id="search-error" class="d-none text-danger small mb-3"></div>
 
         <form hx-get="{{ url_for('inventory.search_products_for_location') }}" hx-target="#products_codes"
@@ -79,7 +79,7 @@
            
             <input type="hidden" name="store_code" value="{{ store.code }}">
             <div class="col-12 col-md">
-                <label for="product_code" class="form-label small fw-semibold text-secondary">Código del
+                <label for="product_code" class="form-label small fw-semibold text-body-secondary">Código del
                     Producto</label>
                 <input type="text" id="product_code" name="product_code" placeholder="Ingrese código del producto"
                     class="form-control form-control-sm">
@@ -103,7 +103,7 @@
 
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="bg-body-tertiary">
                         <tr>
                             <th scope="col"
                                 class="px-4 py-3 small text-uppercase" style="width: 16%;">
@@ -119,7 +119,7 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody id="products_codes" class="bg-white">
+                    <tbody id="products_codes" class="bg-body">
                         <!-- Filas de productos agregadas aquí -->
                     </tbody>
                 </table>

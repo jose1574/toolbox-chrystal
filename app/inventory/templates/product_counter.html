@@ -3,15 +3,15 @@
 
 {% block content %}
 <div class="container-fluid py-4 px-4 ms-5">
-    <h1 class="h3 fw-semibold text-dark mb-3">Contador de Productos</h1>
+    <h1 class="h3 fw-semibold text-body mb-3">Contador de Productos</h1>
 </div>
 
 {% if not store %}
-<div class="bg-white shadow-sm p-4 rounded border border-secondary-subtle ms-5 me-3">
-    <h2 class="h5 fw-bold text-heading">Seleccionar Depósito</h2>
+<div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle ms-5 me-3">
+    <h2 class="h5 fw-bold text-body">Seleccionar Depósito</h2>
     <form action="{{ url_for('inventory.product_counter') }}">
         <div>
-            <label for="store_code" class="form-label small fw-semibold text-secondary">Depósito</label>
+            <label for="store_code" class="form-label small fw-semibold text-body-secondary">Depósito</label>
             <select id="store_code" name="store_code"
                 class="form-select form-select-sm">
                 <option value="">-- Seleccionar depósito --</option>
@@ -40,7 +40,7 @@
 {% endif %}
 {% if store %}
 <div class="d-flex align-items-center justify-content-between mb-2 px-4 ms-5 me-3">
-    <h3 class="h5 fw-semibold text-dark mb-0">Depósito seleccionado: {{ store.description }}</h3>
+    <h3 class="h5 fw-semibold text-body mb-0">Depósito seleccionado: {{ store.description }}</h3>
     <a href="{{ url_for('inventory.product_counter') }}" 
         class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
         <svg width="16" height="16" class="me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
@@ -51,16 +51,16 @@
     </a>
 </div>
 <!-- resultado del conteo de productos -->
-<div class="bg-white shadow-sm rounded border border-secondary-subtle mt-3 p-3 ms-5 me-3">
+<div class="bg-body shadow-sm rounded border border-secondary-subtle mt-3 p-3 ms-5 me-3">
     <div id="container-table"
-        class="w-100 overflow-x-auto border border-secondary-subtle rounded bg-white">
+        class="w-100 overflow-x-auto border border-secondary-subtle rounded bg-body">
 
         <div class="w-full">
             <div id="controls" class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3">
                 <form hx-get="{{ url_for('inventory.search_product_counter', store_code=store.code) }}" hx-target="body"
                     hx-swap="beforeend" autocomplete="off" class="d-flex align-items-center gap-2">
                     <input type="hidden" name="store_code" value="{{ store.code }}">
-                    <label for="product_code" class="small fw-semibold text-secondary me-2 mb-0">Código de producto:</label>
+                    <label for="product_code" class="small fw-semibold text-body-secondary me-2 mb-0">Código de producto:</label>
                     <input id="product_code" name="product_code" type="text" placeholder="Escanear o escribir código"
                         class="form-control form-control-sm"
                         style="max-width: 16rem;"
@@ -79,7 +79,7 @@
             </div>
             <form id="save-counter-form" action="{{ url_for('inventory.save_products_counter', store_code=store.code) }}" method="post" target="_blank" >
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light small text-uppercase">
+                    <thead class="bg-body-tertiary small text-uppercase">
                         <tr scope="col" class="px-6 py-3">
                             <th class="px-4 py-3" style="width: 15%;">Código</th>
                             <th class="px-4 py-3" style="width: 30%;">Descripción</th>

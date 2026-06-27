@@ -21,7 +21,8 @@
 <body class="bg-body-tertiary" id="main-content">
     <nav>
         <aside id="default-sidebar"
-            class="position-fixed top-0 start-0 z-3 vh-100 shadow-sm"
+            class="position-fixed top-0 start-0 vh-100 shadow-sm"
+            style="z-index: 1030;"
             aria-label="Sidenav">
             <div class="h-100 overflow-auto py-4 px-3 bg-body border-end">
                 <ul class="list-unstyled d-grid gap-2 mb-0">
@@ -241,7 +242,7 @@
             </div>
         </aside>
 
-        <div id="sidebar-backdrop" class="d-none position-fixed top-0 start-0 end-0 bottom-0 z-2 bg-dark bg-opacity-50"></div>
+        <div id="sidebar-backdrop" class="d-none position-fixed top-0 start-0 end-0 bottom-0 bg-dark bg-opacity-50" style="z-index: 1025;"></div>
     </nav>
 
     {% block content %}{% endblock %}

@@ -1,8 +1,8 @@
 <!-- Modal para detalles del producto -->
 <div id="productModal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center" style="z-index: 1055;">
-    <div class="p-3 border w-100 shadow rounded bg-white" style="max-width: 32rem;">
+    <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 32rem;">
         <div class="d-flex align-items-start justify-content-between">
-            <h3 class="h5 fw-semibold text-dark mb-0">Detalles del Producto</h3>
+            <h3 class="h5 fw-semibold text-body mb-0">Detalles del Producto</h3>
             <button type="button" onclick="document.getElementById('productModal').remove()"
                 class="btn btn-link btn-sm text-decoration-none p-0" aria-label="Cerrar">
                 <svg width="16" height="16" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -12,7 +12,7 @@
                 </svg>
             </button>
         </div>
-        <div class="mt-2 px-1 d-grid gap-1 small text-secondary">
+        <div class="mt-2 px-1 d-grid gap-1 small text-body-secondary">
             <p><span class="fw-semibold">Código:</span> {{ product.code }}</p>
             <p><span class="fw-semibold">Descripción:</span> {{ product.description }}</p>
             <p><span class="fw-semibold">Referencia:</span> {{ product.referenc }}</p>
@@ -29,7 +29,7 @@
             <input type="text" name="store_code" value="{{ store.code }}" hidden>
             <!-- snapshot de existencia al momento del conteo -->
             <input type="hidden" name="system_qty" value="{{ stock.stock if stock else 0 }}">
-            <label for="counted_amount" class="form-label small fw-semibold text-secondary">Cantidad Contada</label>
+            <label for="counted_amount" class="form-label small fw-semibold text-body-secondary">Cantidad Contada</label>
             <input type="number" id="counted_amount" name="counted_amount" step="0.01"
                 class="form-control form-control-sm mt-1">
             <div class="mt-3 d-flex justify-content-end">

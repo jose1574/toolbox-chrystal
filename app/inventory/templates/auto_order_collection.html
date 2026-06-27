@@ -17,7 +17,7 @@
     <div class="mb-4 d-grid gap-2">
         {% for category, message in messages %}
         <div
-            class="px-4 py-3 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-light text-dark border-secondary-subtle{% endif %}">
+            class="px-4 py-3 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-body-tertiary text-body border-secondary-subtle{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -26,15 +26,15 @@
     {% endwith %}
 
     {% if not store_origin or not store_dst %}
-    <div class="p-4 bg-white border border-secondary-subtle rounded shadow-sm mx-auto w-100" style="max-width: 32rem;">
-        <h1 class="h3 fw-bold">Orden de Traslado Automático</h1>
+    <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto w-100" style="max-width: 32rem;">
+        <h1 class="h3 fw-bold text-body">Orden de Traslado Automático</h1>
 
-        <h2 class="h5 fw-semibold text-heading mb-3">Seleccionar Depósitos</h2>
+        <h2 class="h5 fw-semibold text-body mb-3">Seleccionar Depósitos</h2>
         <form method="get" action="{{ url_for('inventory.auto_order_collection') }}"
             hx-get="{{ url_for('inventory.auto_order_collection') }}" hx-target="#main-content"
              hx-swap="innerHTML" hx-push-url="true" class="d-grid gap-3">
             <div>
-                <label for="store_origin" class="form-label small fw-semibold text-secondary">Depósito origen</label>
+                <label for="store_origin" class="form-label small fw-semibold text-body-secondary">Depósito origen</label>
                 <select id="store_origin" name="store_origin"
                     class="form-select form-select-sm">
                     <option value="">-- Seleccionar depósito origen --</option>
@@ -45,7 +45,7 @@
                 </select>
             </div>
             <div>
-                <label for="store_dst" class="form-label small fw-semibold text-secondary">Depósito destino</label>
+                <label for="store_dst" class="form-label small fw-semibold text-body-secondary">Depósito destino</label>
                 <select id="store_dst" name="store_dst"
                     class="form-select form-select-sm">
                     <option value="">-- Seleccionar depósito destino --</option>
@@ -75,27 +75,27 @@
     {% endif %}
 
     {% if store_origin and store_dst %}
-    <div class="mb-4 mt-4 p-3 bg-light rounded border border-secondary-subtle">
+    <div class="mb-4 mt-4 p-3 bg-body-tertiary rounded border border-secondary-subtle">
         <p>
-            <strong>Depósito Origen:</strong> {{ store_origin }} <span class="text-sm text-gray-600">{{
+            <strong>Depósito Origen:</strong> {{ store_origin }} <span class="small text-body-secondary">{{
                 store_origin_name }}</span>
         </p>
         <p>
-            <strong>Depósito Destino:</strong> {{ store_dst }} <span class="text-sm text-gray-600">{{ store_dst_name
+            <strong>Depósito Destino:</strong> {{ store_dst }} <span class="small text-body-secondary">{{ store_dst_name
                 }}</span>
         </p>
     </div>
-    <div class="mb-4 p-3 bg-light rounded border border-secondary-subtle d-flex flex-wrap align-items-center gap-3 sticky-top" id="filter-panel"
+    <div class="mb-4 p-3 bg-body-tertiary rounded border border-secondary-subtle d-flex flex-wrap align-items-center gap-3 sticky-top" id="filter-panel"
         style="position: sticky; top: 0; z-index: 10;">
         <div class="d-flex align-items-center gap-2">
-            <label for="search" class="small fw-bold text-secondary mb-0 text-nowrap">Buscar:</label>
+            <label for="search" class="small fw-bold text-body-secondary mb-0 text-nowrap">Buscar:</label>
             <input type="text" id="search" placeholder="Código o nombre..."
                 class="filter-input form-control form-control-sm" style="width: 16rem;">
         </div>
 
         <!-- Dropdown Departamentos -->
         <div class="position-relative d-flex align-items-center gap-2">
-            <label class="small fw-bold text-secondary mb-0 text-nowrap">Depto:</label>
+            <label class="small fw-bold text-body-secondary mb-0 text-nowrap">Depto:</label>
             <div class="dropdown-container position-relative">
                 <button type="button"
                     class="dropdown-trigger d-flex align-items-center justify-content-between btn btn-outline-secondary btn-sm" style="width: 14rem;">
@@ -105,12 +105,12 @@
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-white border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
+                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for dept in departments %}
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ dept }}"
                             class="dept-checkbox form-check-input mt-0">
-                        <span class="ms-2 small text-secondary text-truncate">{{ dept }}</span>
+                        <span class="ms-2 small text-body-secondary text-truncate">{{ dept }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -119,7 +119,7 @@
 
         <!-- Dropdown Marcas -->
         <div class="position-relative d-flex align-items-center gap-2">
-            <label class="small fw-bold text-secondary mb-0 text-nowrap">Marca:</label>
+            <label class="small fw-bold text-body-secondary mb-0 text-nowrap">Marca:</label>
             <div class="dropdown-container position-relative">
                 <button type="button"
                     class="dropdown-trigger d-flex align-items-center justify-content-between btn btn-outline-secondary btn-sm" style="width: 14rem;">
@@ -129,12 +129,12 @@
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-white border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
+                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for mark in marks %}
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ mark }}"
                             class="mark-checkbox form-check-input mt-0">
-                        <span class="ms-2 small text-secondary text-truncate">{{ mark }}</span>
+                        <span class="ms-2 small text-body-secondary text-truncate">{{ mark }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -165,7 +165,7 @@
         {% endwith %}
     </div>
 
-    <div id="results-container" class="table-responsive shadow-sm rounded border border-secondary-subtle bg-white">
+    <div id="results-container" class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body">
         <form id="auto-order-form" hx-post="{{ url_for('inventory.save_auto_order_collection') }}"
             hx-target="#main-content" hx-swap="innerHTML" hx-trigger="submit">
 
@@ -173,7 +173,7 @@
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
             <table class="table table-sm align-middle mb-0">
 
-                <thead class="table-light small text-uppercase">
+                <thead class="bg-body-tertiary small text-uppercase">
                     <tr>
                         <th scope="col" class="px-6 py-3">
                             <input type="checkbox" id="select-all"
@@ -195,14 +195,14 @@
                 <tbody>
                     {% for product in products %}
 
-                    <tr class="product-row bg-white" data-code="{{ product.code|lower }}"
+                    <tr class="product-row bg-body" data-code="{{ product.code|lower }}"
                         data-description="{{ product.description|lower }}"
                         data-dept="{{ product.department_description }}" data-mark="{{ product.mark_description }}">
                         <td class="px-6 py-4">
                             <input type="checkbox" name="{{ product.code }}" value="selected"
                                 class="product-checkbox form-check-input">
                         </td>
-                        <td class="px-6 py-4 fw-semibold text-dark text-nowrap">
+                        <td class="px-6 py-4 fw-semibold text-body text-nowrap">
                             <a href="{{ url_for('inventory.modal_product_params') }}?product_code={{ product.code|urlencode }}&store={{ store_dst|urlencode }}"
                                 class="product-link d-inline-flex align-items-center text-primary text-decoration-none"
                                 data-product-code="{{ product.code }}"
@@ -226,8 +226,8 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr class="bg-white">
-                        <td colspan="11" class="px-6 py-4 text-center text-muted fst-italic">No se encontraron productos
+                    <tr class="bg-body">
+                        <td colspan="11" class="px-6 py-4 text-center text-body-secondary fst-italic">No se encontraron productos
                             que requieran transferencia según los niveles de stock.</td>
                     </tr>
                     {% endfor %}
@@ -271,12 +271,12 @@
 
             target.outerHTML = `
                 <div id="product-modal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;" role="dialog" aria-modal="true">
-                    <div class="p-3 border w-100 shadow rounded bg-white" style="max-width: 32rem;">
+                    <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 32rem;">
                         <div class="d-flex align-items-start justify-content-between mb-2">
-                            <h2 class="h5 fw-semibold text-dark mb-0">Error</h2>
+                            <h2 class="h5 fw-semibold text-body mb-0">Error</h2>
                             <button type="button" class="btn btn-link btn-sm text-decoration-none" data-close-product-modal>Cerrar</button>
                         </div>
-                        <p class="small text-secondary mb-0">${safeMessage}</p>
+                        <p class="small text-body-secondary mb-0">${safeMessage}</p>
                     </div>
                 </div>
             `;
