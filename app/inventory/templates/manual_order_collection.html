@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Orden manual de recoleccion - Toolbox{% endblock %}
 {% block content %}
-<div class="container-fluid py-4 px-4 ms-5">
+<div class="container-fluid py-4 px-3 px-lg-4">
     <div class="mb-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
         <div>
             <h1 class="h3 fw-bold text-body mb-1">Orden manual de recoleccion</h1>
@@ -169,6 +169,10 @@
         const cartCount = document.getElementById('cart-count');
         const messageBox = document.getElementById('manual-order-message');
         const cart = new Map();
+        let productSearchDebounceTimer = null;
+        let manualSearchSelectionStart = 0;
+        let manualSearchSelectionEnd = 0;
+        let manualSearchRequestActive = false;
 
         function showMessage(message, type) {
             messageBox.textContent = message;
@@ -258,6 +262,46 @@
             codeInput.focus();
         }
 
+        function selectManualProductRow(selectProduct) {
+            if (!selectProduct) return;
+
+            addProduct({
+                code: selectProduct.dataset.code,
+                description: selectProduct.dataset.description,
+                unit_description: selectProduct.dataset.unit,
+                mark_description: selectProduct.dataset.mark,
+                department_description: selectProduct.dataset.department,
+                stock_origin: Number(selectProduct.dataset.stock || 0),
+            }, 1);
+            document.getElementById('manual-product-modal').outerHTML = '<div id="manual-product-modal"></div>';
+        }
+
+        function focusManualProductSearchInput() {
+            const searchInput = document.getElementById('manual-product-search-input');
+            if (!searchInput) return;
+
+            searchInput.focus();
+            const valueLength = String(searchInput.value || '').length;
+            const selectionStart = Number.isInteger(manualSearchSelectionStart) ? manualSearchSelectionStart : valueLength;
+            const selectionEnd = Number.isInteger(manualSearchSelectionEnd) ? manualSearchSelectionEnd : valueLength;
+            searchInput.setSelectionRange(
+                Math.max(0, Math.min(selectionStart, valueLength)),
+                Math.max(0, Math.min(selectionEnd, valueLength))
+            );
+        }
+
+        function getManualProductRows() {
+            return Array.from(document.querySelectorAll('[data-select-manual-product]'));
+        }
+
+        function focusManualProductRow(index) {
+            const rows = getManualProductRows();
+            if (!rows.length) return;
+
+            const nextIndex = Math.max(0, Math.min(index, rows.length - 1));
+            rows[nextIndex].focus();
+        }
+
         async function lookupByCode() {
             const code = codeInput.value.trim();
             if (!code) {
@@ -282,7 +326,8 @@
             }
         }
 
-        async function openProductModal(query, page) {
+        async function openProductModal(query, page, options) {
+            const modalOptions = options || {};
             try {
                 const params = new URLSearchParams({
                     store_origin: storeOrigin,
@@ -294,6 +339,17 @@
                     headers: { 'HX-Request': 'true' },
                 });
                 document.getElementById('manual-product-modal').outerHTML = await response.text();
+
+                if (window.htmx) {
+                    const modalElement = document.getElementById('manual-product-modal');
+                    if (modalElement) {
+                        window.htmx.process(modalElement);
+                    }
+                }
+
+                window.setTimeout(function () {
+                    focusManualProductSearchInput();
+                }, 0);
             } catch (err) {
                 showMessage('No se pudo abrir el catalogo de productos.', 'error');
             }
@@ -315,6 +371,25 @@
             openProductModal(codeInput.value.trim());
         });
 
+        document.addEventListener('htmx:beforeRequest', function (e) {
+            const searchInput = e.target && e.target.closest ? e.target.closest('#manual-product-search-input') : null;
+            if (!searchInput) return;
+
+            manualSearchRequestActive = true;
+            manualSearchSelectionStart = Number.isInteger(searchInput.selectionStart) ? searchInput.selectionStart : 0;
+            manualSearchSelectionEnd = Number.isInteger(searchInput.selectionEnd) ? searchInput.selectionEnd : manualSearchSelectionStart;
+        });
+
+        document.addEventListener('htmx:afterSwap', function (e) {
+            const modal = e.target && e.target.id === 'manual-product-modal';
+            if (!modal || !manualSearchRequestActive) return;
+
+            manualSearchRequestActive = false;
+            window.setTimeout(function () {
+                focusManualProductSearchInput();
+            }, 0);
+        });
+
         document.addEventListener('click', function (e) {
             const closeModal = e.target.closest('[data-close-manual-product-modal]');
             if (closeModal || e.target.id === 'manual-product-modal') {
@@ -324,15 +399,7 @@
 
             const selectProduct = e.target.closest('[data-select-manual-product]');
             if (selectProduct) {
-                addProduct({
-                    code: selectProduct.dataset.code,
-                    description: selectProduct.dataset.description,
-                    unit_description: selectProduct.dataset.unit,
-                    mark_description: selectProduct.dataset.mark,
-                    department_description: selectProduct.dataset.department,
-                    stock_origin: Number(selectProduct.dataset.stock || 0),
-                }, 1);
-                document.getElementById('manual-product-modal').outerHTML = '<div id="manual-product-modal"></div>';
+                selectManualProductRow(selectProduct);
                 return;
             }
 
@@ -350,12 +417,53 @@
             }
         });
 
-        document.addEventListener('submit', function (e) {
-            const searchForm = e.target.closest('#manual-product-search-form');
-            if (!searchForm) return;
-            e.preventDefault();
-            const formData = new FormData(searchForm);
-            openProductModal(formData.get('q') || '', 1);
+        document.addEventListener('keydown', function (e) {
+            const searchInput = e.target.closest('#manual-product-search-input');
+            if (searchInput) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    return;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    focusManualProductRow(0);
+                    return;
+                }
+
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    focusManualProductRow(getManualProductRows().length - 1);
+                    return;
+                }
+            }
+
+            const productRow = e.target.closest('[data-select-manual-product]');
+            if (!productRow) return;
+
+            const rows = getManualProductRows();
+            const currentIndex = rows.indexOf(productRow);
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                selectManualProductRow(productRow);
+                return;
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusManualProductRow(currentIndex + 1);
+                return;
+            }
+
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (currentIndex <= 0) {
+                    focusManualProductSearchInput();
+                    return;
+                }
+                focusManualProductRow(currentIndex - 1);
+            }
         });
 
         cartBody.addEventListener('input', function (e) {

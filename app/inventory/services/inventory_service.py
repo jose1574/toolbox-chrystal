@@ -332,12 +332,21 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
 
   filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
   if query:
-    search_value = f"%{query}%"
-    filters.append(
-      (Product.code.ilike(search_value))
-      | (Product.description.ilike(search_value))
-      | (Product.referenc.ilike(search_value))
-    )
+    if "*" in query:
+      wildcard_pattern = query.replace("\\", "\\\\")
+      wildcard_pattern = wildcard_pattern.replace("%", "\\%")
+      wildcard_pattern = wildcard_pattern.replace("_", "\\_")
+      wildcard_pattern = f"%{wildcard_pattern.replace('*', '%')}%"
+      while "%%" in wildcard_pattern:
+        wildcard_pattern = wildcard_pattern.replace("%%", "%")
+      filters.append(Product.description.ilike(wildcard_pattern, escape="\\"))
+    else:
+      search_value = f"%{query}%"
+      filters.append(
+        (Product.code.ilike(search_value))
+        | (Product.description.ilike(search_value))
+        | (Product.referenc.ilike(search_value))
+      )
 
   base_stmt = (
     select(
@@ -1030,12 +1039,21 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
 
   filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
   if query:
-    search_value = f"%{query}%"
-    filters.append(
-      (Product.code.ilike(search_value))
-      | (Product.description.ilike(search_value))
-      | (Product.referenc.ilike(search_value))
-    )
+    if "*" in query:
+      wildcard_pattern = query.replace("\\", "\\\\")
+      wildcard_pattern = wildcard_pattern.replace("%", "\\%")
+      wildcard_pattern = wildcard_pattern.replace("_", "\\_")
+      wildcard_pattern = f"%{wildcard_pattern.replace('*', '%')}%"
+      while "%%" in wildcard_pattern:
+        wildcard_pattern = wildcard_pattern.replace("%%", "%")
+      filters.append(Product.description.ilike(wildcard_pattern, escape="\\"))
+    else:
+      search_value = f"%{query}%"
+      filters.append(
+        (Product.code.ilike(search_value))
+        | (Product.description.ilike(search_value))
+        | (Product.referenc.ilike(search_value))
+      )
 
   base_stmt = (
     select(
