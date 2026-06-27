@@ -23,8 +23,12 @@
             padding: 10px;
         }
 
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
         .header-table,
-        .differences-table,
         .summary-table {
             width: 100%;
             border-collapse: collapse;
@@ -62,7 +66,7 @@
             text-transform: uppercase;
         }
 
-        .differences-table th {
+        .table th {
             border: 1.5px solid #000;
             padding: 7px;
             background: #f0f0f0;
@@ -71,13 +75,13 @@
             text-align: left;
         }
 
-        .differences-table td {
+        .table td {
             border: 1px solid #333;
             padding: 6px 7px;
             vertical-align: top;
         }
 
-        .text-right {
+        .text-end {
             text-align: right;
         }
 
@@ -141,15 +145,15 @@
         </table>
 
         <div class="section-title">Productos con diferencias</div>
-        <table class="differences-table">
+        <table class="table">
             <thead>
                 <tr>
                     <th style="width: 12%;">Linea</th>
                     <th style="width: 18%;">Codigo</th>
                     <th>Descripcion</th>
-                    <th class="text-right" style="width: 14%;">Esperada</th>
-                    <th class="text-right" style="width: 14%;">Contada</th>
-                    <th class="text-right" style="width: 14%;">Diferencia</th>
+                    <th class="text-end" style="width: 14%;">Esperada</th>
+                    <th class="text-end" style="width: 14%;">Contada</th>
+                    <th class="text-end" style="width: 14%;">Diferencia</th>
                     <th style="width: 18%;">Usuario</th>
                 </tr>
             </thead>
@@ -159,9 +163,9 @@
                     <td class="text-center">{{ diff.detail_line }}</td>
                     <td>{{ diff.product_code }}</td>
                     <td>{{ diff.product.description if diff.product else '-' }}</td>
-                    <td class="text-right">{{ '%.2f'|format(diff.original_amount or 0) }}</td>
-                    <td class="text-right">{{ '%.2f'|format(diff.counted_amount or 0) }}</td>
-                    <td class="text-right {% if diff.difference < 0 %}negative{% else %}positive{% endif %}">{{ '%.2f'|format(diff.difference or 0) }}</td>
+                    <td class="text-end">{{ '%.2f'|format(diff.original_amount or 0) }}</td>
+                    <td class="text-end">{{ '%.2f'|format(diff.counted_amount or 0) }}</td>
+                    <td class="text-end {% if diff.difference < 0 %}negative{% else %}positive{% endif %}">{{ '%.2f'|format(diff.difference or 0) }}</td>
                     <td>{{ diff.user.description if diff.user else diff.user_code }}</td>
                 </tr>
                 {% else %}

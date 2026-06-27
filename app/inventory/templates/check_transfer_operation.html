@@ -7,15 +7,15 @@
 {% set reception_differences = reception_differences|default({}) %}
 
 {% block content %}
-<div class="px-4 py-6 space-y-6 p-4 ml-[4.5rem]">
-	<div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
-		<h1 class="text-2xl font-bold text-gray-900 mb-4">Recepción de traslado</h1>
+<div class="container-fluid py-4 px-4 ms-5">
+	<div class="bg-white shadow-sm border border-secondary-subtle rounded p-4">
+		<h1 class="h3 fw-bold text-dark mb-4">Recepción de traslado</h1>
 
 		{% with messages = get_flashed_messages(with_categories=true) %}
 		{% if messages %}
-		<div class="mb-4 space-y-2">
+		<div class="mb-4 d-grid gap-2">
 			{% for category, message in messages %}
-			<div class="p-3 rounded-lg border text-sm {% if category == 'success' %}bg-green-50 border-green-200 text-green-800{% elif category == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+			<div class="p-3 rounded border small {% if category == 'success' %}bg-success-subtle border-success-subtle text-success-emphasis{% elif category == 'error' %}bg-danger-subtle border-danger-subtle text-danger-emphasis{% else %}bg-primary-subtle border-primary-subtle text-primary-emphasis{% endif %}">
 				{{ message }}
 			</div>
 			{% endfor %}
@@ -24,52 +24,52 @@
 		{% endwith %}
 
 		{% if message %}
-		<div class="mb-4 p-3 text-sm text-blue-800 rounded-lg bg-blue-50 border border-blue-200">
+		<div class="mb-4 p-3 small text-primary-emphasis rounded bg-primary-subtle border border-primary-subtle">
 			{{ message }}
 		</div>
 		{% endif %}
 
 		{% if not show_products %}
-		<div class="max-w-md">
+		<div class="w-100" style="max-width: 32rem;">
 			{% if error_message %}
-			<div class="mb-3 p-3 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200">
+			<div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle">
 				{{ error_message }}
 			</div>
 			{% endif %}
 			<form 
 			      action="{{ url_for('inventory.check_transfer_operation') }}"
 				  method="post"
-			      class="space-y-3">
-				<label for="correlative" class="block text-sm font-medium text-gray-700">Correlativo del traslado</label>
+			      class="d-grid gap-3">
+				<label for="correlative" class="form-label small fw-semibold text-secondary mb-0">Correlativo del traslado</label>
 				<input type="number" id="correlative" name="correlative" required
-				       class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+				       class="form-control">
 				<button type="submit"
-				        class="w-full inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors">
+				        class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center">
 					Buscar traslado
 				</button>
 			</form>
 		</div>
 		{% else %}
-		<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-gray-200">
+		<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 border-bottom border-secondary-subtle">
 			<div>
-				<h2 class="text-xl font-semibold text-gray-900">Traslado #{{ operation.correlative }}</h2>
-				<p class="text-gray-600 text-sm mt-1">Fecha: {{ operation.emission_date }} | {{ operation.description }}</p>
-				<p class="text-sm mt-1">
+				<h2 class="h4 fw-semibold text-dark mb-1">Traslado #{{ operation.correlative }}</h2>
+				<p class="text-secondary small mb-1">Fecha: {{ operation.emission_date }} | {{ operation.description }}</p>
+				<p class="small mb-0">
 					Estado:
-					<span class="font-semibold {% if flow_status == 'IN_TRANSIT' %}text-blue-700{% else %}text-green-700{% endif %}">
+					<span class="fw-semibold {% if flow_status == 'IN_TRANSIT' %}text-primary{% else %}text-success{% endif %}">
 						{{ flow_status }}
 					</span>
 				</p>
 			</div>
-			<div class="flex space-x-3">
+			<div class="d-flex gap-2">
 				<a href="{{ url_for('inventory.check_transfer_operation') }}"
 				   hx-get="{{ url_for('inventory.check_transfer_operation') }}"
 				   hx-target="#main-content"
 				   hx-select="#main-content"
 				   hx-swap="innerHTML"
 				   hx-push-url="true"
-				   class="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm">
-					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				   class="btn btn-outline-secondary d-inline-flex align-items-center">
+					<svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
 					</svg>
 					Nueva búsqueda
@@ -79,19 +79,19 @@
 
 
 		{% if flow_status == 'IN_TRANSIT' %}
-		<div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+		<div class="mt-3 p-3 rounded border border-warning-subtle bg-warning-subtle small text-warning-emphasis">
 			Cuente la mercancía recibida en el depósito destino. Al completar todos los productos podrá cerrar la recepción.
 		</div>
-		<div>
-			<label for="product_code" class="block text-sm font-medium text-gray-700 mb-2">Buscar producto por código</label>
+		<div class="mt-3">
+			<label for="product_code" class="form-label small fw-semibold text-secondary">Buscar producto por código</label>
 			<form hx-post="{{ url_for('inventory.search_product_in_transfer', operation_id=operation.correlative) }}"
 			      hx-target="#modal-container"
 			      hx-swap="innerHTML"
-			      class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+			      class="d-flex flex-column flex-sm-row gap-2">
 				<input type="text" id="product_code" name="product_code" required
-				       class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+				       class="form-control flex-grow-1">
 				<button type="submit"
-				        class="inline-flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+				        class="btn btn-success d-inline-flex align-items-center justify-content-center">
 					Buscar
 				</button>
 			</form>
@@ -100,9 +100,9 @@
 		<div id="modal-container"></div>
 		{% endif %}
 
-		<div class="overflow-x-auto shadow-xl rounded-xl border border-gray-200 bg-white mt-4">
+		<div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-white mt-4">
 			{% if flow_status == 'IN_TRANSIT' %}
-			<div class="flex items-center justify-end px-6 pt-4 pb-2">
+			<div class="d-flex align-items-center justify-content-end px-3 pt-3 pb-2">
 				<form id="receive-form" method="post" action="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
 					hx-post="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
 					hx-target="#main-content"
@@ -110,24 +110,24 @@
 					hx-swap="innerHTML"
 					onsubmit="return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');">
 					<button type="submit" id="receive-button" disabled
-				        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-gray-100 text-gray-400 px-4 py-2 text-sm font-medium shadow-sm cursor-not-allowed">
+				        class="btn btn-light border d-inline-flex align-items-center gap-2 text-muted" style="cursor: not-allowed;">
 						<span>Cerrar, Recepcionar y Procesar</span>
 					</button>
 				</form>
 			</div>
 			{% endif %}
-			<table class="w-full text-sm text-left text-gray-500">
-				<thead class="text-xs text-gray-700 uppercase bg-gray-100 font-black tracking-wider border-b border-gray-200">
+			<table class="table table-sm align-middle mb-0">
+				<thead class="table-light small text-uppercase">
 					<tr>
-						<th class="px-6 py-4 font-bold">Código</th>
-						<th class="px-6 py-4 font-bold">Descripción</th>
-						<th class="px-6 py-4 font-bold">Referencia</th>
-						<th class="px-6 py-4 font-bold text-center">Cant. Esperada</th>
-						<th class="px-6 py-4 font-bold text-center">Cant. Contada</th>
-						<th class="px-6 py-4 font-bold text-center">Diferencia</th>
+						<th class="px-3 py-3 fw-bold">Código</th>
+						<th class="px-3 py-3 fw-bold">Descripción</th>
+						<th class="px-3 py-3 fw-bold">Referencia</th>
+						<th class="px-3 py-3 fw-bold text-center">Cant. Esperada</th>
+						<th class="px-3 py-3 fw-bold text-center">Cant. Contada</th>
+						<th class="px-3 py-3 fw-bold text-center">Diferencia</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-gray-200 bg-white" id="products-table">
+				<tbody id="products-table">
 					{% for detail in details %}
 					{% set reception_difference = reception_differences.get(detail.line) %}
 					{% set expected_amount = reception_difference.original_amount if reception_difference else detail.amount %}
@@ -135,17 +135,17 @@
 					{% set difference_display = reception_difference.difference if reception_difference else 0 %}
 					{% set has_diff = (reception_difference and reception_difference.difference != 0) %}
 					<tr id="row-{{ detail.code_product }}" data-counted="{% if flow_status == 'IN_TRANSIT' and not reception_difference %}false{% else %}true{% endif %}"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
-						<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900{% if has_diff %} text-red-900{% endif %}">{{ detail.code_product }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.description_product }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600{% if has_diff %} text-red-900{% endif %}">{{ detail.referenc }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}">{{ expected_amount }}</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}" id="counted-{{ detail.code_product }}">
+						<td class="px-3 py-3 text-nowrap small fw-semibold text-dark{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.code_product }}</td>
+						<td class="px-3 py-3 text-nowrap small text-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.description_product }}</td>
+						<td class="px-3 py-3 text-nowrap small text-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.referenc }}</td>
+						<td class="px-3 py-3 text-nowrap small text-center text-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ expected_amount }}</td>
+						<td class="px-3 py-3 text-nowrap small text-center text-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
 							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ counted_display if flow_status == 'IN_TRANSIT' else detail.amount }}{% endif %}
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700{% if has_diff %} text-red-900{% endif %}" id="diff-{{ detail.code_product }}">
+						<td class="px-3 py-3 text-nowrap small text-center text-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
 							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ difference_display if flow_status == 'IN_TRANSIT' else 0 }}{% endif %}
 							{% if has_diff %}
-							<span class="ml-1 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">Dif.</span>
+							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-danger-subtle px-2 py-0 small fw-semibold text-danger-emphasis">Dif.</span>
 							{% endif %}
 						</td>
 					</tr>
@@ -200,14 +200,11 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		if (!receiveBtn) return;
 		const enabled = allRowsCounted();
 		receiveBtn.disabled = !enabled;
-		receiveBtn.classList.toggle('cursor-not-allowed', !enabled);
-		receiveBtn.classList.toggle('bg-gray-100', !enabled);
-		receiveBtn.classList.toggle('text-gray-400', !enabled);
-		receiveBtn.classList.toggle('border-gray-300', !enabled);
-		receiveBtn.classList.toggle('bg-green-600', enabled);
+		receiveBtn.classList.toggle('btn-light', !enabled);
+		receiveBtn.classList.toggle('text-muted', !enabled);
+		receiveBtn.classList.toggle('btn-success', enabled);
 		receiveBtn.classList.toggle('text-white', enabled);
-		receiveBtn.classList.toggle('border-green-700', enabled);
-		receiveBtn.classList.toggle('hover:bg-green-700', enabled);
+		receiveBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
 	}
 
 	document.body.addEventListener('htmx:afterSwap', function(evt) {

@@ -2,18 +2,18 @@
 {% block title %}Contador de Productos - Toolbox{% endblock %}
 
 {% block content %}
-<div class="p-4 ml-[4.5rem]">
-    <h1 class="text-2xl font-semibold text-gray-800 mb-4">Contador de Productos</h1>
+<div class="container-fluid py-4 px-4 ms-5">
+    <h1 class="h3 fw-semibold text-dark mb-3">Contador de Productos</h1>
 </div>
 
 {% if not store %}
-<div class="bg-white shadow-sm p-6 rounded-lg space-y-4 p-4 ml-[4.5rem]">
-    <h2 class="text-lg font-bold text-heading">Seleccionar Depósito</h2>
+<div class="bg-white shadow-sm p-4 rounded border border-secondary-subtle ms-5 me-3">
+    <h2 class="h5 fw-bold text-heading">Seleccionar Depósito</h2>
     <form action="{{ url_for('inventory.product_counter') }}">
         <div>
-            <label for="store_code" class="block text-sm font-medium text-gray-700 mb-1">Depósito</label>
+            <label for="store_code" class="form-label small fw-semibold text-secondary">Depósito</label>
             <select id="store_code" name="store_code"
-                class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                class="form-select form-select-sm">
                 <option value="">-- Seleccionar depósito --</option>
                 {% for s in stores %}
                 <option value="{{ s.code }}" {% if s.code==store_code %}selected{% endif %}>{{ s.description }}
@@ -21,14 +21,13 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex justify-end gap-3 p-4">
-            <button type="submit"
-                class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+        <div class="d-flex justify-content-end gap-2 p-3">
+            <button type="submit" class="btn btn-primary btn-sm">
                 Aplicar
             </button>
             <a href="{{ url_for('inventory.index') }}" 
-                class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
-                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+                <svg width="16" height="16" class="me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                 </svg>
@@ -40,11 +39,11 @@
 
 {% endif %}
 {% if store %}
-<div class="flex items-center justify-between mb-2 p-4 ml-[4.5rem]">
-    <h3 class="text-lg font-semibold text-gray-800">Depósito seleccionado: {{ store.description }}</h3>
+<div class="d-flex align-items-center justify-content-between mb-2 px-4 ms-5 me-3">
+    <h3 class="h5 fw-semibold text-dark mb-0">Depósito seleccionado: {{ store.description }}</h3>
     <a href="{{ url_for('inventory.product_counter') }}" 
-        class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
-        <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
+        class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+        <svg width="16" height="16" class="me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
             stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
@@ -52,55 +51,44 @@
     </a>
 </div>
 <!-- resultado del conteo de productos -->
-<div class="bg-white shadow-sm rounded-lg mt-4 p-4 ml-[4.5rem]">
+<div class="bg-white shadow-sm rounded border border-secondary-subtle mt-3 p-3 ms-5 me-3">
     <div id="container-table"
-        class="w-full max-w-full overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white">
+        class="w-100 overflow-x-auto border border-secondary-subtle rounded bg-white">
 
         <div class="w-full">
-            <div id="controls" class="flex flex-wrap items-center justify-between gap-4 p-4 ">
+            <div id="controls" class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3">
                 <form hx-get="{{ url_for('inventory.search_product_counter', store_code=store.code) }}" hx-target="body"
-                    hx-swap="beforeend" autocomplete="off" class="flex items-center gap-2">
+                    hx-swap="beforeend" autocomplete="off" class="d-flex align-items-center gap-2">
                     <input type="hidden" name="store_code" value="{{ store.code }}">
-                    <label for="product_code" class="text-sm font-medium text-gray-700 mr-3">Código de producto:</label>
+                    <label for="product_code" class="small fw-semibold text-secondary me-2 mb-0">Código de producto:</label>
                     <input id="product_code" name="product_code" type="text" placeholder="Escanear o escribir código"
-                        class="block w-48 md:w-64 rounded-md border border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        class="form-control form-control-sm"
+                        style="max-width: 16rem;"
                         autocomplete="off">
                 </form>
-                <div class="flex items-center gap-4 md:gap-6">
+                <div class="d-flex align-items-center gap-2">
                     <a href="{{ url_for('inventory.clear_product_counter', store_code=store.code) }}"
-                        class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
-                            <path d="M3 6h18" />
-                            <path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" />
-                            <path d="M10 10v6" />
-                            <path d="M14 10v6" />
-                            <path d="M9 6l1-2h4l1 2" />
-                        </svg>
+                        class="btn btn-outline-danger btn-sm">
                         Limpiar conteo
                     </a>
                     <button type="submit" form="save-counter-form" 
-                        class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
-                            <path d="M5 12l4 4L19 6" />
-                        </svg>
+                        class="btn btn-primary btn-sm">
                         Finalizar conteo
                     </button>
                 </div>
             </div>
             <form id="save-counter-form" action="{{ url_for('inventory.save_products_counter', store_code=store.code) }}" method="post" target="_blank" >
-                <table class=" w-full table-fixed text-xs text-left text-gray-500">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
                         <tr scope="col" class="px-6 py-3">
-                            <th class="px-4 py-3 w-[15%]">Código</th>
-                            <th class="px-4 py-3 w-[30%]">Descripción</th>
-                            <th class="px-4 py-3 w-[15%]">Referencia</th>
-                            <th class="px-4 py-3 w-[10%] text-center">Unidad</th>
-                            <th class="px-4 py-3 w-[10%] text-center">Exist.</th>
-                            <th class="px-4 py-3 w-[10%] text-center">Contada</th>
-                            <th class="px-4 py-3 w-[10%] text-center">Dif.</th>
-                            <th class="px-4 py-3 w-[10%] text-center">
+                            <th class="px-4 py-3" style="width: 15%;">Código</th>
+                            <th class="px-4 py-3" style="width: 30%;">Descripción</th>
+                            <th class="px-4 py-3" style="width: 15%;">Referencia</th>
+                            <th class="px-4 py-3 text-center" style="width: 10%;">Unidad</th>
+                            <th class="px-4 py-3 text-center" style="width: 10%;">Exist.</th>
+                            <th class="px-4 py-3 text-center" style="width: 10%;">Contada</th>
+                            <th class="px-4 py-3 text-center" style="width: 10%;">Dif.</th>
+                            <th class="px-4 py-3 text-center" style="width: 10%;">
                                 Acciones
                             </th>
                         </tr>

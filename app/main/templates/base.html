@@ -4,35 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Toolbox{% endblock %}</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    {# <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}"> #}
     <script>
         (function () {
             const savedTheme = localStorage.getItem('theme');
             const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
+            const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', theme);
         })();
     </script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900" id="main-content">
+<body class="bg-body-tertiary" id="main-content">
     <nav>
         <aside id="default-sidebar"
-            class="fixed top-0 left-0 z-40 w-16 h-screen transition-all duration-300"
+            class="position-fixed top-0 start-0 z-3 vh-100 shadow-sm"
             aria-label="Sidenav">
-            <div class="overflow-y-auto py-5 px-3 h-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <ul class="space-y-2">
+            <div class="h-100 overflow-auto py-4 px-3 bg-body border-end">
+                <ul class="list-unstyled d-grid gap-2 mb-0">
                     <li>
                         <button id="sidebar-toggle" type="button" class="sidebar-item" aria-label="Alternar menú">
                             <svg class="sidebar-icon" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                 <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
                             </svg>
-                            <span class="sidebar-text hidden ml-3">Menú</span>
+                            <span class="sidebar-text d-none ms-3">Menú</span>
                         </button>
                     </li>
                     <li>
@@ -41,7 +39,7 @@
                                 <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                                 <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                             </svg>
-                            <span class="sidebar-text hidden">Inicio</span>
+                            <span class="sidebar-text d-none">Inicio</span>
                         </a>
                     </li>
 
@@ -50,15 +48,15 @@
                         <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
                         </svg>
-                        <span class="sidebar-text hidden flex-1 ml-3 text-left whitespace-nowrap">Inventario</span>
-                        <svg class="sidebar-arrow hidden w-5 h-5 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Inventario</span>
+                        <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                         </svg>
                     </button>
-                    <ul id="dropdown-inventory" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
+                    <ul id="dropdown-inventory" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
                         <li>
-                            <a href="{{ url_for('inventory.index') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400 dark:text-sky-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.index') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                                     <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                                 </svg>
@@ -66,80 +64,80 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.auto_order_collection') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-amber-400 dark:text-amber-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.auto_order_collection') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-warning" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M4 3a1 1 0 00-1 1v12a1 1 0 001.447.894L10 14.118l5.553 2.776A1 1 0 0017 16V4a1 1 0 00-1-1H4z"></path>
                                 </svg>
                                 <span>Orden de recolección</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.manual_order_collection') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-cyan-400 dark:text-cyan-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.manual_order_collection') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3 4a2 2 0 012-2h6.586A2 2 0 0113 2.586L16.414 6A2 2 0 0117 7.414V16a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm7 1a1 1 0 00-1 1v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V6a1 1 0 00-1-1z"></path>
                                 </svg>
                                 <span>Orden manual de recolección</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.check_order') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-emerald-400 dark:text-emerald-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.check_order') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-success" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-3-3a1 1 0 011.414-1.414L9 11.586l6.293-6.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Chequeo de orden de recolección</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.start_transfer_operation') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-blue-400 dark:text-blue-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.start_transfer_operation') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-primary" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4A1 1 0 015.707 9.293L8 11.586V3a1 1 0 011-1h1zm-7 13a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Inicio de traslado</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.check_transfer_operation') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-orange-400 dark:text-orange-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.check_transfer_operation') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-warning" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3a1 1 0 010 2H5v10h3a1 1 0 110 2H5a2 2 0 01-2-2V5zm14.707 5.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L14.586 11H9a1 1 0 110-2h5.586l-1.293-1.293a1 1 0 011.414-1.414l3 3z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Recepción de traslado</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.listado_productos') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-cyan-400 dark:text-cyan-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.listado_productos') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm2 3a1 1 0 100 2h8a1 1 0 100-2H6zm0 4a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Listado de productos</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.product_params') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-rose-400 dark:text-rose-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.product_params') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-danger" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.14.7a1 1 0 01-.75.77l-.73.18a1 1 0 00-.35 1.77l.62.43a1 1 0 01.41 1.07l-.16.71a1 1 0 001.48 1.08l.63-.38a1 1 0 011.06 0l.63.38a1 1 0 001.48-1.08l-.16-.71a1 1 0 01.41-1.07l.62-.43a1 1 0 00-.35-1.77l-.73-.18a1 1 0 01-.75-.77l-.14-.7zM10 13a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Parámetros de productos</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.products_locations') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-fuchsia-400 dark:text-fuchsia-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.products_locations') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-danger" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M5.05 3.636a7 7 0 119.9 9.9L10 18.485l-4.95-4.95a7 7 0 010-9.9zM10 9a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Ubicación de productos</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.product_counter') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-lime-400 dark:text-lime-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.product_counter') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-success" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 7a1 1 0 011-1h2a1 1 0 110 2H8v1a1 1 0 11-2 0V9zm6 0a1 1 0 100 2h1v1a1 1 0 102 0V9a1 1 0 00-1-1h-2z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Contador de productos</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('products_label.index') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-violet-400 dark:text-violet-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('products_label.index') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-primary" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M2 4a2 2 0 012-2h5.586a2 2 0 011.414.586l5.414 5.414a2 2 0 010 2.828l-4.414 4.414a2 2 0 01-2.828 0L3.172 8.828A2 2 0 012.586 7.414V4zm4 1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Etiquetas de Productos</span>
@@ -153,15 +151,15 @@
                         <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
                         </svg>
-                        <span class="sidebar-text hidden flex-1 ml-3 text-left whitespace-nowrap">Informes</span>
-                        <svg class="sidebar-arrow hidden w-5 h-5 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Informes</span>
+                        <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                         </svg>
                     </button>
-                    <ul id="dropdown-reports" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
+                    <ul id="dropdown-reports" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
                         <li>
-                            <a href="{{ url_for('inventory.transfer_traceability') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400 dark:text-sky-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.transfer_traceability') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                                     <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                                 </svg>
@@ -169,8 +167,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.transfer_differences') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400 dark:text-sky-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('inventory.transfer_differences') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                                     <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                                 </svg>
@@ -178,8 +176,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('reports.product_stock') }}" class="sidebar-subitem flex items-center gap-2" role="menuitem">
-                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400 dark:text-sky-300" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <a href="{{ url_for('reports.product_stock') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-info" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                                     <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                                 </svg>
@@ -194,13 +192,13 @@
                         <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
                         </svg>
-                        <span class="sidebar-text hidden flex-1 ml-3 text-left whitespace-nowrap">Administración</span>
-                        <svg class="sidebar-arrow hidden w-5 h-5 flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Administración</span>
+                        <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
                             xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                         </svg>
                     </button>
-                    <ul id="dropdown-admin" class="sidebar-submenu hidden py-2 space-y-0.5" role="menu">
+                    <ul id="dropdown-admin" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
                         <li><a href="{{ url_for('admin.manage_users') }}" class="sidebar-subitem" role="menuitem">Usuarios</a></li>
                         <li><a href="{{ url_for('admin.user_profile') }}" class="sidebar-subitem" role="menuitem">Perfiles</a></li>
                         <li><a href="{{ url_for('admin.manage_menus') }}" class="sidebar-subitem" role="menuitem">Menús</a></li>
@@ -213,21 +211,21 @@
                             <path d="M8.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414L11 7.586V3a1 1 0 10-2 0v4.586l-.293-.293z"></path>
                             <path d="M3 5a2 2 0 012-2h1a1 1 0 010 2H5v7h2l1 2h4l1-2h2V5h-1a1 1 0 110-2h1a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"></path>
                         </svg>
-                        <span class="sidebar-text hidden flex-1 ml-3 whitespace-nowrap text-left">Documentos</span>
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-nowrap text-start">Documentos</span>
                     </a>
                 </li>
             </ul>
 
-                <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
+                <ul class="pt-4 mt-4 d-grid gap-2 border-top list-unstyled">
                     <li>
                         <button id="theme-toggle" type="button" class="sidebar-item" aria-label="Cambiar tema">
-                            <svg id="theme-toggle-dark-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <svg id="theme-toggle-dark-icon" class="sidebar-icon d-none" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 6a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707A1 1 0 104.343 5.757l.707.707zM4 11a1 1 0 100-2H3a1 1 0 000 2h1zm1.343 4.657a1 1 0 001.414 0l.707-.707A1 1 0 106.05 13.536l-.707.707a1 1 0 000 1.414z"></path>
                             </svg>
-                            <svg id="theme-toggle-light-icon" class="sidebar-icon hidden" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <svg id="theme-toggle-light-icon" class="sidebar-icon d-none" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                             </svg>
-                            <span id="theme-toggle-label" class="sidebar-text hidden ml-3">Tema</span>
+                            <span id="theme-toggle-label" class="sidebar-text d-none ms-3">Tema</span>
                         </button>
                     </li>
                     <li>
@@ -236,20 +234,20 @@
                                 <path fill-rule="evenodd" d="M3 4.5A1.5 1.5 0 014.5 3h7A1.5 1.5 0 0113 4.5V6a1 1 0 11-2 0v-.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V14a1 1 0 112 0v1.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 15.5v-11z" clip-rule="evenodd"></path>
                                 <path fill-rule="evenodd" d="M15.707 10.707a1 1 0 00-1.414-1.414L13.586 10H8a1 1 0 100 2h5.586l.707.707a1 1 0 001.414-1.414L14.414 11l1.293-1.293z" clip-rule="evenodd"></path>
                             </svg>
-                            <span class="sidebar-text hidden ml-3">Salir</span>
+                            <span class="sidebar-text d-none ms-3">Salir</span>
                         </a>
                     </li>
                 </ul>
             </div>
         </aside>
 
-        <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/40 z-30"></div>
+        <div id="sidebar-backdrop" class="d-none position-fixed top-0 start-0 end-0 bottom-0 z-2 bg-dark bg-opacity-50"></div>
     </nav>
 
     {% block content %}{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/document_manager.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    {# <script src="{{ url_for('static', filename='js/document_manager.js') }}"></script> #}
     <script>
         (function () {
             const sidebar = document.getElementById('default-sidebar');
@@ -259,26 +257,52 @@
 
             const textElements = document.querySelectorAll('.sidebar-text, .sidebar-arrow');
             const itemElements = document.querySelectorAll('.sidebar-item');
+            const subitemElements = document.querySelectorAll('.sidebar-subitem');
             const submenus = document.querySelectorAll('.sidebar-submenu');
             const dropdownButtons = document.querySelectorAll('.sidebar-dropdown-trigger');
-            let expanded = false;
+            const allSidebarIcons = document.querySelectorAll('#default-sidebar svg');
+            const collapsedWidth = '4rem';
+            const expandedWidth = '13rem';
+            let expanded = localStorage.getItem('sidebarExpanded') === 'true';
+
+            sidebar.style.transition = 'width .25s ease';
+
+            allSidebarIcons.forEach((icon) => {
+                icon.setAttribute('width', '16');
+                icon.setAttribute('height', '16');
+            });
+
+            itemElements.forEach((el) => {
+                el.classList.add('btn', 'btn-sm', 'w-100', 'd-flex', 'align-items-center', 'gap-2', 'rounded-2', 'text-body', 'text-decoration-none', 'border-0', 'py-1', 'px-2');
+                if (el.tagName === 'BUTTON') {
+                    el.classList.add('bg-transparent');
+                }
+            });
+
+            subitemElements.forEach((el) => {
+                el.classList.add('rounded-2', 'px-2', 'py-1', 'small', 'text-body', 'text-decoration-none', 'd-flex', 'align-items-center', 'gap-2');
+            });
+
+            submenus.forEach((submenu) => {
+                submenu.classList.add('ms-1', 'ps-2', 'border-start');
+            });
 
             function closeSubmenus() {
-                submenus.forEach((submenu) => submenu.classList.add('hidden'));
+                submenus.forEach((submenu) => submenu.classList.add('d-none'));
                 dropdownButtons.forEach((button) => button.setAttribute('aria-expanded', 'false'));
             }
 
             function setExpandedState(value) {
                 expanded = value;
-                sidebar.classList.toggle('w-56', expanded);
-                sidebar.classList.toggle('w-16', !expanded);
-                sidebar.classList.toggle('shadow-2xl', expanded);
-                backdrop.classList.toggle('hidden', !expanded);
+                sidebar.style.width = expanded ? expandedWidth : collapsedWidth;
+                sidebar.classList.toggle('shadow-lg', expanded);
+                backdrop.classList.toggle('d-none', !expanded);
+                localStorage.setItem('sidebarExpanded', expanded ? 'true' : 'false');
 
-                textElements.forEach((el) => el.classList.toggle('hidden', !expanded));
+                textElements.forEach((el) => el.classList.toggle('d-none', !expanded));
                 itemElements.forEach((el) => {
-                    el.classList.toggle('justify-center', !expanded);
-                    el.classList.toggle('justify-start', expanded);
+                    el.classList.toggle('justify-content-center', !expanded);
+                    el.classList.toggle('justify-content-start', expanded);
                 });
 
                 if (!expanded) closeSubmenus();
@@ -313,10 +337,10 @@
                     const panel = id ? document.getElementById(id) : null;
                     if (!panel) return;
 
-                    const willOpen = panel.classList.contains('hidden');
+                    const willOpen = panel.classList.contains('d-none');
                     closeSubmenus();
                     if (willOpen) {
-                        panel.classList.remove('hidden');
+                        panel.classList.remove('d-none');
                         button.setAttribute('aria-expanded', 'true');
                     }
                 });
@@ -338,18 +362,22 @@
 
             if (!toggleButton || !darkIcon || !lightIcon || !label) return;
 
-            function renderThemeState(isDark) {
-                darkIcon.classList.toggle('hidden', !isDark);
-                lightIcon.classList.toggle('hidden', isDark);
+            function renderThemeState(theme) {
+                const isDark = theme === 'dark';
+                darkIcon.classList.toggle('d-none', !isDark);
+                lightIcon.classList.toggle('d-none', isDark);
                 label.textContent = isDark ? 'Tema oscuro' : 'Tema claro';
             }
 
-            renderThemeState(document.documentElement.classList.contains('dark'));
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            renderThemeState(currentTheme);
 
             toggleButton.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                renderThemeState(isDark);
+                const activeTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                const nextTheme = activeTheme === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-bs-theme', nextTheme);
+                localStorage.setItem('theme', nextTheme);
+                renderThemeState(nextTheme);
             });
         })();
     </script>

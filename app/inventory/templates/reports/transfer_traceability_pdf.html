@@ -9,9 +9,9 @@
         body { font-family: Arial, sans-serif; font-size: 10px; color: #111; margin: 0; padding: 10px; }
         h1 { font-size: 18px; margin: 0 0 4px; text-transform: uppercase; }
         .meta { color: #444; margin-bottom: 12px; }
-        .matrix { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .matrix th { color: #fff; padding: 7px; border: 1px solid #111; text-align: left; font-size: 9px; text-transform: uppercase; }
-        .matrix td { padding: 7px; border: 1px solid #555; vertical-align: top; }
+        .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .table th { color: #fff; padding: 7px; border: 1px solid #111; text-align: left; font-size: 9px; text-transform: uppercase; }
+        .table td { padding: 7px; border: 1px solid #555; vertical-align: top; }
         .operation-head { background: #1f2937; width: 22%; }
         .step-1 { background: #0369a1; }
         .step-2 { background: #0f766e; }
@@ -36,7 +36,7 @@
         Generado por: {{ user.description if user else 'Sistema' }} | {{ now.strftime('%d/%m/%Y %H:%M:%S') }}
     </div>
 
-    <table class="matrix">
+    <table class="table">
         <thead>
             <tr>
                 <th class="operation-head">Operación</th>

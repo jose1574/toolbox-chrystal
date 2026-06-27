@@ -2,227 +2,95 @@
 {% block title %}Inventario - Toolbox{% endblock %}
 
 {% block content %}
-<div class="p-4 ml-[4.5rem]">
-	<section class="bg-gray-50">
-		<div class="w-full px-2 sm:px-4 lg:px-6">
-			<div class="bg-white shadow-md rounded-lg p-6 sm:p-8">
-				<h2 class="text-2xl font-semibold text-gray-800">Operaciones de inventarios</h2>
+<div class="container-fluid py-4 px-4 ms-5">
+  <section>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+        <h2 class="h3 fw-semibold text-dark">Operaciones de inventarios</h2>
 
-				<div class="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-					<!-- Card: Crear Orden de Recolección -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-teal-50 border border-teal-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-teal-100 text-teal-600">
-							<!-- Truck icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M8.25 18.75a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 0h7.5m-7.5 0V6.75A2.25 2.25 0 0 1 10.5 4.5h3.75a2.25 2.25 0 0 1 2.25 2.25v12m0 0a1.5 1.5 0 1 0 3 0m-3 0a1.5 1.5 0 1 1 3 0m0 0h.75a2.25 2.25 0 0 0 2.25-2.25V13.5a2.25 2.25 0 0 0-.66-1.59l-2.85-2.85A2.25 2.25 0 0 0 17.94 8.25H16.5" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Orden de recolección</h5>
-						<p class="mb-6 text-gray-600">Selecciona depósitos y productos para generar una orden de
-							traslado en espera.</p>
-						<a href="{{ url_for('inventory.auto_order_collection') }}" class="inline-flex items-center text-gray-700
-                     bg-white box-border border
-                      border-gray-300 hover:bg-gray-100
-                       hover:text-gray-900 focus:ring-4 focus:ring-gray-200 
-                       shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-info-subtle bg-info-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Orden de recolección</h5>
+                <p class="card-text text-secondary flex-grow-1">Selecciona depósitos y productos para generar una orden de traslado en espera.</p>
+                <a href="{{ url_for('inventory.auto_order_collection') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					<!-- Card: Chequeo de Orden de Recolección -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-indigo-50 border border-indigo-100">
-						<div
-							class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-100 text-indigo-600">
-							<!-- Clipboard Check icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M9 12.75 11.25 15 15 9.75m-2.955-5.1-.3-.6a1.125 1.125 0 0 0-1.01-.63H9A2.25 2.25 0 0 0 6.75 5.625V6H6a2.25 2.25 0 0 0-2.25 2.25v9.75A2.25 2.25 0 0 0 6 20.25h12a2.25 2.25 0 0 0 2.25-2.25V8.25A2.25 2.25 0 0 0 18 6h-.75v-.375A2.25 2.25 0 0 0 15 3.375h-1.5c-.427 0-.82.244-1.005.625Z" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Chequeo de orden de recolección
-						</h5>
-						<p class="mb-6 text-gray-600">Escanea productos, concilia cantidades y valida la orden de
-							recolección.</p>
-						<a href="{{ url_for('inventory.check_order') }}"
-							class="cursor-pointer inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-primary-subtle bg-primary-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Chequeo de orden de recolección</h5>
+                <p class="card-text text-secondary flex-grow-1">Escanea productos, concilia cantidades y valida la orden de recolección.</p>
+                <a href="{{ url_for('inventory.check_order') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					<!-- Card: Inicio de Traslado -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-blue-50 border border-blue-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100 text-blue-600">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M8.25 18.75a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 0h7.5m-7.5 0V6.75A2.25 2.25 0 0 1 10.5 4.5h3.75a2.25 2.25 0 0 1 2.25 2.25v12m0 0a1.5 1.5 0 1 0 3 0m-3 0a1.5 1.5 0 1 1 3 0m0 0h.75a2.25 2.25 0 0 0 2.25-2.25V13.5a2.25 2.25 0 0 0-.66-1.59l-2.85-2.85A2.25 2.25 0 0 0 17.94 8.25H16.5" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Inicio de traslado</h5>
-						<p class="mb-6 text-gray-600">Confirma la carga y registra el responsable que retira la mercancía.</p>
-						<a href="{{ url_for('inventory.start_transfer_operation') }}"
-							class="cursor-pointer inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-secondary-subtle bg-light">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Inicio de traslado</h5>
+                <p class="card-text text-secondary flex-grow-1">Confirma la carga y registra el responsable que retira la mercancía.</p>
+                <a href="{{ url_for('inventory.start_transfer_operation') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					<!-- Card: Recepción de Traslado -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-green-50 border border-green-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-green-100 text-green-600">
-							<!-- Arrow Down Tray / caja recepción icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M3.75 6A2.25 2.25 0 0 1 6 3.75h12A2.25 2.25 0 0 1 20.25 6v4.5A2.25 2.25 0 0 1 18 12.75H6A2.25 2.25 0 0 1 3.75 10.5V6Zm3 9.75h10.5a3 3 0 0 1 2.965 2.588l.285 2.282a.75.75 0 0 1-.744.83H4.244a.75.75 0 0 1-.744-.83l.285-2.282A3 3 0 0 1 6.75 15.75Zm5.47-8.28 2.25 2.25a.75.75 0 1 1-1.06 1.06l-.97-.97v3.19a.75.75 0 0 1-1.5 0v-3.19l-.97.97a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0Z" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Recepción de traslado
-						</h5>
-						<p class="mb-6 text-gray-600">Herramienta para contar físicamente productos de traslados.</p>
-						<a href="{{ url_for('inventory.check_transfer_operation') }}" 
-							class="cursor-pointer inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-success-subtle bg-success-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Recepción de traslado</h5>
+                <p class="card-text text-secondary flex-grow-1">Herramienta para contar físicamente productos de traslados.</p>
+                <a href="{{ url_for('inventory.check_transfer_operation') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-info-subtle bg-info-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Orden manual de recolección</h5>
+                <p class="card-text text-secondary flex-grow-1">Agrega productos uno por uno y define cantidades antes de generar la orden.</p>
+                <a href="{{ url_for('inventory.manual_order_collection') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-cyan-50 border border-cyan-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-cyan-100 text-cyan-600">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Orden manual de recolección</h5>
-						<p class="mb-6 text-gray-600">Agrega productos uno por uno y define cantidades antes de generar la orden.</p>
-						<a href="{{ url_for('inventory.manual_order_collection') }}"
-							class="cursor-pointer inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-warning-subtle bg-warning-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Parámetros de Productos</h5>
+                <p class="card-text text-secondary flex-grow-1">Edita existencias mínima y máxima y otros parámetros por depósito.</p>
+                <a href="{{ url_for('inventory.product_params') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					<!-- Card: Configurar parámetros de productos -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-amber-50 border border-amber-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-amber-100 text-amber-600">
-							<!-- Adjustments/Sliders icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M6 13.5h12M6 6h12M6 21h12M9 6v12m6-6v6" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Parámetros de Productos
-						</h5>
-						<p class="mb-6 text-gray-600">Edita existencias mínima y máxima y otros parámetros por depósito.
-						</p>
-						<a href="{{ url_for('inventory.product_params') }}" class="inline-flex items-center text-gray-700 bg-white
-					 box-border border border-gray-300 hover:bg-gray-100
-					  hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm 
-					  font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-danger-subtle bg-danger-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Ubicación de Productos</h5>
+                <p class="card-text text-secondary flex-grow-1">Asigna y actualiza ubicaciones por depósito para agilizar la recolección.</p>
+                <a href="{{ url_for('inventory.products_locations') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
 
-					
-
-					<!-- Card: Configurar ubicación de productos -->
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-rose-50 border border-rose-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-rose-100 text-rose-600">
-							<!-- Map Pin icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM19.5 10.5c0 7.5-7.5 10.5-7.5 10.5S4.5 18 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Ubicación de Productos
-						</h5>
-						<p class="mb-6 text-gray-600">Asigna y actualiza ubicaciones por depósito para agilizar la
-							recolección.</p>
-						<a href="{{ url_for('inventory.products_locations') }}" 
-							class="inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
-
-					<div
-						class="block p-6 rounded-lg shadow-sm hover:shadow transition bg-rose-50 border border-rose-100">
-						<div class="flex items-center justify-center h-12 w-12 rounded-md bg-rose-100 text-rose-600">
-							<!-- Map Pin icon -->
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8"
-								stroke="currentColor" class="w-7 h-7">
-								<path stroke-linecap="round" stroke-linejoin="round"
-									d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM19.5 10.5c0 7.5-7.5 10.5-7.5 10.5S4.5 18 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-							</svg>
-						</div>
-						<h5 class="mt-6 mb-2 text-xl font-semibold tracking-tight text-gray-900">Contador de Productos
-						</h5>
-						<p class="mb-6 text-gray-600">Visualiza y gestiona el conteo de productos en cada depósito.</p>
-						<a href="{{ url_for('inventory.product_counter') }}" 
-							class="inline-flex items-center text-gray-700 bg-white box-border border border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:ring-4 focus:ring-gray-200 shadow-sm font-medium rounded-md text-sm px-4 py-2.5 focus:outline-none">
-							Abrir
-							<svg class="w-4 h-4 ml-1.5 -mr-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-								width="24" height="24" fill="none" viewBox="0 0 24 24">
-								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-									stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
-							</svg>
-						</a>
-					</div>
-
-
-
-				</div>
-			</div>
-		</div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-danger-subtle bg-danger-subtle">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Contador de Productos</h5>
+                <p class="card-text text-secondary flex-grow-1">Visualiza y gestiona el conteo de productos en cada depósito.</p>
+                <a href="{{ url_for('inventory.product_counter') }}" class="btn btn-outline-secondary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
-</section>
-</div>
-
-
 {% endblock %}

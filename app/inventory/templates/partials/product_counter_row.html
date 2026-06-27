@@ -1,23 +1,23 @@
-<tr class="border-b border-gray-200 last:border-b-0">
+<tr class="border-bottom border-secondary-subtle">
     <!-- datos ocultos para que HTMX pueda enviarlos al borrar -->
     <input type="hidden" name="product_code" value="{{ product.code }}">
     <input type="hidden" name="store_code" value="{{ store_code }}">
 
-    <td class="py-2 w-[15%]">{{ product.code }}</td>
-    <td class="py-2 w-[30%]">{{ product.description }}</td>
-    <td class="py-2 w-[15%]">{{ product.referenc }}</td>
-    <td class="py-2 w-[10%] text-center">{{ unit.description }}</td>
-    <td class="py-2 w-[10%] text-center">{{ system_qty }}</td>
-    <td class="py-2 w-[10%] text-center">{{ counted_amount }}</td>
-    <td class="py-2 w-[10%] text-center">{{ difference }}</td>
-    <td class="py-2 w-[10%] text-center">
+    <td class="py-2" style="width: 15%;">{{ product.code }}</td>
+    <td class="py-2" style="width: 30%;">{{ product.description }}</td>
+    <td class="py-2" style="width: 15%;">{{ product.referenc }}</td>
+    <td class="py-2 text-center" style="width: 10%;">{{ unit.description }}</td>
+    <td class="py-2 text-center" style="width: 10%;">{{ system_qty }}</td>
+    <td class="py-2 text-center" style="width: 10%;">{{ counted_amount }}</td>
+    <td class="py-2 text-center" style="width: 10%;">{{ difference }}</td>
+    <td class="py-2 text-center" style="width: 10%;">
         <button
             type="button"
             hx-post="{{ url_for('inventory.remove_product_counter_row') }}"
             hx-target="closest tr"
             hx-include="closest tr"
             hx-swap="outerHTML"
-            class="text-red-600 hover:text-red-800 text-xs font-medium"
+            class="btn btn-outline-danger btn-sm"
         >
             Quitar
         </button>

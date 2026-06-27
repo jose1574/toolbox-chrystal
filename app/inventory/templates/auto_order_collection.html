@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Orden de recolección - Toolbox{% endblock %}
 {% block content %}
-<div class="p-4 ml-[4.5rem]">
-    <div class="flex items-center justify-between mb-4">
+<div class="container-fluid py-4 px-4 ms-5">
+    <div class="d-flex align-items-center justify-content-between mb-3">
         {% if store_origin and store_dst %}
         <button type="button" hx-get="{{ url_for('inventory.auto_order_collection') }}" hx-target="#main-content"
              hx-swap="innerHTML" hx-push-url="true"
-            class="text-sm text-blue-700 hover:underline">
+            class="btn btn-link btn-sm text-decoration-none p-0 text-primary">
             Cambiar depósitos
         </button>
         {% endif %}
@@ -14,10 +14,10 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="mb-4 space-y-2">
+    <div class="mb-4 d-grid gap-2">
         {% for category, message in messages %}
         <div
-            class="px-4 py-3 rounded border text-sm {% if category == 'success' %}bg-green-50 text-green-800 border-green-200{% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border-yellow-200{% elif category == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-gray-50 text-gray-800 border-gray-200{% endif %}">
+            class="px-4 py-3 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-light text-dark border-secondary-subtle{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -26,17 +26,17 @@
     {% endwith %}
 
     {% if not store_origin or not store_dst %}
-    <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm max-w-md w-full mx-auto">
-        <h1 class="text-2xl font-bold">Orden de Traslado Automático</h1>
+    <div class="p-4 bg-white border border-secondary-subtle rounded shadow-sm mx-auto w-100" style="max-width: 32rem;">
+        <h1 class="h3 fw-bold">Orden de Traslado Automático</h1>
 
-        <h2 class="text-lg font-semibold text-heading mb-4">Seleccionar Depósitos</h2>
+        <h2 class="h5 fw-semibold text-heading mb-3">Seleccionar Depósitos</h2>
         <form method="get" action="{{ url_for('inventory.auto_order_collection') }}"
             hx-get="{{ url_for('inventory.auto_order_collection') }}" hx-target="#main-content"
-             hx-swap="innerHTML" hx-push-url="true" class="space-y-4">
+             hx-swap="innerHTML" hx-push-url="true" class="d-grid gap-3">
             <div>
-                <label for="store_origin" class="block text-sm font-medium text-gray-700 mb-1">Depósito origen</label>
+                <label for="store_origin" class="form-label small fw-semibold text-secondary">Depósito origen</label>
                 <select id="store_origin" name="store_origin"
-                    class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    class="form-select form-select-sm">
                     <option value="">-- Seleccionar depósito origen --</option>
                     {% for store in stores %}
                     <option value="{{ store.code }}" {% if store.code==store_origin %}selected{% endif %}>{{
@@ -45,9 +45,9 @@
                 </select>
             </div>
             <div>
-                <label for="store_dst" class="block text-sm font-medium text-gray-700 mb-1">Depósito destino</label>
+                <label for="store_dst" class="form-label small fw-semibold text-secondary">Depósito destino</label>
                 <select id="store_dst" name="store_dst"
-                    class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    class="form-select form-select-sm">
                     <option value="">-- Seleccionar depósito destino --</option>
                     {% for s in stores %}
                     <option value="{{ s.code }}" {% if s.code==store_dst %}selected{% endif %}>{{ s.description}}
@@ -55,14 +55,14 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="flex justify-end gap-4">
+            <div class="d-flex justify-content-end gap-2">
                 <button type="submit"
-                    class="inline-flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-base text-sm px-4 py-2.5 shadow-xs transition-colors">
+                    class="btn btn-primary btn-sm">
                     Aplicar
                 </button>
                 <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content"
                     hx-swap="innerHTML" hx-push-url="true"
-                    class="inline-flex items-center text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-base text-sm px-4 py-2.5 shadow-sm transition-colors">
+                    class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
                     <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.8" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -75,7 +75,7 @@
     {% endif %}
 
     {% if store_origin and store_dst %}
-    <div class="mb-6 mt-6 p-4 bg-gray-100 rounded-lg space-y-1">
+    <div class="mb-4 mt-4 p-3 bg-light rounded border border-secondary-subtle">
         <p>
             <strong>Depósito Origen:</strong> {{ store_origin }} <span class="text-sm text-gray-600">{{
                 store_origin_name }}</span>
@@ -85,32 +85,32 @@
                 }}</span>
         </p>
     </div>
-    <div class="mb-4 p-3 bg-gray-100 rounded-lg flex flex-wrap items-center gap-6 sticky top-0 z-10" id="filter-panel"
+    <div class="mb-4 p-3 bg-light rounded border border-secondary-subtle d-flex flex-wrap align-items-center gap-3 sticky-top" id="filter-panel"
         style="position: sticky; top: 0; z-index: 10;">
-        <div class="flex items-center gap-4">
-            <label for="search" class="text-sm font-bold text-gray-700 whitespace-nowrap">Buscar:</label>
+        <div class="d-flex align-items-center gap-2">
+            <label for="search" class="small fw-bold text-secondary mb-0 text-nowrap">Buscar:</label>
             <input type="text" id="search" placeholder="Código o nombre..."
-                class="filter-input block w-64 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2">
+                class="filter-input form-control form-control-sm" style="width: 16rem;">
         </div>
 
         <!-- Dropdown Departamentos -->
-        <div class="relative flex items-center gap-4">
-            <label class="text-sm font-bold text-gray-700 whitespace-nowrap">Depto:</label>
-            <div class="dropdown-container relative">
+        <div class="position-relative d-flex align-items-center gap-2">
+            <label class="small fw-bold text-secondary mb-0 text-nowrap">Depto:</label>
+            <div class="dropdown-container position-relative">
                 <button type="button"
-                    class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                    class="dropdown-trigger d-flex align-items-center justify-content-between btn btn-outline-secondary btn-sm" style="width: 14rem;">
                     <span class="truncate">Seleccionar...</span>
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="ms-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
+                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-white border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for dept in departments %}
-                    <label class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer transition-colors">
+                    <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ dept }}"
-                            class="dept-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="ml-2 text-xs text-gray-700 truncate">{{ dept }}</span>
+                            class="dept-checkbox form-check-input mt-0">
+                        <span class="ms-2 small text-secondary text-truncate">{{ dept }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -118,39 +118,39 @@
         </div>
 
         <!-- Dropdown Marcas -->
-        <div class="relative flex items-center gap-4">
-            <label class="text-sm font-bold text-gray-700 whitespace-nowrap">Marca:</label>
-            <div class="dropdown-container relative">
+        <div class="position-relative d-flex align-items-center gap-2">
+            <label class="small fw-bold text-secondary mb-0 text-nowrap">Marca:</label>
+            <div class="dropdown-container position-relative">
                 <button type="button"
-                    class="dropdown-trigger flex items-center justify-between w-56 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                    class="dropdown-trigger d-flex align-items-center justify-content-between btn btn-outline-secondary btn-sm" style="width: 14rem;">
                     <span class="truncate">Seleccionar...</span>
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="ms-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu hidden absolute z-10 mt-1 w-56 h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg p-1">
+                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-white border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for mark in marks %}
-                    <label class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer transition-colors">
+                    <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ mark }}"
-                            class="mark-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="ml-2 text-xs text-gray-700 truncate">{{ mark }}</span>
+                            class="mark-checkbox form-check-input mt-0">
+                        <span class="ms-2 small text-secondary text-truncate">{{ mark }}</span>
                     </label>
                     {% endfor %}
                 </div>
             </div>
             <button type="button" id="clear-filters"
-                class="ml-auto text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-4 py-2 transition-colors">
+                class="btn btn-outline-secondary btn-sm ms-2">
                 Limpiar
             </button>
         </div>
         <div>
-            <p>cantidad de productos: {{ products|length }}</p>
-            <p>productos seleccionados: <span id="selected-count">0</span></p>
+            <p class="small mb-1">cantidad de productos: {{ products|length }}</p>
+            <p class="small mb-0">productos seleccionados: <span id="selected-count">0</span></p>
         </div>
         <div>
             <button type="submit" hx-trigger="submit" form="auto-order-form"
-                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
+                class="btn btn-primary btn-sm">
                 Generar Orden
             </button>
         </div>
@@ -165,19 +165,19 @@
         {% endwith %}
     </div>
 
-    <div id="results-container" class="relative overflow-x-auto shadow-md sm:rounded-lg">
+    <div id="results-container" class="table-responsive shadow-sm rounded border border-secondary-subtle bg-white">
         <form id="auto-order-form" hx-post="{{ url_for('inventory.save_auto_order_collection') }}"
             hx-target="#main-content" hx-swap="innerHTML" hx-trigger="submit">
 
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
-            <table class="w-full text-sm text-left text-gray-500">
+            <table class="table table-sm align-middle mb-0">
 
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <thead class="table-light small text-uppercase">
                     <tr>
                         <th scope="col" class="px-6 py-3">
                             <input type="checkbox" id="select-all"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                class="form-check-input">
                         </th>
                         <th scope="col" class="px-6 py-3">Código</th>
                         <th scope="col" class="px-6 py-3">Descripción</th>
@@ -188,23 +188,23 @@
                         <th scope="col" class="px-6 py-3">Exist. Min</th>
                         <th scope="col" class="px-6 py-3">Exist. Max</th>
                         <th scope="col" class="px-6 py-3">Stock Dest. {{ store_dst_name or store_dst }}</th>
-                        <th scope="col" class="px-6 py-3 bg-blue-50 dark:bg-slate-800/80 dark:text-slate-100">A
+                        <th scope="col" class="px-6 py-3 bg-primary-subtle">A
                             Transferir</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for product in products %}
 
-                    <tr class="product-row bg-white border-b hover:bg-gray-50" data-code="{{ product.code|lower }}"
+                    <tr class="product-row bg-white" data-code="{{ product.code|lower }}"
                         data-description="{{ product.description|lower }}"
                         data-dept="{{ product.department_description }}" data-mark="{{ product.mark_description }}">
                         <td class="px-6 py-4">
                             <input type="checkbox" name="{{ product.code }}" value="selected"
-                                class="product-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                class="product-checkbox form-check-input">
                         </td>
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                        <td class="px-6 py-4 fw-semibold text-dark text-nowrap">
                             <a href="{{ url_for('inventory.modal_product_params') }}?product_code={{ product.code|urlencode }}&store={{ store_dst|urlencode }}"
-                                class="product-link inline-flex items-center text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                                class="product-link d-inline-flex align-items-center text-primary text-decoration-none"
                                 data-product-code="{{ product.code }}"
                                 data-store="{{ store_dst }}"
                                 aria-label="Abrir parametros del producto {{ product.code }}">
@@ -220,14 +220,14 @@
                         <td class="px-6 py-4">{{ product.minimum_stock }}</td>
                         <td class="px-6 py-4">{{ product.maximum_stock }}</td>
                         <td class="px-6 py-4">{{ product.stock_destination }}</td>
-                        <td class="px-6 py-4 bg-blue-50 dark:bg-slate-800/70">
+                        <td class="px-6 py-4 bg-primary-subtle">
                             <input type="number" value="{{ product.to_transfer }}" name="qty_{{ product.code }}"
-                                class="block w-20 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-600">
+                                class="form-control form-control-sm" style="max-width: 6rem;">
                         </td>
                     </tr>
                     {% else %}
-                    <tr class="bg-white border-b">
-                        <td colspan="11" class="px-6 py-4 text-center text-gray-500 italic">No se encontraron productos
+                    <tr class="bg-white">
+                        <td colspan="11" class="px-6 py-4 text-center text-muted fst-italic">No se encontraron productos
                             que requieran transferencia según los niveles de stock.</td>
                     </tr>
                     {% endfor %}
@@ -270,13 +270,13 @@
             if (!target) return;
 
             target.outerHTML = `
-                <div id="product-modal" class="fixed inset-0 z-50 bg-gray-600/50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-                    <div class="p-4 border max-w-md w-full shadow-lg rounded-md bg-white">
-                        <div class="flex items-start justify-between mb-3">
-                            <h2 class="text-lg font-semibold text-gray-900">Error</h2>
-                            <button type="button" class="text-gray-500 hover:text-gray-700" data-close-product-modal>Cerrar</button>
+                <div id="product-modal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;" role="dialog" aria-modal="true">
+                    <div class="p-3 border w-100 shadow rounded bg-white" style="max-width: 32rem;">
+                        <div class="d-flex align-items-start justify-content-between mb-2">
+                            <h2 class="h5 fw-semibold text-dark mb-0">Error</h2>
+                            <button type="button" class="btn btn-link btn-sm text-decoration-none" data-close-product-modal>Cerrar</button>
                         </div>
-                        <p class="text-sm text-gray-700">${safeMessage}</p>
+                        <p class="small text-secondary mb-0">${safeMessage}</p>
                     </div>
                 </div>
             `;
@@ -285,15 +285,15 @@
         document.querySelectorAll('.dropdown-trigger').forEach(trigger => {
             trigger.addEventListener('click', (e) => {
                 const menu = trigger.nextElementSibling;
-                const isOpen = !menu.classList.contains('hidden');
-                document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-                if (!isOpen) menu.classList.remove('hidden');
+                const isOpen = !menu.classList.contains('d-none');
+                document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('d-none'));
+                if (!isOpen) menu.classList.remove('d-none');
                 e.stopPropagation();
             });
         });
 
         document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('d-none'));
         });
 
         document.addEventListener('click', (e) => {

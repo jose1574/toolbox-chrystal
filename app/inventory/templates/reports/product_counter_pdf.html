@@ -33,33 +33,32 @@
 			display: inline-block;
 			margin-right: 12px;
 		}
-		h2 {
-			font-size: 15px;
-			margin: 14px 0 6px 0;
-		}
-		table {
+		.table {
 			width: 100%;
 			border-collapse: collapse;
 			margin-top: 8px;
 		}
-		thead {
+		h2 {
+			font-size: 15px;
+			margin: 14px 0 6px 0;
+		}
+		.table thead {
 			background: #f3f4f6;
 		}
-		th, td {
+		.table th, .table td {
 			border: 1px solid #e5e7eb;
 			padding: 5px 6px;
 			text-align: left;
 		}
-		th {
+		.table th {
 			text-transform: uppercase;
 			font-size: 15px;
 			letter-spacing: 0.03em;
 			color: #374151;
 		}
-		td.numeric {
+		.text-end {
 			text-align: right;
 			font-variant-numeric: tabular-nums;
-			font-size: 15px;
 		}
 		.status-sobrante { color: #047857; font-weight: 600; }
 		.status-faltante { color: #b91c1c; font-weight: 600; }
@@ -97,7 +96,7 @@
 
 	<div class="section">
 		<h2>Operaciones generadas por el conteo</h2>
-		<table class="operations-table">
+		<table class="table operations-table">
 			<thead>
 				<tr>
 					<th>Tipo</th>
@@ -142,7 +141,7 @@
 
 	<div class="section">
 		<h2>Detalle del resultado de inventario</h2>
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th>Código</th>
@@ -158,9 +157,9 @@
 				<tr>
 					<td>{{ h.product.code }}</td>
 					<td>{{ h.product.description }}</td>
-					<td class="numeric">{{ '%.2f'|format(h.system_qty) }}</td>
-					<td class="numeric">{{ '%.2f'|format(h.counted_qty) }}</td>
-					<td class="numeric">{{ '%.2f'|format(h.difference) }}</td>
+					<td class="text-end">{{ '%.2f'|format(h.system_qty) }}</td>
+					<td class="text-end">{{ '%.2f'|format(h.counted_qty) }}</td>
+					<td class="text-end">{{ '%.2f'|format(h.difference) }}</td>
 					<td>
 						{% if h.difference > 0 %}
 							<span class="status-sobrante">Sobrante</span>
