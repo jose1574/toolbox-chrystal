@@ -259,7 +259,7 @@
 
         function resetProductModalTarget() {
             const currentModal = document.getElementById('product-modal');
-            if (currentModal && currentModal.classList.contains('fixed')) {
+            if (currentModal && currentModal.classList.contains('position-fixed')) {
                 currentModal.outerHTML = '<div id="product-modal"></div>';
             }
         }

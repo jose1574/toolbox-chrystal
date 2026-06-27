@@ -1906,7 +1906,7 @@ def product_counter_report(count_batch_id):
 @login_required
 def modal_product_params(product_code=None, store=None):
     product_code = product_code or request.values.get("product_code")
-    store = store or request.values.get("store")
+    store = store or request.values.get("store") or request.values.get("store_code")
 
     if request.method == "POST":
         form_product_code = inventory_service.normalize_code(request.form.get("product_code") or product_code)
@@ -1921,6 +1921,7 @@ def modal_product_params(product_code=None, store=None):
         main_code = modal_data["main_code"]
         product_info = modal_data["product"]
         store_info = modal_data["store"]
+        existing_params = modal_data["product_params"]
 
         if not product_info:
             return "Producto no encontrado.", 404
@@ -1947,7 +1948,7 @@ def modal_product_params(product_code=None, store=None):
                 main_code,
                 minimal_stock,
                 maximum_stock,
-                "",
+                existing_params.location if existing_params and existing_params.location else "",
             )
             return "Parametros guardados correctamente.", 200
         except Exception as exc:
