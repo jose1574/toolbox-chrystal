@@ -1,18 +1,72 @@
 {% extends "base.html" %}
 {% block title %}Orden de recolección - Toolbox{% endblock %}
 {% block content %}
-<div class="container-fluid py-4 px-4 ms-5">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        {% if store_origin and store_dst %}
-        <button type="button" hx-get="{{ url_for('inventory.auto_order_collection') }}" hx-target="#main-content"
-             hx-swap="innerHTML" hx-push-url="true"
-            class="btn btn-link btn-sm text-decoration-none p-0 text-primary">
-            Cambiar depósitos
-        </button>
-        {% endif %}
-    </div>
+<style>
+    .auto-order-table {
+        width: 100%;
+        table-layout: fixed;
+    }
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
+    .auto-order-table th,
+    .auto-order-table td {
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .auto-order-table .col-check {
+        width: 3rem;
+    }
+
+    .auto-order-table .col-code {
+        width: 8rem;
+    }
+
+    .auto-order-table .col-description {
+        width: 16rem;
+    }
+
+    .auto-order-table .col-unit,
+    .auto-order-table .col-mark,
+    .auto-order-table .col-department {
+        width: 9rem;
+    }
+
+    .auto-order-table .col-stock,
+    .auto-order-table .col-min,
+    .auto-order-table .col-max,
+    .auto-order-table .col-destination,
+    .auto-order-table .col-transfer {
+        width: 7rem;
+    }
+
+    .auto-order-table .product-code-link {
+        overflow-wrap: anywhere;
+    }
+
+    .auto-order-table .transfer-input {
+        max-width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        .auto-order-table .col-description {
+            width: 12rem;
+        }
+
+        .auto-order-table .col-unit,
+        .auto-order-table .col-mark,
+        .auto-order-table .col-department,
+        .auto-order-table .col-stock,
+        .auto-order-table .col-min,
+        .auto-order-table .col-max,
+        .auto-order-table .col-destination,
+        .auto-order-table .col-transfer {
+            width: 6rem;
+        }
+    }
+</style>
+
+
+ {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="mb-4 d-grid gap-2">
         {% for category, message in messages %}
@@ -24,10 +78,31 @@
     </div>
     {% endif %}
     {% endwith %}
+<div class="container-fluid py-4 px-3 px-lg-4">
+        {% if store_origin and store_dst %}
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <div class="mt-3 mt-md-0 d-flex flex-column flex-sm-row gap-2">
+                    <a href="{{ url_for('inventory.auto_order_collection') }}"
+                        class="btn btn-secondary d-inline-flex align-items-center justify-content-center">
+                        <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Cambiar depósitos
+                    </a>
+                </div>
+            </div>
+        
+        </div>
+        {% endif %}
+
+   
 
     {% if not store_origin or not store_dst %}
     <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto w-100" style="max-width: 32rem;">
         <h1 class="h3 fw-bold text-body">Orden de Traslado Automático</h1>
+        <hr>
 
         <h2 class="h5 fw-semibold text-body mb-3">Seleccionar Depósitos</h2>
         <form method="get" action="{{ url_for('inventory.auto_order_collection') }}"
@@ -105,7 +180,7 @@
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
+                    class="filter-dropdown-menu d-none position-absolute start-0 z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for dept in departments %}
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ dept }}"
@@ -129,7 +204,7 @@
                     </svg>
                 </button>
                 <div
-                    class="dropdown-menu d-none position-absolute z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
+                    class="filter-dropdown-menu d-none position-absolute start-0 z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 14rem; max-height: 12rem; overflow-y: auto;">
                     {% for mark in marks %}
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
                         <input type="checkbox" value="{{ mark }}"
@@ -171,7 +246,20 @@
 
             <input type="hidden" name="store_origin" value="{{ store_origin }}">
             <input type="hidden" name="store_dst" value="{{ store_dst }}">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 auto-order-table">
+                <colgroup>
+                    <col class="col-check">
+                    <col class="col-code">
+                    <col class="col-description">
+                    <col class="col-unit">
+                    <col class="col-mark">
+                    <col class="col-department">
+                    <col class="col-stock">
+                    <col class="col-min">
+                    <col class="col-max">
+                    <col class="col-destination">
+                    <col class="col-transfer">
+                </colgroup>
 
                 <thead class="bg-body-tertiary small text-uppercase">
                     <tr>
@@ -202,9 +290,9 @@
                             <input type="checkbox" name="{{ product.code }}" value="selected"
                                 class="product-checkbox form-check-input">
                         </td>
-                        <td class="px-6 py-4 fw-semibold text-body text-nowrap">
+                        <td class="px-6 py-4 fw-semibold text-body">
                             <a href="{{ url_for('inventory.modal_product_params') }}?product_code={{ product.code|urlencode }}&store={{ store_dst|urlencode }}"
-                                class="product-link d-inline-flex align-items-center text-primary text-decoration-none"
+                                class="product-link product-code-link d-inline-flex align-items-center text-primary text-decoration-none"
                                 data-product-code="{{ product.code }}"
                                 data-store="{{ store_dst }}"
                                 aria-label="Abrir parametros del producto {{ product.code }}">
@@ -222,7 +310,7 @@
                         <td class="px-6 py-4">{{ product.stock_destination }}</td>
                         <td class="px-6 py-4 bg-primary-subtle">
                             <input type="number" value="{{ product.to_transfer }}" name="qty_{{ product.code }}"
-                                class="form-control form-control-sm" style="max-width: 6rem;">
+                                class="form-control form-control-sm transfer-input">
                         </td>
                     </tr>
                     {% else %}
@@ -286,14 +374,14 @@
             trigger.addEventListener('click', (e) => {
                 const menu = trigger.nextElementSibling;
                 const isOpen = !menu.classList.contains('d-none');
-                document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('d-none'));
+                document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.add('d-none'));
                 if (!isOpen) menu.classList.remove('d-none');
                 e.stopPropagation();
             });
         });
 
         document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('d-none'));
+            document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.add('d-none'));
         });
 
         document.addEventListener('click', (e) => {
@@ -361,7 +449,7 @@
             }
         });
 
-        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        document.querySelectorAll('.filter-dropdown-menu').forEach(menu => {
             menu.addEventListener('click', (e) => e.stopPropagation());
         });
 

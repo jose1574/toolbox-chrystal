@@ -1,11 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container-fluid py-4 px-4 ms-5">
+<style>
+    #products-tbody tr.row-counted-match>* {
+        background-color: rgba(13, 110, 253, 0.18) !important;
+    }
+
+    #products-tbody tr.row-counted-diff>* {
+        background-color: rgba(255, 193, 7, 0.30) !important;
+    }
+
+    #products-tbody tr.row-counted-match td,
+    #products-tbody tr.row-counted-diff td {
+        transition: background-color 0.18s ease-in-out;
+    }
+</style>
+<div class="container-fluid py-4 px-3 px-lg-4">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="d-grid gap-2">
         {% for category, message in messages %}
-        <div class="p-3 rounded border small {% if category == 'success' %}bg-success-subtle border-success-subtle text-success-emphasis{% elif category == 'error' %}bg-danger-subtle border-danger-subtle text-danger-emphasis{% else %}bg-primary-subtle border-primary-subtle text-primary-emphasis{% endif %}">
+        <div
+            class="p-3 rounded border small {% if category == 'success' %}bg-success-subtle border-success-subtle text-success-emphasis{% elif category == 'error' %}bg-danger-subtle border-danger-subtle text-danger-emphasis{% else %}bg-primary-subtle border-primary-subtle text-primary-emphasis{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -14,10 +29,13 @@
     {% endwith %}
 
     {% if not order or not details %}
-    <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto mt-4 w-100" style="max-width: 32rem;">
+    <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto mt-4 w-100"
+        style="max-width: 32rem;">
         <h2 class="h4 fw-semibold text-body mb-3">Chequeo de Orden de Recolección</h2>
+        <hr>
         {% if error %}
-        <div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle" role="alert">
+        <div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle"
+            role="alert">
             <span class="fw-semibold">Error:</span> {{ error|safe }}
         </div>
         {% endif %}
@@ -25,8 +43,7 @@
             <div>
                 <label for="order_id" class="form-label small fw-semibold text-body">Ingrese Correlativo de la
                     orden</label>
-                <input type="number" id="order_id" name="order_id"
-                    value=""
+                <input type="number" id="order_id" name="order_id" value=""
                     class="form-control bg-body-tertiary border border-secondary-subtle text-body small"
                     placeholder="Ingresa el correlativo">
             </div>
@@ -35,7 +52,7 @@
                     Cargar Orden
                 </button>
                 <a href="{{ url_for('inventory.index') }}"
-                   class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+                    class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
                     Regresar
                 </a>
             </div>
@@ -44,42 +61,41 @@
     {% endif %}
 
     {% if order and details %}
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 border-bottom border-secondary-subtle mb-3">
+    <div
+        class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 border-bottom border-secondary-subtle mb-3">
+
         <div>
             <h1 class="h3 fw-bold text-body mb-1">
-                Chequeo de Orden #{{ order.correlative if order else '---' }}
+                Chequeo de Orden de Recolección #{{ order.correlative if order else '---' }}
             </h1>
             <p class="text-body-secondary small mb-0">
                 Depósito: <span class="fw-semibold text-body-secondary">{{ order.store_origin_description }}</span>
                 <span class="mx-2 text-primary">→</span>
                 Destino: <span class="fw-semibold text-body-secondary">{{ order.store_dst_description }}</span>
             </p>
+            <div class="mt-3 mt-md-0 d-flex flex-column flex-sm-row gap-2">
+                <a href="{{ url_for('inventory.check_order') }}"
+                    class="btn btn-secondary d-inline-flex align-items-center justify-content-center">
+                    <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Atras
+                </a>
+            </div>
         </div>
-        <div class="mt-3 mt-md-0 d-flex flex-column flex-sm-row gap-2">
-            <button hx-get="{{ url_for('inventory.check_order') }}" hx-target="#main-content" hx-select="#main-content"
-                hx-swap="innerHTML" hx-push-url="true"
-                class="btn btn-outline-secondary d-inline-flex align-items-center">
-                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Nueva búsqueda
-            </button>
-        </div>
+
     </div>
-    
+
 
     <div class="w-100" style="max-width: 40rem;">
-        <form class="d-grid gap-2">
-            <label for="code-product" class="form-label small fw-semibold text-body mb-0">Buscar código de
+        <form class="d-grid gap-2 m-4">
+            <label for="code-product" class="form-label small fw-semibold text-body mb-0 h3">Buscar código de
                 producto</label>
             <input type="text" id="code-product" name="code-product"
-                class="form-control bg-body-tertiary border border-secondary-subtle text-body small text-uppercase"
-                placeholder="Ingrese código de producto" 
-                hx-get="{{ url_for('inventory.search_product') }}"
-                hx-target="#product-modal-container" 
-                hx-include="[name='order_id']" 
-                hx-trigger="keydown[key=='Enter']"
+                class="form-control bg-body-tertiary border border-secondary-subtle text-body small"
+                placeholder="código de producto" hx-get="{{ url_for('inventory.search_product') }}"
+                hx-target="#product-modal-container" hx-include="[name='order_id']" hx-trigger="keydown[key=='Enter']"
                 hx-on:htmx:afterRequest="if (event.detail && event.detail.elt === this) { this.value=''; this.focus(); }"
                 oninput="this.value = this.value.toUpperCase();"
                 onkeydown="if(event.key==='Enter') event.preventDefault();">
@@ -102,8 +118,8 @@
             </thead>
             <tbody id="products-tbody">
                 {% for item in details %}
-                <tr id="row-{{ item.code_product }}"
-                    data-code="{{ item.code_product }}" data-expected="{{ item.amount }}">
+                <tr id="row-{{ item.code_product }}" data-code="{{ item.code_product }}"
+                    data-expected="{{ item.amount }}">
                     <td class="px-4 py-3 fw-semibold text-body">{{ item.code_product }}</td>
                     <td class="px-4 py-3 small fw-semibold leading-relaxed">
                         {{ item.product_description }}
@@ -125,8 +141,7 @@
                     </td>
                     <td class="px-4 py-3 text-center">
                         <button type="button" hx-post="{{ url_for('inventory.delete_product_from_order') }}"
-                            hx-target="[id='row-{{ item.code_product }}']" hx-swap="delete"
-                            hx-include="closest tr"
+                            hx-target="[id='row-{{ item.code_product }}']" hx-swap="delete" hx-include="closest tr"
                             hx-confirm="¿Estás seguro de que quieres eliminar este producto de la orden?"
                             hx-on:htmx:afterRequest="const hidden=document.getElementById('hidden-counted-{{ item.code_product }}'); if(hidden){hidden.remove();} checkAllCounted()"
                             class="btn btn-sm btn-outline-danger fw-bold py-1 px-2">
@@ -150,8 +165,7 @@
             <input type="hidden" name="counted_{{ item.code_product }}" id="hidden-counted-{{ item.code_product }}"
                 value="">
             {% endfor %}
-            <button id="save-button" type="button" onclick="generateOrder()"
-                class="btn btn-success w-100 fw-bold py-2">
+            <button id="save-button" type="button" onclick="generateOrder()" class="btn btn-success w-100 fw-bold py-2">
                 Confirmar Chequeo
             </button>
         </form>
@@ -199,20 +213,26 @@
 
         function generateOrder() {
             const rows = document.querySelectorAll('tbody tr');
-            let allCounted = true;
+            const pendingRows = [];
             rows.forEach((row) => {
                 const status = row.querySelector('[id^="status-"]');
                 if (status && !status.textContent.trim().includes('Contado')) {
-                    allCounted = false;
+                    pendingRows.push(row);
                 }
             });
-            if (allCounted) {
+            if (pendingRows.length) {
+                const confirmed = confirm('aun hay productos que no se han terminado de contar, ¿deseas confirmar el chequeo y eliminar estos productos de la orden?');
+                if (confirmed) {
+                    submitCheckOrder();
+                }
+                return;
+            }
+
+            if (rows.length) {
                 const confirmed = confirm('¿Confirmar chequeo de recolección?');
                 if (confirmed) {
                     submitCheckOrder();
                 }
-            } else {
-                alert('Debe contar todos los productos antes de generar la orden.');
             }
         }
 
@@ -287,11 +307,8 @@
                 const countedText = countedCell ? countedCell.textContent : '';
                 const countedNum = parseFloat(detail.counted_amount || countedText || '0');
                 const hasDiff = !Number.isNaN(expected) && !Number.isNaN(countedNum) && countedNum !== expected;
-                if (hasDiff) {
-                    row.classList.add('row-diff');
-                } else {
-                    row.classList.remove('row-diff');
-                }
+                row.classList.remove('row-counted-match', 'row-counted-diff');
+                row.classList.add(hasDiff ? 'row-counted-diff' : 'row-counted-match');
             }
             ensureHiddenCountedInput(code, detail.counted_amount);
             closeModal();

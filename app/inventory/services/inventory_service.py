@@ -1454,6 +1454,25 @@ def delete_detail_from_order(order_id, code_product):
   return True
 
 
+def delete_details_from_order(order_id, code_products):
+  normalized_codes = [normalize_code(code) for code in code_products if code]
+  if not normalized_codes:
+    return 0
+
+  details = (
+    InventoryOperationDetail.query.filter(
+      InventoryOperationDetail.main_correlative == order_id,
+      func.upper(func.trim(InventoryOperationDetail.code_product)).in_(normalized_codes),
+    )
+    .all()
+  )
+
+  for detail in details:
+    db.session.delete(detail)
+
+  return len(details)
+
+
 def get_transfer_operation_by_correlative(correlative):
   return InventoryOperation.query.filter_by(
     correlative=correlative,

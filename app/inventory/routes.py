@@ -876,16 +876,24 @@ def save_order_check():
         flash("Orden no encontrada.", "error")
         return redirect(url_for("inventory.check_order"))
 
-    # Actualizar las cantidades contadas en la BD para los productos restantes
+    uncounted_products = []
+
     for key, value in request.form.items():
         if key.startswith("counted_"):
             code_product = inventory_service.normalize_code(key[8:])  # Remove "counted_"
-            counted_amount = float(value) if value else 0
-
             detail = inventory_service.find_detail_by_codes(order_id, [code_product])
 
+            if value is None or str(value).strip() == "":
+                if detail:
+                    uncounted_products.append(code_product)
+                continue
+
+            counted_amount = float(value)
             if detail:
                 detail.amount = counted_amount
+
+    if uncounted_products:
+        inventory_service.delete_details_from_order(order_id, uncounted_products)
 
     # Actualizar descripción de cabecera para reflejar el chequeo
     order.description = "orden de recoleccion chequeada"

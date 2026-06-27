@@ -81,13 +81,13 @@
 
                 <div class="row g-3">
                     <div>
-                        <label for="responsible_user" class="form-label small fw-semibold text-body-secondary">Usuario responsable</label>
+                        <label for="responsible_user" class="form-label small fw-semibold text-body-secondary input-skip">Usuario responsable</label>
                         <input type="text" id="responsible_user" name="responsible_user" autocomplete="username"
                             class="form-control text-uppercase"
                             oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div>
-                        <label for="responsible_password" class="form-label small fw-semibold text-body-secondary">Clave</label>
+                        <label for="responsible_password" class="form-label small fw-semibold text-body-secondary input-skip">Clave</label>
                         <input type="password" id="responsible_password" name="responsible_password" autocomplete="current-password"
                             class="form-control">
                     </div>
@@ -102,4 +102,27 @@
         {% endif %}
     </div>
 </div>
+<script>
+    const responsibleInput = document.getElementById('responsible') || document.getElementById('responsible_user');
+    const responsiblePasswordInput = document.getElementById('responsible_password');
+
+    if (responsibleInput && responsiblePasswordInput) {
+        responsibleInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                responsiblePasswordInput.focus();
+            }
+        });
+
+        responsiblePasswordInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const form = responsiblePasswordInput.closest('form');
+                if (form) {
+                    form.requestSubmit();
+                }
+            }
+        });
+    }
+</script>
 {% endblock %}
