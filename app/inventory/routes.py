@@ -14,32 +14,12 @@ import json
 from io import BytesIO
 from flask_login import login_required, current_user
 from datetime import datetime
-from uuid import uuid4
-from app import db
-from sqlalchemy import select, case, func, text
-from sqlalchemy.orm import aliased, joinedload
 from app.inventory import inventory_bp
 import pandas as pd
 import xlwt
-from app.models import (
-    Store,
-    Product,
-    ProductsUnit,
-    Department,
-    Unit,
-    Mark,
-    ProductsFailure,
-    ProductsStock,
-    Tax,
-    InventoryOperation,
-    InventoryOperationDetail,
-    InventoryOperationReceptionDifference,
-    ProductsCode,
-    ProductsCounterHistory,
-    User,
-)
 
 from app.reports.utils import render_pdf, generate_barcode
+from app.inventory.services import inventory_service
 
 
 @inventory_bp.route("/")
@@ -48,177 +28,16 @@ def index():
     return render_template("index.html")
 
 
-def _parse_date_filter(value):
-    if not value:
-        return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except ValueError:
-        return None
-
-
-def _build_transfer_traceability_filters():
-    status = (request.args.get("status") or "").strip().upper()
-    if status not in TRANSFER_STATUS_LABELS:
-        status = ""
-
-    date_from_raw = (request.args.get("date_from") or "").strip()
-    date_to_raw = (request.args.get("date_to") or "").strip()
-    query = (request.args.get("q") or "").strip()
-
-    return {
-        "status": status,
-        "date_from": date_from_raw,
-        "date_to": date_to_raw,
-        "q": query,
-        "date_from_value": _parse_date_filter(date_from_raw),
-        "date_to_value": _parse_date_filter(date_to_raw),
-    }
-
-
-def _get_transfer_traceability_rows(filters):
-    sql = text(
-        """
-        SELECT f.operation_correlative,
-               f.current_status,
-               f.recollection_issued_user,
-               issued_user.description AS recollection_issued_user_name,
-               f.recollection_issued_at,
-               f.checking_user,
-               checking_user.description AS checking_user_name,
-               f.checked_at,
-               f.in_transit_user,
-               transit_user.description AS in_transit_user_name,
-               f.in_transit_at,
-               f.receiving_user,
-               receiving_user.description AS receiving_user_name,
-               f.received_at,
-               io.document_no,
-               io.emission_date,
-               io.description,
-               io.store,
-               origin_store.description AS store_description,
-               io.destination_store,
-               destination_store.description AS destination_store_description,
-               io.wait
-          FROM toolbox.inventory_operation_flow f
-          JOIN public.inventory_operation io
-            ON io.correlative = f.operation_correlative
-          LEFT JOIN public.store origin_store
-            ON origin_store.code = io.store
-          LEFT JOIN public.store destination_store
-            ON destination_store.code = io.destination_store
-          LEFT JOIN public.users issued_user
-            ON issued_user.code = f.recollection_issued_user
-          LEFT JOIN public.users checking_user
-            ON checking_user.code = f.checking_user
-          LEFT JOIN public.users transit_user
-            ON transit_user.code = f.in_transit_user
-          LEFT JOIN public.users receiving_user
-            ON receiving_user.code = f.receiving_user
-         WHERE io.operation_type = 'TRANSFER'
-           AND (:status = '' OR f.current_status = :status)
-           AND (:date_from IS NULL OR io.emission_date >= :date_from)
-           AND (:date_to IS NULL OR io.emission_date <= :date_to)
-           AND (
-                :q = ''
-                OR CAST(f.operation_correlative AS VARCHAR) ILIKE :q_like
-                OR COALESCE(io.document_no, '') ILIKE :q_like
-                OR COALESCE(io.description, '') ILIKE :q_like
-                OR COALESCE(origin_store.description, '') ILIKE :q_like
-                OR COALESCE(destination_store.description, '') ILIKE :q_like
-           )
-         ORDER BY io.emission_date DESC NULLS LAST,
-                  f.operation_correlative DESC
-        """
-    )
-    params = {
-        "status": filters["status"],
-        "date_from": filters["date_from_value"],
-        "date_to": filters["date_to_value"],
-        "q": filters["q"],
-        "q_like": f"%{filters['q']}%",
-    }
-    return db.session.execute(sql, params).mappings().all()
-
-
-def _build_transfer_differences_filters():
-        date_from_raw = (request.args.get("date_from") or "").strip()
-        date_to_raw = (request.args.get("date_to") or "").strip()
-        query = (request.args.get("q") or "").strip()
-        return {
-                "date_from": date_from_raw,
-                "date_to": date_to_raw,
-                "q": query,
-                "date_from_value": _parse_date_filter(date_from_raw),
-                "date_to_value": _parse_date_filter(date_to_raw),
-        }
-
-
-def _get_transfer_differences_rows(filters):
-        sql = text(
-                """
-                SELECT io.correlative AS operation_correlative,
-                             io.document_no,
-                             io.emission_date,
-                             io.description,
-                             io.store,
-                             origin_store.description AS store_description,
-                             io.destination_store,
-                             destination_store.description AS destination_store_description,
-                             COALESCE(f.current_status, 'SIN_FLUJO') AS current_status,
-                             COUNT(d.correlative) AS difference_lines,
-                             SUM(d.original_amount) AS expected_total,
-                             SUM(d.counted_amount) AS counted_total,
-                             SUM(d.difference) AS difference_total,
-                             MAX(COALESCE(d.updated_at, d.detected_at)) AS last_difference_at
-                    FROM toolbox.inventory_operation_reception_differences d
-                    JOIN public.inventory_operation io
-                        ON io.correlative = d.operation_correlative
-                    LEFT JOIN toolbox.inventory_operation_flow f
-                        ON f.operation_correlative = io.correlative
-                    LEFT JOIN public.store origin_store
-                        ON origin_store.code = io.store
-                    LEFT JOIN public.store destination_store
-                        ON destination_store.code = io.destination_store
-                 WHERE io.operation_type = 'TRANSFER'
-                     AND (:date_from IS NULL OR io.emission_date >= :date_from)
-                     AND (:date_to IS NULL OR io.emission_date <= :date_to)
-                     AND (
-                                :q = ''
-                                OR CAST(io.correlative AS VARCHAR) ILIKE :q_like
-                                OR COALESCE(io.document_no, '') ILIKE :q_like
-                                OR COALESCE(io.description, '') ILIKE :q_like
-                                OR COALESCE(origin_store.description, '') ILIKE :q_like
-                                OR COALESCE(destination_store.description, '') ILIKE :q_like
-                     )
-                 GROUP BY io.correlative,
-                                    io.document_no,
-                                    io.emission_date,
-                                    io.description,
-                                    io.store,
-                                    origin_store.description,
-                                    io.destination_store,
-                                    destination_store.description,
-                                    f.current_status
-                 ORDER BY last_difference_at DESC NULLS LAST,
-                                    io.correlative DESC
-                """
-        )
-        params = {
-                "date_from": filters["date_from_value"],
-                "date_to": filters["date_to_value"],
-                "q": filters["q"],
-                "q_like": f"%{filters['q']}%",
-        }
-        return db.session.execute(sql, params).mappings().all()
-
-
 @inventory_bp.route("/transfer_traceability", methods=["GET"])
 @login_required
 def transfer_traceability():
-    filters = _build_transfer_traceability_filters()
-    transfers = _get_transfer_traceability_rows(filters)
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
     return render_template(
         "transfer_traceability.html",
         transfers=transfers,
@@ -231,8 +50,12 @@ def transfer_traceability():
 @inventory_bp.route("/transfer_differences", methods=["GET"])
 @login_required
 def transfer_differences():
-    filters = _build_transfer_differences_filters()
-    transfers = _get_transfer_differences_rows(filters)
+    filters = inventory_service.build_transfer_differences_filters(
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_differences_rows(filters)
     return render_template(
         "transfer_differences.html",
         transfers=transfers,
@@ -244,8 +67,13 @@ def transfer_differences():
 @inventory_bp.route("/transfer_traceability/pdf", methods=["GET"])
 @login_required
 def transfer_traceability_pdf():
-    filters = _build_transfer_traceability_filters()
-    transfers = _get_transfer_traceability_rows(filters)
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
     pdf = render_pdf(
         "reports/transfer_traceability_pdf.html",
         {
@@ -269,8 +97,13 @@ def transfer_traceability_pdf():
 @inventory_bp.route("/transfer_traceability/excel", methods=["GET"])
 @login_required
 def transfer_traceability_excel():
-    filters = _build_transfer_traceability_filters()
-    transfers = _get_transfer_traceability_rows(filters)
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
 
     output = BytesIO()
     wb = xlwt.Workbook()
@@ -387,297 +220,10 @@ TRANSFER_STATUS_LABELS = {
 }
 
 
-def register_flow_step1(operation_correlative, user_code):
-    conn = None
-    cursor = None
-    try:
-        conn = db.engine.raw_connection()
-        cursor = conn.cursor()
-        sql = """
-            INSERT INTO toolbox.inventory_operation_flow (
-                operation_correlative,
-                current_status,
-                recollection_issued_user
-            ) VALUES (%s, %s, %s)
-        """
-        data = (
-            operation_correlative,
-            FLOW_RECOLLECTION_ISSUED,
-            user_code,
-        )
-        cursor.execute(sql, data)
-        conn.commit()
-        return True
-    except Exception:
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def register_flow_step2(operation_correlative, user_code):
-    conn = None
-    cursor = None
-    try:
-        conn = db.engine.raw_connection()
-        cursor = conn.cursor()
-        sql = """
-            UPDATE toolbox.inventory_operation_flow
-               SET current_status = %s,
-                   checking_user = %s,
-                   checked_at = CURRENT_TIMESTAMP
-             WHERE operation_correlative = %s
-               AND current_status = %s
-        """
-        data = (
-            FLOW_RECOLLECTION_CHECKED,
-            user_code,
-            operation_correlative,
-            FLOW_RECOLLECTION_ISSUED,
-        )
-        cursor.execute(sql, data)
-        if cursor.rowcount != 1:
-            raise ValueError("La orden no esta en estado de recoleccion emitida.")
-        conn.commit()
-        return True
-    except Exception:
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def register_flow_step3(operation_correlative, user_code):
-    conn = None
-    cursor = None
-    try:
-        conn = db.engine.raw_connection()
-        cursor = conn.cursor()
-        sql = """
-            UPDATE toolbox.inventory_operation_flow
-               SET current_status = %s,
-                   in_transit_user = %s,
-                   in_transit_at = CURRENT_TIMESTAMP
-             WHERE operation_correlative = %s
-               AND current_status = %s
-        """
-        data = (
-            FLOW_IN_TRANSIT,
-            user_code,
-            operation_correlative,
-            FLOW_RECOLLECTION_CHECKED,
-        )
-        cursor.execute(sql, data)
-        if cursor.rowcount != 1:
-            raise ValueError("La orden no esta chequeada para iniciar traslado.")
-        conn.commit()
-        return True
-    except Exception:
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def register_flow_step4(operation_correlative, user_code):
-    conn = None
-    cursor = None
-    try:
-        conn = db.engine.raw_connection()
-        cursor = conn.cursor()
-        sql = """
-            UPDATE toolbox.inventory_operation_flow
-               SET current_status = %s,
-                   receiving_user = %s,
-                   received_at = CURRENT_TIMESTAMP
-             WHERE operation_correlative = %s
-               AND current_status = %s
-        """
-        data = (
-            FLOW_RECEIVED,
-            user_code,
-            operation_correlative,
-            FLOW_IN_TRANSIT,
-        )
-        cursor.execute(sql, data)
-        if cursor.rowcount != 1:
-            raise ValueError("La orden no esta en transito para recepcionar.")
-        conn.commit()
-        return True
-    except Exception:
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def _get_inventory_operation_flow(operation_correlative):
-    sql = text(
-        """
-        SELECT current_status,
-               recollection_issued_user,
-               recollection_issued_at,
-               checking_user,
-               checked_at,
-               in_transit_user,
-               in_transit_at,
-               receiving_user,
-               received_at
-          FROM toolbox.inventory_operation_flow
-         WHERE operation_correlative = :operation_correlative
-        """
-    )
-    return db.session.execute(
-        sql, {"operation_correlative": operation_correlative}
-    ).mappings().first()
-
-
-def _get_reception_difference_map(operation_correlative):
-    differences = InventoryOperationReceptionDifference.query.filter_by(
-        operation_correlative=operation_correlative
-    ).all()
-    return {difference.detail_line: difference for difference in differences}
-
-
-def _get_reception_difference(operation_correlative, detail_line):
-    return InventoryOperationReceptionDifference.query.filter_by(
-        operation_correlative=operation_correlative,
-        detail_line=detail_line,
-    ).first()
-
-
-def _validate_transfer_responsible(username, password):
-    username = _normalize_code(username)
-    password = password or ""
-
-    if not username and not password:
-        return current_user.code, None
-    if not username or not password:
-        return None, "Debe ingresar usuario y clave del responsable, o dejar ambos campos vacíos."
-
-    user = User.query.filter_by(code=username).first()
-    if not user or user.user_password != password:
-        return None, "Usuario o clave del responsable incorrectos."
-
-    return user.code, None
-
-
-def process_inventory_operation(operation_correlative):
-    conn = None
-    cursor = None
-    try:
-        conn = db.engine.raw_connection()
-        cursor = conn.cursor()
-        sql = "SELECT save_inventory_operation(%s)"
-        data = (operation_correlative,)
-        cursor.execute(sql, data)
-        conn.commit()
-        return True
-    except Exception:
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def _normalize_code(code: str) -> str:
-    return (code or "").strip().upper()
-
-
-def _resolve_main_code(code: str) -> str:
-    normalized = _normalize_code(code)
-    mapping = ProductsCode.query.filter(
-        func.upper(func.trim(ProductsCode.other_code)) == normalized
-    ).first()
-    return _normalize_code(mapping.main_code) if mapping else normalized
-
-
-def _find_detail_by_codes(order_id, codes):
-    normalized_codes = {_normalize_code(code) for code in codes if code}
-    if not normalized_codes:
-        return None
-    return (
-        InventoryOperationDetail.query.filter(
-            InventoryOperationDetail.main_correlative == order_id,
-            func.upper(func.trim(InventoryOperationDetail.code_product)).in_(
-                normalized_codes
-            ),
-        )
-        .options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(
-                ProductsUnit.unit1
-            ),
-        )
-        .first()
-    )
-
-
-def _sort_details_by_location(details):
-    def sort_key(detail):
-        location = ""
-        if detail.failure_info and detail.failure_info.location:
-            location = detail.failure_info.location.strip().upper()
-
-        code_product = _normalize_code(detail.code_product)
-        return (location == "", location, code_product)
-
-    return sorted(details, key=sort_key)
-
-
-def _build_products_list_df():
-    stmt = (
-        select(
-            Product.code.label("code"),
-            Product.description.label("description"),
-            Product.referenc.label("referenc"),
-            Product.mark.label("mark"),
-            Product.model.label("model"),
-            Product.department.label("department"),
-            Product.buy_tax.label("buy_tax"),
-            Product.sale_tax.label("sale_tax"),
-            Product.coin.label("coin"),
-            Product.serialized.label("serialized"),
-            Product.use_lots.label("use_lots"),
-            ProductsUnit.unit.label("unit"),
-            ProductsUnit.unitary_cost.label("unitary_cost"),
-            ProductsUnit.maximum_price.label("maximum_price"),
-            ProductsUnit.offer_price.label("offer_price"),
-            ProductsUnit.higher_price.label("higher_price"),
-            ProductsUnit.minimum_price.label("minimum_price"),
-        )
-        .join(ProductsUnit, ProductsUnit.product_code == Product.code)
-        .where(ProductsUnit.main_unit.is_(True))
-        .order_by(Product.code.asc())
-    )
-    rows = db.session.execute(stmt).mappings().all()
-    return pd.DataFrame(rows)
-
-
 @inventory_bp.route("/listado-productos", methods=["GET"])
 @login_required
 def listado_productos():
-    df = _build_products_list_df()
+    df = inventory_service.build_products_list_df()
     columns = [
         "code",
         "description",
@@ -709,7 +255,7 @@ def listado_productos():
 @inventory_bp.route("/exportar-excel", methods=["GET"])
 @login_required
 def exportar_excel_productos():
-    df = _build_products_list_df()
+    df = inventory_service.build_products_list_df()
 
     column_order = [
         "code",
@@ -816,10 +362,11 @@ def exportar_excel_productos():
 @inventory_bp.route("/auto_order_collection", methods=["GET"])
 @login_required
 def auto_order_collection():
-    stores = Store.query.all()
     new_order_id = request.args.get("new_order_id")
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
+
+    data = inventory_service.get_auto_order_collection_data(store_origin, store_dst)
 
     if store_origin and store_dst and store_origin == store_dst:
         flash("El depósito origen y destino no pueden ser el mismo.", "warning")
@@ -832,14 +379,9 @@ def auto_order_collection():
             products=[],
             departments=[],
             marks=[],
-            stores=stores,
+            stores=data["stores"],
             new_order_id=new_order_id,
         )
-
-    store_origin_obj = (
-        Store.query.filter_by(code=store_origin).first() if store_origin else None
-    )
-    store_dst_obj = Store.query.filter_by(code=store_dst).first() if store_dst else None
 
     # Si no hay selección de depósitos, solo mostramos el formulario
     if not store_origin or not store_dst:
@@ -847,325 +389,27 @@ def auto_order_collection():
             "auto_order_collection.html",
             store_origin=store_origin,
             store_dst=store_dst,
-            store_origin_name=store_origin_obj.description if store_origin_obj else "",
-            store_dst_name=store_dst_obj.description if store_dst_obj else "",
+            store_origin_name=data["store_origin_obj"].description if data["store_origin_obj"] else "",
+            store_dst_name=data["store_dst_obj"].description if data["store_dst_obj"] else "",
             products=[],
             departments=[],
             marks=[],
-            stores=stores,
+            stores=data["stores"],
             new_order_id=new_order_id,
         )
-
-    stock_orig_totals = (
-        select(
-            ProductsStock.product_code.label("product_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
-        )
-        .where(ProductsStock.store == store_origin)
-        .group_by(ProductsStock.product_code)
-        .subquery()
-    )
-
-    stock_dst_totals = (
-        select(
-            ProductsStock.product_code.label("product_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
-        )
-        .where(ProductsStock.store == store_dst)
-        .group_by(ProductsStock.product_code)
-        .subquery()
-    )
-
-    pf = aliased(ProductsFailure)
-    m = aliased(Mark)
-    d = aliased(Department)
-    u = aliased(Unit)
-    pu = aliased(ProductsUnit)
-
-    needed = pf.maximum_stock - func.coalesce(stock_dst_totals.c.stock_total, 0)
-    to_transfer = func.least(
-        func.coalesce(stock_orig_totals.c.stock_total, 0), func.greatest(needed, 0)
-    ).label("to_transfer")
-
-    stmt = (
-        select(
-            Product.code,
-            Product.description,
-            Product.mark.label("mark_code"),
-            Product.department.label("department_code"),
-            m.description.label("mark_description"),
-            d.description.label("department_description"),
-            func.coalesce(stock_orig_totals.c.stock_total, 0).label("stock_origin"),
-            pf.minimal_stock.label("minimum_stock"),
-            pf.maximum_stock.label("maximum_stock"),
-            func.coalesce(stock_dst_totals.c.stock_total, 0).label("stock_destination"),
-            u.description.label("unit_description"),
-            to_transfer,
-        )
-        .join(
-            stock_orig_totals,
-            Product.code == stock_orig_totals.c.product_code,
-        )
-        .outerjoin(
-            stock_dst_totals,
-            Product.code == stock_dst_totals.c.product_code,
-        )
-        .outerjoin(pf, (Product.code == pf.product_code) & (pf.store_code == store_dst))
-        .join(pu, (Product.code == pu.product_code) & (pu.main_unit == True))
-        .join(u, pu.unit == u.code)
-        .join(d, Product.department == d.code)
-        .outerjoin(m, Product.mark == m.code)
-        .where(
-            (func.coalesce(stock_orig_totals.c.stock_total, 0) > 0)
-            & (func.coalesce(stock_dst_totals.c.stock_total, 0) < pf.minimal_stock)
-            & (needed > 0)
-        )
-    )
-
-    results = db.session.execute(stmt).all()
-
-    unique_depts = sorted(
-        list(
-            set(
-                row.department_description
-                for row in results
-                if row.department_description
-            )
-        )
-    )
-    unique_marks = sorted(
-        list(set(row.mark_description for row in results if row.mark_description))
-    )
 
     return render_template(
         "auto_order_collection.html",
         store_origin=store_origin,
         store_dst=store_dst,
-        store_origin_name=store_origin_obj.description if store_origin_obj else "",
-        store_dst_name=store_dst_obj.description if store_dst_obj else "",
-        products=results,
-        departments=unique_depts,
-        marks=unique_marks,
-        stores=stores,
+        store_origin_name=data["store_origin_obj"].description if data["store_origin_obj"] else "",
+        store_dst_name=data["store_dst_obj"].description if data["store_dst_obj"] else "",
+        products=data["products"],
+        departments=data["departments"],
+        marks=data["marks"],
+        stores=data["stores"],
         new_order_id=new_order_id,
     )
-
-
-def _get_product_for_manual_order(product_code, store_origin):
-    main_code = _resolve_main_code(product_code)
-    if not main_code or not store_origin:
-        return None
-
-    stock_totals = (
-        select(
-            ProductsStock.product_code.label("product_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
-        )
-        .where(ProductsStock.store == store_origin)
-        .group_by(ProductsStock.product_code)
-        .subquery()
-    )
-
-    stmt = (
-        select(
-            Product.code,
-            Product.description,
-            Product.referenc,
-            Unit.description.label("unit_description"),
-            Mark.description.label("mark_description"),
-            Department.description.label("department_description"),
-            func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
-        )
-        .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
-        .join(Unit, Unit.code == ProductsUnit.unit)
-        .outerjoin(Mark, Mark.code == Product.mark)
-        .outerjoin(Department, Department.code == Product.department)
-        .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
-        .where(func.upper(func.trim(Product.code)) == main_code)
-    )
-    return db.session.execute(stmt).first()
-
-
-def _search_products_for_manual_order(store_origin, query, page=1, per_page=10):
-    query = (query or "").strip()
-    if not store_origin:
-        return [], 0, 1, 1
-
-    page = max(page or 1, 1)
-    per_page = max(min(per_page or 10, 50), 1)
-
-    stock_totals = (
-        select(
-            ProductsStock.product_code.label("product_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
-        )
-        .where(ProductsStock.store == store_origin)
-        .group_by(ProductsStock.product_code)
-        .subquery()
-    )
-
-    filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
-    if query:
-        search_value = f"%{query}%"
-        filters.append(
-            (Product.code.ilike(search_value))
-            | (Product.description.ilike(search_value))
-            | (Product.referenc.ilike(search_value))
-        )
-
-    base_stmt = (
-        select(
-            Product.code,
-            Product.description,
-            Product.referenc,
-            Unit.description.label("unit_description"),
-            Mark.description.label("mark_description"),
-            Department.description.label("department_description"),
-            func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
-        )
-        .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
-        .join(Unit, Unit.code == ProductsUnit.unit)
-        .outerjoin(Mark, Mark.code == Product.mark)
-        .outerjoin(Department, Department.code == Product.department)
-        .join(stock_totals, stock_totals.c.product_code == Product.code)
-        .where(*filters)
-        .order_by(Product.code.asc())
-    )
-
-    count_stmt = select(func.count()).select_from(base_stmt.alias("manual_products"))
-    total = db.session.execute(count_stmt).scalar() or 0
-    total_pages = max((total + per_page - 1) // per_page, 1)
-    page = min(page, total_pages)
-    products = db.session.execute(
-        base_stmt.limit(per_page).offset((page - 1) * per_page)
-    ).all()
-    return products, total, total_pages, page
-
-
-def _create_order_collection_operation(store_origin, store_dst, selected_items, source_label):
-    if not store_origin or not store_dst:
-        raise ValueError("Debes seleccionar depósito origen y destino.")
-
-    if store_origin == store_dst:
-        raise ValueError("El depósito origen y destino no pueden ser el mismo.")
-
-    store_origen_obj = Store.query.filter_by(code=store_origin).first()
-    store_dst_obj = Store.query.filter_by(code=store_dst).first()
-
-    if not store_origen_obj or not store_dst_obj:
-        raise ValueError("Depósitos inválidos.")
-
-    normalized_items = {}
-    for item in selected_items:
-        main_code = _resolve_main_code(item.get("code"))
-        try:
-            quantity = float(item.get("quantity", 0))
-        except (TypeError, ValueError):
-            quantity = 0
-
-        if main_code and quantity > 0:
-            normalized_items[main_code] = normalized_items.get(main_code, 0) + quantity
-
-    if not normalized_items:
-        raise ValueError("No se han seleccionado productos.")
-
-    header_params = {
-        "p_correlative": None,
-        "p_operation_type": "TRANSFER",
-        "p_document_no": None,
-        "p_emission_date": datetime.now().date(),
-        "p_wait": True,
-        "p_description": f"Traslado {source_label} {store_origen_obj.description} -> {store_dst_obj.description}",
-        "p_user_code": current_user.code,
-        "p_station": "00",
-        "p_store": store_origin,
-        "p_locations": "00",
-        "p_destination_store": store_dst,
-        "p_destination_location": "00",
-        "p_operation_comments": f"Generado desde Toolbox {source_label}",
-        "p_total_amount": 0.0,
-        "p_total_net": 0.0,
-        "p_total_tax": 0.0,
-        "p_total": 0.0,
-        "p_coin_code": "02",
-        "p_internal_use": False,
-    }
-
-    sql_header = text(
-        """
-        SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no,
-        :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations,
-        :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount,
-        :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
-    """
-    )
-
-    document_no = db.session.execute(sql_header, header_params).scalar()
-    if not document_no:
-        raise RuntimeError("La DB no devolvió ID de operación.")
-
-    sql_detail = text(
-        """
-        SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product,
-        :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations,
-        :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type,
-        :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code,
-        :p_change_price)
-    """
-    )
-
-    for code, quantity in normalized_items.items():
-        data_row = (
-            db.session.query(ProductsUnit, Product, Tax)
-            .join(Product, ProductsUnit.product_code == Product.code)
-            .outerjoin(Tax, Product.buy_tax == Tax.code)
-            .filter(ProductsUnit.product_code == code, ProductsUnit.main_unit == True)
-            .first()
-        )
-
-        if not data_row:
-            raise ValueError(f"El producto {code} no tiene unidad principal configurada.")
-
-        product_stock = (
-            db.session.query(func.sum(func.coalesce(ProductsStock.stock, 0)))
-            .filter(ProductsStock.product_code == code, ProductsStock.store == store_origin)
-            .scalar()
-            or 0
-        )
-        if float(quantity) > float(product_stock):
-            raise ValueError(
-                f"El producto {code} supera el stock disponible en origen ({product_stock})."
-            )
-
-        pu, prod, tax = data_row
-        detail_params = {
-            "p_main_correlative": document_no,
-            "p_line": 0,
-            "p_code_product": code,
-            "p_description_product": prod.description or "Producto agregado desde Toolbox",
-            "p_referenc": prod.referenc,
-            "p_mark": prod.mark,
-            "p_model": prod.model,
-            "p_amount": float(quantity),
-            "p_store": store_origin,
-            "p_locations": "00",
-            "p_destination_store": store_dst,
-            "p_destination_location": "00",
-            "p_unit": int(pu.correlative),
-            "p_conversion_factor": 0.0,
-            "p_unit_type": 0,
-            "p_unitary_cost": 0.0,
-            "p_buy_tax": prod.buy_tax,
-            "p_aliquot": tax.aliquot if tax else 0.0,
-            "p_total_cost": 0.0,
-            "p_total_tax": 0.0,
-            "p_total": 0.0,
-            "p_coin_code": "02",
-            "p_change_price": False,
-        }
-        db.session.execute(sql_detail, detail_params)
-
-    return document_no
 
 
 @inventory_bp.route("/auto_order_collection/save", methods=["POST"])
@@ -1188,8 +432,8 @@ def save_auto_order_collection():
             )
         )
 
-    store_origen_obj = Store.query.filter_by(code=store_origin).first()
-    store_dst_obj = Store.query.filter_by(code=store_dst).first()
+    store_origen_obj = inventory_service.get_store_by_code(store_origin)
+    store_dst_obj = inventory_service.get_store_by_code(store_dst)
 
     if not store_origen_obj or not store_dst_obj:
         flash("Depósitos inválidos.", "error")
@@ -1217,11 +461,11 @@ def save_auto_order_collection():
         )
 
     try:
-        document_no = _create_order_collection_operation(
-            store_origin, store_dst, selected_items, "Automatico"
+        document_no = inventory_service.create_order_collection_operation(
+            store_origin, store_dst, selected_items, "Automatico", current_user.code
         )
-        db.session.commit()
-        register_flow_step1(document_no, current_user.code)
+        inventory_service.commit_session()
+        inventory_service.register_flow_step1(document_no, current_user.code)
         flash(f"Operación #{document_no} guardada correctamente.", "success")
 
         # HTMX: redirigir a la vista y abrir el PDF en nueva pestaña
@@ -1247,7 +491,7 @@ def save_auto_order_collection():
         )
 
     except Exception as e:
-        db.session.rollback()
+        inventory_service.rollback_session()
         print(f"Error crítico: {e}")
         flash(f"Error: {str(e)}", "error")
         return redirect(
@@ -1262,7 +506,7 @@ def save_auto_order_collection():
 @inventory_bp.route("/manual_order_collection", methods=["GET"])
 @login_required
 def manual_order_collection():
-    stores = Store.query.order_by(Store.description.asc()).all()
+    stores = inventory_service.get_stores_ordered_by_description()
     new_order_id = request.args.get("new_order_id")
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
@@ -1272,8 +516,8 @@ def manual_order_collection():
         store_origin = None
         store_dst = None
 
-    store_origin_obj = Store.query.filter_by(code=store_origin).first() if store_origin else None
-    store_dst_obj = Store.query.filter_by(code=store_dst).first() if store_dst else None
+    store_origin_obj = inventory_service.get_store_by_code(store_origin) if store_origin else None
+    store_dst_obj = inventory_service.get_store_by_code(store_dst) if store_dst else None
 
     return render_template(
         "manual_order_collection.html",
@@ -1291,9 +535,9 @@ def manual_order_collection():
 def manual_order_product_lookup():
     store_origin = request.args.get("store_origin")
     code = request.args.get("code")
-    entered_code = _normalize_code(code)
-    main_code = _resolve_main_code(code)
-    product = _get_product_for_manual_order(code, store_origin)
+    entered_code = inventory_service.normalize_code(code)
+    main_code = inventory_service.resolve_main_code(code)
+    product = inventory_service.get_product_for_manual_order(code, store_origin)
 
     if not product or float(product.stock_origin or 0) <= 0:
         return jsonify({"ok": False, "message": "Producto no encontrado o sin stock en origen."}), 404
@@ -1322,7 +566,7 @@ def manual_order_products_modal():
     store_origin = request.args.get("store_origin")
     query = request.args.get("q", "")
     page = request.args.get("page", 1, type=int)
-    products, total_products, total_pages, current_page = _search_products_for_manual_order(
+    products, total_products, total_pages, current_page = inventory_service.search_products_for_manual_order(
         store_origin, query, page=page, per_page=10
     )
     return render_template(
@@ -1349,11 +593,11 @@ def save_manual_order_collection():
     ]
 
     try:
-        document_no = _create_order_collection_operation(
-            store_origin, store_dst, selected_items, "Manual"
+        document_no = inventory_service.create_order_collection_operation(
+            store_origin, store_dst, selected_items, "Manual", current_user.code
         )
-        db.session.commit()
-        register_flow_step1(document_no, current_user.code)
+        inventory_service.commit_session()
+        inventory_service.register_flow_step1(document_no, current_user.code)
         flash(f"Orden manual #{document_no} guardada correctamente.", "success")
 
         if request.headers.get("HX-Request"):
@@ -1376,7 +620,7 @@ def save_manual_order_collection():
             url_for("inventory.order_collection_report", order_id=document_no)
         )
     except Exception as e:
-        db.session.rollback()
+        inventory_service.rollback_session()
         flash(f"Error: {str(e)}", "error")
         return redirect(
             url_for(
@@ -1391,20 +635,8 @@ def save_manual_order_collection():
 @login_required
 def order_collection_report(order_id):
     user = current_user
-    order = InventoryOperation.query.options(
-        joinedload(InventoryOperation.store1),
-        joinedload(InventoryOperation.store2),
-        joinedload(InventoryOperation.user),
-        joinedload(InventoryOperation.details).options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(
-                ProductsUnit.unit1
-            ),
-            # Aquí cargamos la información del esquema toolbox
-            joinedload(InventoryOperationDetail.failure_info),
-        ),
-    ).get_or_404(order_id)
-    sorted_details = _sort_details_by_location(order.inventory_operation_details)
+    order = inventory_service.get_order_for_report(order_id)
+    sorted_details = inventory_service.sort_details_by_location(order.inventory_operation_details)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -1435,14 +667,6 @@ def check_order():
     order_details = None
     error = None
 
-    io = aliased(InventoryOperation)
-    iod = aliased(InventoryOperationDetail)
-    pu = aliased(ProductsUnit)
-    p = aliased(Product)
-    u = aliased(Unit)
-    store_dst = aliased(Store)
-    store_origin = aliased(Store)
-
     if request.method == "POST":
         order_id = request.form.get("order_id", type=int)
         if not order_id:
@@ -1452,17 +676,14 @@ def check_order():
             )
 
         # Buscar la operación y validar que sea un traslado procesado
-        order_entity = InventoryOperation.query.filter_by(
-            correlative=order_id, operation_type="TRANSFER", wait=True
-        ).first()
-
-        if not order_entity:
+        order_entity = inventory_service.get_order_by_id(order_id)
+        if not order_entity or order_entity.operation_type != "TRANSFER" or not order_entity.wait:
             error = f"No se encontró la orden con ID {order_id}"
             return render_template(
                 "check_order_collection.html", order=None, details=[], error=error
             )
 
-        flow = _get_inventory_operation_flow(order_id)
+        flow = inventory_service.get_inventory_operation_flow(order_id)
         if not flow:
             error = f"La orden {order_id} no tiene bitácora de flujo registrada."
             return render_template(
@@ -1477,38 +698,7 @@ def check_order():
                 "check_order_collection.html", order=None, details=[], error=error
             )
 
-        stmt = (
-            select(
-                io.correlative,
-                io.document_no,
-                io.emission_date,
-                io.store,
-                io.destination_store,
-                io.description,
-                io.operation_comments,
-                io.user_code,
-                io.total_amount,
-                iod.code_product,
-                p.description.label("product_description"),
-                iod.amount,
-                u.description.label("unit_description"),
-                store_origin.description.label("store_origin_description"),
-                store_dst.description.label("store_dst_description"),
-            )
-            .join(iod, iod.main_correlative == io.correlative)
-            .join(p, p.code == iod.code_product)
-            .join(pu, pu.correlative == iod.unit)
-            .join(u, u.code == pu.unit)
-            .join(store_origin, store_origin.code == io.store)
-            .join(store_dst, store_dst.code == io.destination_store)
-            .where(
-                io.correlative == order_id,
-                io.operation_type == "TRANSFER",
-                io.wait.is_(True),
-            )
-        )
-
-        results = db.session.execute(stmt).all()
+        results = inventory_service.get_check_order_rows(order_id)
 
         if not results:
             error = f"No se encontró la orden con ID {order_id} o no contiene detalles."
@@ -1535,7 +725,7 @@ def check_order():
 @inventory_bp.route("/search_product", methods=["GET"])
 @login_required
 def search_product():
-    code_product = _normalize_code(request.args.get("code-product"))
+    code_product = inventory_service.normalize_code(request.args.get("code-product"))
     order_id = request.args.get("order_id", type=int)
 
     if not code_product or not order_id:
@@ -1547,15 +737,13 @@ def search_product():
             order=None,
         )
 
-    main_code = _resolve_main_code(code_product)
+    main_code = inventory_service.resolve_main_code(code_product)
 
-    detail = _find_detail_by_codes(order_id, [main_code])
+    detail = inventory_service.find_detail_by_codes(order_id, [main_code])
 
     if not detail:
         # Producto no encontrado en la orden, validar existencia en catálogo
-        product = Product.query.filter(
-            func.upper(func.trim(Product.code)) == main_code
-        ).first()
+        product = inventory_service.get_product_by_code(main_code)
         if not product:
             error_payload = {
                 "product-error": {
@@ -1570,7 +758,7 @@ def search_product():
             )
 
         # Obtener la orden
-        order = InventoryOperation.query.get(order_id)
+        order = inventory_service.get_order_by_id(order_id)
         if not order:
             return render_template(
                 "partials/check_order_product_modal.html",
@@ -1582,14 +770,7 @@ def search_product():
             )
 
         # Obtener unidad principal
-        pu = (
-            ProductsUnit.query.filter(
-                func.upper(func.trim(ProductsUnit.product_code)) == main_code,
-                ProductsUnit.main_unit.is_(True),
-            )
-            .options(joinedload(ProductsUnit.unit1))
-            .first()
-        )
+        pu = inventory_service.get_main_unit_for_product(main_code)
         if not pu:
             return render_template(
                 "partials/check_order_product_modal.html",
@@ -1600,13 +781,10 @@ def search_product():
                 is_new=False,
             )
 
-        unit = Unit.query.filter_by(code=pu.unit).first()
+        unit = inventory_service.get_unit_by_code(pu.unit)
 
         # Obtener cantidad en depósito origen
-        stock = ProductsStock.query.filter(
-            func.upper(func.trim(ProductsStock.product_code)) == main_code,
-            ProductsStock.store == order.store,
-        ).first()
+        stock = inventory_service.get_stock_for_product_store(main_code, order.store)
         stock_amount = stock.stock if stock else 0.0
 
         # Renderizar modal para agregar
@@ -1622,21 +800,12 @@ def search_product():
         )
 
     # Obtener descripción del producto y unidad
-    actual_code = _normalize_code(detail.code_product)
-    product = Product.query.filter(
-        func.upper(func.trim(Product.code)) == actual_code
-    ).first()
-    unit = (
-        Unit.query.join(ProductsUnit)
-        .filter(ProductsUnit.correlative == detail.unit)
-        .first()
-    )
+    actual_code = inventory_service.normalize_code(detail.code_product)
+    product = inventory_service.get_product_by_code(actual_code)
+    unit = inventory_service.get_unit_by_correlative(detail.unit)
 
     # Obtener cantidad en depósito origen para validación de conteo
-    stock = ProductsStock.query.filter(
-        func.upper(func.trim(ProductsStock.product_code)) == actual_code,
-        ProductsStock.store == detail.store,
-    ).first()
+    stock = inventory_service.get_stock_for_product_store(actual_code, detail.store)
     stock_amount = stock.stock if stock else 0.0
 
     # Renderizar el modal con datos
@@ -1645,7 +814,7 @@ def search_product():
         item=detail,
         product_description=product.description if product else "Desconocido",
         unit_description=unit.description if unit else "Desconocida",
-        order=InventoryOperation.query.get(order_id),
+        order=inventory_service.get_order_by_id(order_id),
         stock_amount=stock_amount,
     )
 
@@ -1654,7 +823,7 @@ def search_product():
 @login_required
 def add_product_to_order():
     order_id = request.form.get("order_id", type=int)
-    code_product = _normalize_code(request.form.get("code_product"))
+    code_product = inventory_service.normalize_code(request.form.get("code_product"))
 
     print(f"Agregando producto: order_id={order_id}, code_product={code_product}")
 
@@ -1670,12 +839,12 @@ def add_product_to_order():
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    main_code = _resolve_main_code(code_product)
+    main_code = inventory_service.resolve_main_code(code_product)
 
     print(f"Main code: {main_code}")
 
     # Verificar si ya existe
-    detail = _find_detail_by_codes(order_id, [main_code, code_product])
+    detail = inventory_service.find_detail_by_codes(order_id, [main_code, code_product])
 
     if detail:
         print("Producto ya agregado")
@@ -1689,21 +858,11 @@ def add_product_to_order():
             "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    # Obtener datos
-    product = Product.query.filter(
-        func.upper(func.trim(Product.code)) == main_code
-    ).first()
-    order = InventoryOperation.query.get(order_id)
-    pu = (
-        ProductsUnit.query.filter(
-            func.upper(func.trim(ProductsUnit.product_code)) == main_code,
-            ProductsUnit.main_unit.is_(True),
-        )
-        .options(joinedload(ProductsUnit.unit1))
-        .first()
+    product, order, pu, created_payload, error_code = inventory_service.add_product_to_order(
+        order_id, main_code
     )
 
-    if not product:
+    if error_code == "PRODUCT_NOT_FOUND":
         error_payload = {
             "product-error": {
                 "message": "El producto ingresado no existe en la base de datos.",
@@ -1714,7 +873,7 @@ def add_product_to_order():
             "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    if not order:
+    if error_code == "ORDER_NOT_FOUND":
         error_payload = {
             "product-error": {
                 "message": "Orden no encontrada. Vuelve a cargar el correlativo.",
@@ -1725,7 +884,7 @@ def add_product_to_order():
             "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    if not pu:
+    if error_code == "MAIN_UNIT_NOT_FOUND":
         error_payload = {
             "product-error": {
                 "message": "Unidad principal no encontrada para el producto.",
@@ -1735,18 +894,7 @@ def add_product_to_order():
         return Response(
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
-
-    tax = Tax.query.filter_by(code=product.buy_tax).first() if product.buy_tax else None
-
-    print(f"Product: {product}, Order: {order}, PU: {pu}, Tax: {tax}")
-
-    # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter(
-        func.upper(func.trim(ProductsStock.product_code)) == main_code,
-        ProductsStock.store == order.store,
-    ).first()
-    stock_amount = stock.stock if stock else 0.0
-    if stock_amount <= 0:
+    if error_code == "NO_STOCK":
         error_payload = {
             "product-error": {
                 "message": "No hay stock disponible en el depósito de origen para este producto.",
@@ -1756,50 +904,14 @@ def add_product_to_order():
         return Response(
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
-
     try:
-        # Calcular siguiente línea respetando la restricción unique de la columna line (es global, no por orden)
-        max_line_global = db.session.query(
-            func.max(InventoryOperationDetail.line)
-        ).scalar()
-        next_line = (max_line_global or 0) + 1
-
-        # Crear detalle
-        new_detail = InventoryOperationDetail(
-            main_correlative=order_id,
-            line=next_line,
-            code_product=main_code,
-            description_product=product.description,
-            referenc=product.referenc,
-            mark=product.mark,
-            model=product.model,
-            amount=0.0,
-            store=order.store,
-            locations="00",
-            destination_store=order.destination_store,
-            destination_location="00",
-            unit=pu.correlative,
-            conversion_factor=0.0,
-            unit_type=0,
-            unitary_cost=0.0,
-            buy_tax=product.buy_tax,
-            aliquot=tax.aliquot if tax else 0.0,
-            total_cost=0.0,
-            total_tax=0.0,
-            total=0.0,
-            coin_code="02",
-            change_price=False,
-        )
-
-        db.session.add(new_detail)
-        db.session.commit()
+        if error_code:
+            raise RuntimeError(error_code)
 
         print("Producto agregado exitosamente")
+        unit = created_payload["unit"] if created_payload else None
+        new_detail = created_payload["detail"] if created_payload else None
 
-        # Obtener unidad para descripción
-        unit = Unit.query.filter_by(code=pu.unit).first()
-
-        # Renderizar la fila y devolver, notificando al cliente vía HX-Trigger
         trigger_payload = {"product-added": {"code_product": main_code}}
         return Response(
             render_template(
@@ -1813,7 +925,7 @@ def add_product_to_order():
         )
 
     except Exception as e:
-        db.session.rollback()
+        inventory_service.rollback_session()
         print(f"Error al agregar producto: {e}")
         error_payload = {
             "product-error": {
@@ -1830,7 +942,7 @@ def add_product_to_order():
 @login_required
 def update_counted_amount():
     order_id = request.form.get("order_id", type=int)
-    code_product = _normalize_code(request.form.get("code_product"))
+    code_product = inventory_service.normalize_code(request.form.get("code_product"))
     counted_amount = request.form.get("counted_amount", type=float)
 
     if not order_id or not code_product or counted_amount is None:
@@ -1838,7 +950,7 @@ def update_counted_amount():
 
     # Actualizar el detalle (por ahora, solo en memoria, pero luego en BD)
     # Para simplificar, devolver HTML actualizado para la fila
-    detail = _find_detail_by_codes(order_id, [code_product])
+    detail = inventory_service.find_detail_by_codes(order_id, [code_product])
 
     if not detail:
         error_payload = {
@@ -1852,10 +964,7 @@ def update_counted_amount():
         )
 
     # Validar stock en depósito de origen
-    stock = ProductsStock.query.filter(
-        func.upper(ProductsStock.product_code) == _normalize_code(detail.code_product),
-        ProductsStock.store == detail.store,
-    ).first()
+    stock = inventory_service.get_stock_for_product_store(detail.code_product, detail.store)
     stock_amount = stock.stock if stock else 0.0
     if counted_amount > stock_amount:
         error_payload = {
@@ -1889,17 +998,12 @@ def update_counted_amount():
 @login_required
 def delete_product_from_order():
     order_id = request.form.get("order_id", type=int)
-    code_product = _normalize_code(request.form.get("code_product"))
+    code_product = inventory_service.normalize_code(request.form.get("code_product"))
 
     if not order_id or not code_product:
         return "Error: Datos incompletos.", 400
 
-    # Eliminar de la BD
-    detail = _find_detail_by_codes(order_id, [code_product])
-
-    if detail:
-        db.session.delete(detail)
-        db.session.commit()
+    inventory_service.delete_detail_from_order(order_id, code_product)
 
     # Responder vacío para hx-swap=delete
     return ""
@@ -1914,7 +1018,7 @@ def save_order_check():
         flash("ID de orden inválido.", "error")
         return redirect(url_for("inventory.check_order"))
 
-    order = InventoryOperation.query.get(order_id)
+    order = inventory_service.get_order_by_id(order_id)
     if not order:
         flash("Orden no encontrada.", "error")
         return redirect(url_for("inventory.check_order"))
@@ -1922,10 +1026,10 @@ def save_order_check():
     # Actualizar las cantidades contadas en la BD para los productos restantes
     for key, value in request.form.items():
         if key.startswith("counted_"):
-            code_product = _normalize_code(key[8:])  # Remove "counted_"
+            code_product = inventory_service.normalize_code(key[8:])  # Remove "counted_"
             counted_amount = float(value) if value else 0
 
-            detail = _find_detail_by_codes(order_id, [code_product])
+            detail = inventory_service.find_detail_by_codes(order_id, [code_product])
 
             if detail:
                 detail.amount = counted_amount
@@ -1934,13 +1038,13 @@ def save_order_check():
     order.description = "orden de recoleccion chequeada"
 
     try:
-        register_flow_step2(order_id, current_user.code)
+        inventory_service.register_flow_step2(order_id, current_user.code)
     except Exception as exc:
-        db.session.rollback()
+        inventory_service.rollback_session()
         flash(f"No se pudo registrar el chequeo de recolección: {exc}", "error")
         return redirect(url_for("inventory.check_order"))
 
-    db.session.commit()
+    inventory_service.commit_session()
 
     flash("Orden de recolección chequeada correctamente.", "success")
 
@@ -1982,10 +1086,7 @@ def check_transfer_operation():
                 message=message,
             )
 
-        operation = InventoryOperation.query.filter_by(
-            correlative=int(correlative),
-            operation_type="TRANSFER",
-        ).first()
+        operation = inventory_service.get_transfer_operation_by_correlative(int(correlative))
 
         if not operation:
             return render_template(
@@ -1994,7 +1095,7 @@ def check_transfer_operation():
                 error_message="No se encontró una operación de traslado con ese correlativo.",
             )
 
-        flow = _get_inventory_operation_flow(operation.correlative)
+        flow = inventory_service.get_inventory_operation_flow(operation.correlative)
         if not flow:
             return render_template(
                 "check_transfer_operation.html",
@@ -2013,19 +1114,8 @@ def check_transfer_operation():
             )
 
         # Obtener detalles con productos
-        details = (
-            InventoryOperationDetail.query.filter_by(
-                main_correlative=operation.correlative
-            )
-            .options(
-                joinedload(InventoryOperationDetail.product),
-                joinedload(InventoryOperationDetail.products_unit).joinedload(
-                    ProductsUnit.unit1
-                ),
-            )
-            .all()
-        )
-        reception_differences = _get_reception_difference_map(operation.correlative)
+        details = inventory_service.get_transfer_operation_details(operation.correlative)
+        reception_differences = inventory_service.get_reception_difference_map(operation.correlative)
 
         return render_template(
             "check_transfer_operation.html",
@@ -2061,15 +1151,12 @@ def start_transfer_operation():
         if not correlative:
             error_message = "Por favor, ingrese un correlativo válido."
         else:
-            operation = InventoryOperation.query.filter_by(
-                correlative=correlative,
-                operation_type="TRANSFER",
-            ).first()
+            operation = inventory_service.get_transfer_operation_by_correlative(correlative)
 
             if not operation:
                 error_message = "No se encontró una operación de traslado con ese correlativo."
             else:
-                flow = _get_inventory_operation_flow(operation.correlative)
+                flow = inventory_service.get_inventory_operation_flow(operation.correlative)
                 if not flow:
                     error_message = "La operación no tiene bitácora de flujo registrada."
                 elif flow["current_status"] != FLOW_RECOLLECTION_CHECKED:
@@ -2078,15 +1165,16 @@ def start_transfer_operation():
                         f"Estado actual: {flow['current_status']}."
                     )
                 elif action == "start":
-                    responsible_user, validation_error = _validate_transfer_responsible(
+                    responsible_user, validation_error = inventory_service.validate_transfer_responsible(
                         request.form.get("responsible_user"),
                         request.form.get("responsible_password"),
+                        current_user.code,
                     )
                     if validation_error:
                         error_message = validation_error
                     else:
                         try:
-                            register_flow_step3(operation.correlative, responsible_user)
+                            inventory_service.register_flow_step3(operation.correlative, responsible_user)
                             flash(
                                 f"Traslado #{operation.correlative} iniciado correctamente.",
                                 "success",
@@ -2101,25 +1189,11 @@ def start_transfer_operation():
                             error_message = f"No se pudo iniciar el traslado: {exc}"
 
     elif correlative:
-        operation = InventoryOperation.query.filter_by(
-            correlative=correlative,
-            operation_type="TRANSFER",
-        ).first()
-        flow = _get_inventory_operation_flow(correlative) if operation else None
+        operation = inventory_service.get_transfer_operation_by_correlative(correlative)
+        flow = inventory_service.get_inventory_operation_flow(correlative) if operation else None
 
     if operation:
-        details = (
-            InventoryOperationDetail.query.filter_by(
-                main_correlative=operation.correlative
-            )
-            .options(
-                joinedload(InventoryOperationDetail.product),
-                joinedload(InventoryOperationDetail.products_unit).joinedload(
-                    ProductsUnit.unit1
-                ),
-            )
-            .all()
-        )
+        details = inventory_service.get_transfer_operation_details(operation.correlative)
 
     return render_template(
         "start_transfer_operation.html",
@@ -2134,10 +1208,7 @@ def start_transfer_operation():
 @inventory_bp.route("/transfer_operation/<int:operation_id>/receive", methods=["POST"])
 @login_required
 def receive_transfer_operation(operation_id):
-    operation = InventoryOperation.query.filter_by(
-        correlative=operation_id,
-        operation_type="TRANSFER",
-    ).first()
+    operation = inventory_service.get_transfer_operation_by_correlative(operation_id)
     if not operation:
         flash("No se encontró la operación de traslado.", "error")
         return redirect(url_for("inventory.check_transfer_operation"))
@@ -2147,19 +1218,14 @@ def receive_transfer_operation(operation_id):
         return redirect(url_for("inventory.check_transfer_operation"))
 
     try:
-        register_flow_step4(operation_id, current_user.code)
-        process_inventory_operation(operation_id)
+        inventory_service.register_flow_step4(operation_id, current_user.code)
+        inventory_service.process_inventory_operation(operation_id)
         operation.wait = False
-        db.session.commit()
-        has_reception_differences = (
-            InventoryOperationReceptionDifference.query.filter_by(
-                operation_correlative=operation_id
-            ).count()
-            > 0
-        )
+        inventory_service.commit_session()
+        has_reception_differences = inventory_service.count_reception_differences(operation_id) > 0
         flash("Traslado recepcionado y procesado correctamente.", "success")
     except Exception as exc:
-        db.session.rollback()
+        inventory_service.rollback_session()
         flash(f"No se pudo recepcionar o procesar el traslado: {exc}", "error")
         return redirect(url_for("inventory.check_transfer_operation"))
 
@@ -2193,7 +1259,7 @@ def receive_transfer_operation(operation_id):
 )
 @login_required
 def search_product_in_transfer(operation_id):
-    flow = _get_inventory_operation_flow(operation_id)
+    flow = inventory_service.get_inventory_operation_flow(operation_id)
     if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
         error_payload = {
             "search-error": {
@@ -2222,9 +1288,7 @@ def search_product_in_transfer(operation_id):
         )
 
     # Resolver código alterno a código principal
-    products_code = ProductsCode.query.filter(
-        func.upper(func.trim(ProductsCode.other_code)) == product_code_input
-    ).first()
+    products_code = inventory_service.get_products_code_mapping(product_code_input)
     main_code = (
         (products_code.main_code if products_code else product_code_input)
         .strip()
@@ -2232,19 +1296,7 @@ def search_product_in_transfer(operation_id):
     )
 
     # Buscar el producto en la operación usando código principal o alterno
-    detail = (
-        InventoryOperationDetail.query.filter(
-            InventoryOperationDetail.main_correlative == operation_id,
-            func.upper(func.trim(InventoryOperationDetail.code_product)) == main_code,
-        )
-        .options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(
-                ProductsUnit.unit1
-            ),
-        )
-        .first()
-    )
+    detail = inventory_service.get_operation_detail_by_code(operation_id, main_code)
 
     if not detail:
         error_payload = {
@@ -2273,37 +1325,22 @@ def search_product_in_transfer(operation_id):
 )
 @login_required
 def product_modal(operation_id, product_code):
-    flow = _get_inventory_operation_flow(operation_id)
+    flow = inventory_service.get_inventory_operation_flow(operation_id)
     if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
         return "La operación debe estar en tránsito para contar recepción.", 409
 
-    product_code = _normalize_code(product_code)
-    # Buscar el producto en la operación
-    detail = (
-        InventoryOperationDetail.query.filter(
-            InventoryOperationDetail.main_correlative == operation_id,
-            func.upper(func.trim(InventoryOperationDetail.code_product)) == product_code,
-        )
-        .options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(
-                ProductsUnit.unit1
-            ),
-        )
-        .first()
-    )
+    product_code = inventory_service.normalize_code(product_code)
+    detail = inventory_service.get_operation_detail_by_code(operation_id, product_code)
 
     if not detail:
         return "Producto no encontrado", 404
 
-    reception_difference = _get_reception_difference(operation_id, detail.line)
+    reception_difference = inventory_service.get_reception_difference(operation_id, detail.line)
     expected_amount = (
         reception_difference.original_amount if reception_difference else detail.amount
     )
 
-    failure_info = ProductsFailure.query.filter_by(
-        product_code=product_code, store_code=detail.destination_store
-    ).first()
+    failure_info = inventory_service.get_failure_info(product_code, detail.destination_store)
 
     return render_template(
         "partials/product_modal.html",
@@ -2325,7 +1362,7 @@ def product_modal(operation_id, product_code):
 )
 @login_required
 def update_count(operation_id, product_code=None, destination_store=None):
-    flow = _get_inventory_operation_flow(operation_id)
+    flow = inventory_service.get_inventory_operation_flow(operation_id)
     if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
         error_payload = {
             "counted-error": {
@@ -2337,7 +1374,7 @@ def update_count(operation_id, product_code=None, destination_store=None):
             "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    product_code = _normalize_code(product_code or request.form.get("product_code"))
+    product_code = inventory_service.normalize_code(product_code or request.form.get("product_code"))
     destination_store = (destination_store or request.form.get("destination_store") or "").strip()
     counted_amount = request.form.get("counted_amount", type=float, default=0)
     minimal_stock = request.form.get("minimal_stock", type=float, default=0)
@@ -2366,13 +1403,17 @@ def update_count(operation_id, product_code=None, destination_store=None):
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    # Verificar que el producto existe en la operación
-    detail = InventoryOperationDetail.query.filter(
-        InventoryOperationDetail.main_correlative == operation_id,
-        func.upper(func.trim(InventoryOperationDetail.code_product)) == product_code,
-    ).first()
+    payload, error_code = inventory_service.apply_transfer_reception_count(
+        operation_id=operation_id,
+        product_code=product_code,
+        destination_store=destination_store,
+        counted_amount=counted_amount,
+        minimal_stock=minimal_stock,
+        maximum_stock=maximum_stock,
+        user_code=current_user.code,
+    )
 
-    if not detail:
+    if error_code == "PRODUCT_NOT_FOUND":
         error_payload = {
             "counted-error": {
                 "message": "Producto no encontrado en esta operación.",
@@ -2383,58 +1424,10 @@ def update_count(operation_id, product_code=None, destination_store=None):
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    ##actualiza products_failures
-    failure_info = ProductsFailure.query.filter(
-        func.upper(func.trim(ProductsFailure.product_code)) == product_code,
-        func.trim(ProductsFailure.store_code) == destination_store,
-    ).first()
-
-    if not failure_info:
-        failure_info = ProductsFailure(
-            product_code=product_code,
-            store_code=destination_store,
-            minimal_stock=minimal_stock or 0,
-            maximum_stock=maximum_stock or 0,
-            location="",
-        )
-        db.session.add(failure_info)
-    else:
-        failure_info.minimal_stock = minimal_stock or 0
-        failure_info.maximum_stock = maximum_stock or 0
-
-    existing_difference = _get_reception_difference(operation_id, detail.line)
-    original_amount = (
-        float(existing_difference.original_amount)
-        if existing_difference
-        else float(detail.amount or 0)
-    )
-    difference_amount = float(counted_amount) - original_amount
-
-    if difference_amount != 0:
-        if not existing_difference:
-            existing_difference = InventoryOperationReceptionDifference(
-                operation_correlative=operation_id,
-                detail_line=detail.line,
-                product_code=detail.code_product,
-                original_amount=original_amount,
-                counted_amount=float(counted_amount),
-                difference=difference_amount,
-                user_code=current_user.code,
-            )
-            db.session.add(existing_difference)
-        else:
-            existing_difference.counted_amount = float(counted_amount)
-            existing_difference.difference = difference_amount
-            existing_difference.user_code = current_user.code
-            existing_difference.updated_at = datetime.now()
-
-        detail.amount = float(counted_amount)
-    else:
-        if existing_difference:
-            detail.amount = original_amount
-            db.session.delete(existing_difference)
-
-    db.session.commit()
+    detail = payload["detail"]
+    original_amount = payload["expected_amount"]
+    difference_amount = payload["difference_amount"]
+    counted_amount = payload["counted_amount"]
 
     # Devolver siempre la fila actualizada (aunque no haya diferencia) para permitir re-conteos posteriores
     return render_template(
@@ -2452,65 +1445,29 @@ def update_count(operation_id, product_code=None, destination_store=None):
 @inventory_bp.route("/product_params", methods=["GET", "POST"])
 @login_required
 def product_params():
-    stores = Store.query.all()
+    stores = inventory_service.get_all_stores()
     store_code = request.form.get("store_code") 
     code_product = request.form.get("code-product") 
 
     if request.method == "POST":
         if store_code and not code_product:
-            selected_store = Store.query.filter_by(code=store_code).first()
+            selected_store = inventory_service.get_store_by_code(store_code)
             return render_template(
                 "product_params.html", stores=stores, selected_store=selected_store
             )
 
         if code_product and store_code:
-            # Buscar código principal si es código alterno
-            products_code = ProductsCode.query.filter_by(
-                other_code=code_product
-            ).first()
-            main_code = products_code.main_code if products_code else code_product
-
-            product = Product.query.filter_by(code=main_code).first()
-            if not product:
+            product_params, _main_code = inventory_service.build_product_params_payload(
+                store_code, code_product
+            )
+            if not product_params:
                 flash("Producto no encontrado.", "error")
-                selected_store = Store.query.filter_by(code=store_code).first()
+                selected_store = inventory_service.get_store_by_code(store_code)
                 return render_template(
                     "product_params.html", stores=stores, selected_store=selected_store
                 )
 
-            product_failure = ProductsFailure.query.filter_by(
-                product_code=main_code, store_code=store_code
-            ).first()
-            product_stock = ProductsStock.query.filter_by(
-                product_code=main_code, store=store_code
-            ).first()
-
-            product_params = {
-                "code": main_code,
-                "description": product.description,
-                "referenc": product.referenc,
-                "mark": product.mark,
-                "model": product.model,
-                "stock": product_stock.stock if product_stock else 0,
-                "minimal_stock": (
-                    product_failure.minimal_stock
-                    if product_failure and product_failure.minimal_stock is not None
-                    else 0
-                ),
-                "maximum_stock": (
-                    product_failure.maximum_stock
-                    if product_failure and product_failure.maximum_stock is not None
-                    else 0
-                ),
-                "location": (
-                    product_failure.location
-                    if product_failure
-                    and product_failure.location
-                    and product_failure.location
-                    else ""
-                ),
-            }
-            selected_store = Store.query.filter_by(code=store_code).first()
+            selected_store = inventory_service.get_store_by_code(store_code)
             return render_template(
                 "product_params.html",
                 product_params=product_params,
@@ -2531,9 +1488,7 @@ def save_product_params():
         flash("Datos incompletos.", "error")
         return redirect(url_for("inventory.product_params"))
 
-    # Buscar código principal si es código alterno
-    products_code = ProductsCode.query.filter_by(other_code=code_product).first()
-    main_code = products_code.main_code if products_code else code_product
+    main_code = inventory_service.resolve_main_code_by_other_code(code_product)
 
     # Guardar parámetros para el producto específico
     min_stock = request.form.get("minimal_stock", "0").strip()
@@ -2550,28 +1505,17 @@ def save_product_params():
     # Validaciones
     if min_stock < 0 or max_stock < 0:
         flash("Los valores de stock deben ser números positivos.", "error")
-        # Recargar la página con los datos actuales
-        product = Product.query.filter_by(code=main_code).first()
-        product_failure = ProductsFailure.query.filter_by(
-            product_code=main_code, store_code=store_code
-        ).first()
-        product_stock = ProductsStock.query.filter_by(
-            product_code=main_code, store=store_code
-        ).first()
+        product_params, _ = inventory_service.build_product_params_payload(
+            store_code, main_code
+        )
+        if not product_params:
+            product_params = {"code": main_code, "location": location}
+        product_params["minimal_stock"] = min_stock
+        product_params["maximum_stock"] = max_stock
+        product_params["location"] = location
 
-        product_params = {
-            "code": main_code,
-            "description": product.description if product else "",
-            "referenc": product.referenc if product else "",
-            "mark": product.mark if product else "",
-            "model": product.model if product else "",
-            "stock": product_stock.stock if product_stock else 0,
-            "minimal_stock": min_stock,  # Usar los valores enviados para mostrar errores
-            "maximum_stock": max_stock,
-            "location": location,
-        }
-        selected_store = Store.query.filter_by(code=store_code).first()
-        stores = Store.query.all()
+        selected_store = inventory_service.get_store_by_code(store_code)
+        stores = inventory_service.get_all_stores()
         return render_template(
             "product_params.html",
             stores=stores,
@@ -2581,28 +1525,17 @@ def save_product_params():
 
     if min_stock > max_stock:
         flash("El stock mínimo no puede ser mayor que el máximo.", "error")
-        # Recargar la página con los datos actuales
-        product = Product.query.filter_by(code=main_code).first()
-        product_failure = ProductsFailure.query.filter_by(
-            product_code=main_code, store_code=store_code
-        ).first()
-        product_stock = ProductsStock.query.filter_by(
-            product_code=main_code, store=store_code
-        ).first()
+        product_params, _ = inventory_service.build_product_params_payload(
+            store_code, main_code
+        )
+        if not product_params:
+            product_params = {"code": main_code, "location": location}
+        product_params["minimal_stock"] = min_stock
+        product_params["maximum_stock"] = max_stock
+        product_params["location"] = location
 
-        product_params = {
-            "code": main_code,
-            "description": product.description if product else "",
-            "referenc": product.referenc if product else "",
-            "mark": product.mark if product else "",
-            "model": product.model if product else "",
-            "stock": product_stock.stock if product_stock else 0,
-            "minimal_stock": min_stock,
-            "maximum_stock": max_stock,
-            "location": location,
-        }
-        selected_store = Store.query.filter_by(code=store_code).first()
-        stores = Store.query.all()
+        selected_store = inventory_service.get_store_by_code(store_code)
+        stores = inventory_service.get_all_stores()
         return render_template(
             "product_params.html",
             stores=stores,
@@ -2610,30 +1543,14 @@ def save_product_params():
             product_params=product_params,
         )
 
-    pf = ProductsFailure.query.filter_by(
-        product_code=main_code, store_code=store_code
-    ).first()
-
-    if pf:
-        pf.minimal_stock = min_stock
-        pf.maximum_stock = max_stock
-        pf.location = location
-    else:
-        pf = ProductsFailure(
-            product_code=main_code,
-            store_code=store_code,
-            minimal_stock=min_stock,
-            maximum_stock=max_stock,
-            location=location,
-        )
-        db.session.add(pf)
-
-    db.session.commit()
+    inventory_service.upsert_product_params(
+        store_code, main_code, min_stock, max_stock, location
+    )
     flash("Parámetros del producto guardados correctamente.", "success")
 
     # Limpiar la búsqueda y mostrar solo el input para buscar otro producto
-    selected_store = Store.query.filter_by(code=store_code).first()
-    stores = Store.query.all()
+    selected_store = inventory_service.get_store_by_code(store_code)
+    stores = inventory_service.get_all_stores()
     return render_template(
         "product_params.html", stores=stores, selected_store=selected_store
     )
@@ -2644,20 +1561,8 @@ def save_product_params():
 @login_required
 def transfer_operation_report(order_id):
     user = current_user
-    order = InventoryOperation.query.options(
-        joinedload(InventoryOperation.store1),
-        joinedload(InventoryOperation.store2),
-        joinedload(InventoryOperation.user),
-        joinedload(InventoryOperation.details).options(
-            joinedload(InventoryOperationDetail.product),
-            joinedload(InventoryOperationDetail.products_unit).joinedload(
-                ProductsUnit.unit1
-            ),
-            # Aquí cargamos la información del esquema toolbox
-            joinedload(InventoryOperationDetail.failure_info),
-        ),
-    ).get_or_404(order_id)
-    sorted_details = _sort_details_by_location(order.inventory_operation_details)
+    order = inventory_service.get_transfer_operation_report_data(order_id)
+    sorted_details = inventory_service.sort_details_by_location(order.inventory_operation_details)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -2686,22 +1591,7 @@ def transfer_operation_report(order_id):
 @login_required
 def transfer_reception_differences_report(order_id):
     user = current_user
-    order = InventoryOperation.query.options(
-        joinedload(InventoryOperation.store1),
-        joinedload(InventoryOperation.store2),
-        joinedload(InventoryOperation.user),
-    ).get_or_404(order_id)
-    differences = (
-        InventoryOperationReceptionDifference.query.filter_by(
-            operation_correlative=order_id
-        )
-        .options(
-            joinedload(InventoryOperationReceptionDifference.product),
-            joinedload(InventoryOperationReceptionDifference.user),
-        )
-        .order_by(InventoryOperationReceptionDifference.detail_line.asc())
-        .all()
-    )
+    order, differences = inventory_service.get_transfer_reception_differences_report_data(order_id)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -2729,34 +1619,20 @@ def transfer_reception_differences_report(order_id):
 @inventory_bp.route("/products_locations", methods=["GET", "POST"])
 @login_required
 def products_locations():
-
-    stores = Store.query.all()
-
     store_code = request.values.get("store_code")
     location = request.values.get("location")
+    data = inventory_service.get_products_locations_view_data(store_code, location)
 
-    if store_code:
-        store_obj = Store.query.filter_by(code=store_code).first()
+    if store_code and not data["store"]:
+        flash("Depósito no válido.", "error")
+        return render_template("products_locations.html", stores=data["stores"])
 
-        if not store_obj:
-            flash("Depósito no válido.", "error")
-            return render_template("products_locations.html", stores=stores)
-
-        if location:
-            return render_template(
-                "products_locations.html",
-                stores=stores,
-                store=store_obj,
-                location=location,
-            )
-
-        return render_template(
-            "products_locations.html",
-            stores=stores,
-            store=store_obj,
-        )
-
-    return render_template("products_locations.html", stores=stores)
+    return render_template(
+        "products_locations.html",
+        stores=data["stores"],
+        store=data["store"],
+        location=location,
+    )
 
 
 @inventory_bp.route("/update_product_location", methods=["POST"])
@@ -2780,37 +1656,19 @@ def update_product_location():
         flash("No se seleccionaron productos para actualizar.", "error")
         return redirect(url_for("inventory.products_locations"))
 
-    products_count = 0
     try:
-        for code in products:
-            pf = ProductsFailure.query.filter_by(
-                product_code=code, store_code=store_code
-            ).first()
-
-            # actualiza la ubicación del producto en products_failure
-            if pf:
-                pf.location = location
-            else:
-                pf = ProductsFailure(
-                    product_code=code,
-                    store_code=store_code,
-                    minimal_stock=0,
-                    maximum_stock=0,
-                    location=location,
-                )
-                db.session.add(pf)
-            products_count += 1
-
-        db.session.commit()
+        products_count = inventory_service.bulk_update_product_location(
+            store_code, location, products
+        )
         # Redirigir con los parámetros de GET para mantener el estado
+        flash(f"Ubicación actualizada los productos seleccionados: {products_count}", "success")
         return redirect(
             url_for(
-                flash(f"Ubicación actualizada los productos seleccionados: {products_count}", "success"),
                 "inventory.products_locations", store_code=store_code, location=location
             )
         )
     except Exception as e:
-        db.session.rollback()
+        inventory_service.rollback_session()
         flash("Error al actualizar ubicaciones. Intente nuevamente.", "error")
         print(f"Error updating product locations: {e}")
         return redirect(
@@ -2839,11 +1697,9 @@ def search_products_for_location():
             headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
         )
 
-    # Resolver código alterno a código principal
-    products_code = ProductsCode.query.filter_by(other_code=product_code).first()
-    main_code = products_code.main_code if products_code else product_code
-
-    product = Product.query.filter_by(code=main_code).first()
+    product, pf = inventory_service.get_search_product_for_location_data(
+        product_code, request.args.get("store_code")
+    )
 
     if not product:
         error_payload = {
@@ -2858,70 +1714,41 @@ def search_products_for_location():
             headers={"HX-Trigger": json.dumps(error_payload), "HX-Reswap": "none"},
         )
 
-    # Obtener ubicación actual si existe
-    store_code = request.args.get("store_code")
-
-    pf = None
-    if store_code:
-        pf = ProductsFailure.query.filter_by(
-            product_code=main_code, store_code=store_code
-        ).first()
-
     return render_template("partials/product_row_location.html", product=product, pf=pf)
 
 
 @inventory_bp.route("/product_counter", methods=["GET", "POST"])
 @login_required
 def product_counter():
-    stores = Store.query.all()
+    user_code = current_user.code
+    all_counters = session.get("product_counter", {}) or {}
+    user_counters = all_counters.get(user_code, {}) or {}
+
     store_code = request.values.get("store_code")
-    store = Store.query.filter_by(code=store_code).first() if store_code else None
+    context = inventory_service.get_product_counter_context(
+        user_code=user_code,
+        store_code=store_code,
+        counters_by_user=user_counters,
+    )
 
-    # Reconstruir filas desde sesión para el usuario actual y el depósito seleccionado
-    counter_rows_html = ""
-    if store:
-        user_code = current_user.code
-        all_counters = session.get("product_counter", {}) or {}
-        user_counters = all_counters.get(user_code, {}) or {}
-        store_counters = user_counters.get(store.code, {}) or {}
-
-        rows = []
-        for code, item in store_counters.items():
-            product_row = Product.query.filter_by(code=code).first()
-            if not product_row:
-                continue
-
-            unit_rel = ProductsUnit.query.filter_by(
-                product_code=code, main_unit=True
-            ).first()
-
-            if isinstance(item, dict):
-                qty = float(item.get("counted", 0))
-                sys_q = float(item.get("system_qty", 0))
-                diff = float(item.get("difference", qty - sys_q))
-            else:
-                qty = float(item)
-                sys_q = 0.0
-                diff = qty - sys_q
-
-            rows.append(
-                render_template(
-                    "partials/product_counter_row.html",
-                    product=product_row,
-                    system_qty=sys_q,
-                    unit=unit_rel.unit1 if unit_rel else None,
-                    counted_amount=qty,
-                    difference=diff,
-                    store_code=store.code,
-                )
-            )
-
-        counter_rows_html = "".join(rows)
+    rows = [
+        render_template(
+            "partials/product_counter_row.html",
+            product=item["product"],
+            system_qty=item["system_qty"],
+            unit=item["unit"],
+            counted_amount=item["counted_amount"],
+            difference=item["difference"],
+            store_code=item["store_code"],
+        )
+        for item in context["rows"]
+    ]
+    counter_rows_html = "".join(rows)
 
     return render_template(
         "product_counter.html",
-        stores=stores,
-        store=store,
+        stores=context["stores"],
+        store=context["store"],
         store_code=store_code,
         counter_rows_html=counter_rows_html,
     )
@@ -2931,27 +1758,13 @@ def product_counter():
 @login_required
 def search_product_counter(store_code):
     product_code = request.args.get("product_code", "").strip()
-
-    # Resolver código alterno a código principal
-    products_code = ProductsCode.query.filter_by(other_code=product_code).first()
-    main_code = products_code.main_code if products_code else product_code
-
-    product_info = Product.query.filter_by(code=main_code).first()
-
-    store = Store.query.filter_by(code=store_code).first()
-
-    stock = ProductsStock.query.filter_by(
-        product_code=main_code, store=store_code
-    ).first()
-    unit = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
-
-    unit_value = unit.unit1 if unit is not None else None
+    data = inventory_service.get_search_product_counter_data(store_code, product_code)
     return render_template(
         "partials/product_counter_modal.html",
-        product=product_info,
-        stock=stock,
-        unit=unit_value,
-        store=store,
+        product=data["product"],
+        stock=data["stock"],
+        unit=data["unit"],
+        store=data["store"],
     )
 
 
@@ -2972,8 +1785,6 @@ def update_product_counter():
     if system_qty is None:
         system_qty = 0.0
 
-    # Obtener datos de producto (no necesitamos volver a leer el stock)
-    product_info = Product.query.filter_by(code=product_code).first()
     difference = float(counted_amount) - float(system_qty)
 
     # Guardar/actualizar el conteo en sesión por usuario, depósito y producto
@@ -2997,38 +1808,24 @@ def update_product_counter():
     all_counters[user_code] = user_counters
     session["product_counter"] = all_counters
 
-    # Reconstruir todas las filas para ese depósito a partir de la sesión
-    rows = []
-    for code, item in store_counters.items():
-        product_row = Product.query.filter_by(code=code).first()
-        if not product_row:
-            continue
+    context = inventory_service.get_product_counter_context(
+        user_code=user_code,
+        store_code=store_code,
+        counters_by_user=user_counters,
+    )
 
-        unit_rel = ProductsUnit.query.filter_by(
-            product_code=code, main_unit=True
-        ).first()
-
-        # Compatibilidad: si todavía hay datos antiguos (solo cantidad), recalcular
-        if isinstance(item, dict):
-            qty = float(item.get("counted", 0))
-            sys_q = float(item.get("system_qty", 0))
-            diff = float(item.get("difference", qty - sys_q))
-        else:
-            qty = float(item)
-            sys_q = 0.0
-            diff = qty - sys_q
-
-        rows.append(
-            render_template(
-                "partials/product_counter_row.html",
-                product=product_row,
-                system_qty=sys_q,
-                unit=unit_rel.unit1 if unit_rel else None,
-                counted_amount=qty,
-                difference=diff,
-                store_code=store_code,
-            )
+    rows = [
+        render_template(
+            "partials/product_counter_row.html",
+            product=item["product"],
+            system_qty=item["system_qty"],
+            unit=item["unit"],
+            counted_amount=item["counted_amount"],
+            difference=item["difference"],
+            store_code=item["store_code"],
         )
+        for item in context["rows"]
+    ]
 
     return "".join(rows)
 
@@ -3089,277 +1886,19 @@ def save_products_counter(store_code):
     user_counters = all_counters.get(user_code, {}) or {}
     store_counters = user_counters.get(store_code, {}) or {}
 
-    # Agrupar por tipo de diferencia para el usuario actual en este depósito
-    positive_diffs = {}  # diferencia > 0 (sobrante)
-    negative_diffs = {}  # diferencia < 0 (faltante)
-    zero_diffs = {}  # diferencia == 0 (sin ajuste)
-
-    print(f"Guardando conteo para depósito {store_code} (usuario {user_code}):")
-    for code, item in store_counters.items():
-        if isinstance(item, dict):
-            system_qty = float(item.get("system_qty", 0) or 0)
-            counted = float(item.get("counted", 0) or 0)
-            difference = float(item.get("difference", counted - system_qty) or 0)
-        else:
-            # Compatibilidad con datos antiguos: solo cantidad contada
-            counted = float(item or 0)
-            system_qty = 0.0
-            difference = counted - system_qty
-
-        # Clasificar por signo de la diferencia
-        if difference > 0:
-            positive_diffs[code] = {
-                "system_qty": system_qty,
-                "counted": counted,
-                "difference": difference,
-            }
-
-        elif difference < 0:
-            negative_diffs[code] = {
-                "system_qty": system_qty,
-                "counted": counted,
-                "difference": difference,
-            }
-        else:
-            zero_diffs[code] = {
-                "system_qty": system_qty,
-                "counted": counted,
-                "difference": difference,
-            }
-
-        print(
-            f" - Producto {code}: inventario={system_qty}, contada={counted}, diferencia={difference}"
-        )
-
-    # Si no hay diferencias, no generamos operaciones
+    positive_diffs, negative_diffs, _ = inventory_service.classify_counter_differences(
+        store_counters
+    )
     if not positive_diffs and not negative_diffs:
         flash("No hay diferencias de inventario para procesar.", "info")
         return redirect(url_for("inventory.product_counter"))
 
-    store = Store.query.filter_by(code=store_code).first()
-
-    # Preparar SQL para cabecera y detalle (mismo patrón que auto_order_collection)
-    sql_header = text(
-        """
-        SELECT set_inventory_operation(:p_correlative, :p_operation_type, :p_document_no, 
-        :p_emission_date, :p_wait, :p_description, :p_user_code, :p_station, :p_store, :p_locations, 
-        :p_destination_store, :p_destination_location, :p_operation_comments, :p_total_amount, 
-        :p_total_net, :p_total_tax, :p_total, :p_coin_code, :p_internal_use)
-        """
-    )
-
-    sql_detail = text(
-        """
-        SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product, 
-        :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations, 
-        :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type, 
-        :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code, 
-        :p_change_price)
-        """
-    )
-
-    load_correlative = None
-    download_correlative = None
-
     try:
-        # Operación de CARGA (sobrantes)
-        if positive_diffs:
-            header_params_load = {
-                "p_correlative": None,
-                "p_operation_type": "LOAD",  # tipo lógico para ajustes de carga
-                "p_document_no": None,
-                "p_emission_date": datetime.now().date(),
-                "p_wait": True,
-                "p_description": f"Ajuste de inventario (Sobrantes) {store.description if store else store_code}",
-                "p_user_code": user_code,
-                "p_station": "00",
-                "p_store": store_code,
-                "p_locations": "00",
-                "p_destination_store": store_code,
-                "p_destination_location": "00",
-                "p_operation_comments": "Generado desde conteo físico Toolbox (sobrantes)",
-                "p_total_amount": 0.0,
-                "p_total_net": 0.0,
-                "p_total_tax": 0.0,
-                "p_total": 0.0,
-                "p_coin_code": "02",
-                "p_internal_use": False,
-            }
-
-            load_correlative = db.session.execute(
-                sql_header, header_params_load
-            ).scalar()
-            if not load_correlative:
-                raise Exception("La DB no devolvió ID de operación de carga.")
-
-            for code, data in positive_diffs.items():
-                # Obtener datos maestros del producto
-                data_row = (
-                    db.session.query(ProductsUnit, Product, Tax)
-                    .join(Product, ProductsUnit.product_code == Product.code)
-                    .outerjoin(Tax, Product.buy_tax == Tax.code)
-                    .filter(
-                        ProductsUnit.product_code == code,
-                        ProductsUnit.main_unit == True,
-                    )
-                    .first()
-                )
-
-                if not data_row:
-                    print(f"OMITIDO (carga): {code} falta info maestra.")
-                    continue
-
-                pu, prod, tax = data_row
-
-                detail_params = {
-                    "p_main_correlative": load_correlative,
-                    "p_line": 0,
-                    "p_code_product": code,
-                    "p_description_product": prod.description,
-                    "p_referenc": prod.referenc,
-                    "p_mark": prod.mark,
-                    "p_model": prod.model,
-                    "p_amount": float(data["difference"]),  # sobrante > 0
-                    "p_store": store_code,
-                    "p_locations": "00",
-                    "p_destination_store": store_code,
-                    "p_destination_location": "00",
-                    "p_unit": int(pu.correlative),
-                    "p_conversion_factor": 0.0,
-                    "p_unit_type": 0,
-                    "p_unitary_cost": 0.0,
-                    "p_buy_tax": prod.buy_tax,
-                    "p_aliquot": tax.aliquot if tax else 0.0,
-                    "p_total_cost": 0.0,
-                    "p_total_tax": 0.0,
-                    "p_total": 0.0,
-                    "p_coin_code": "02",
-                    "p_change_price": False,
-                }
-                db.session.execute(sql_detail, detail_params)
-
-        # Operación de DESCARGA (faltantes)
-        if negative_diffs:
-            header_params_down = {
-                "p_correlative": None,
-                "p_operation_type": "DOWNLOAD",  # tipo lógico para ajustes de descarga
-                "p_document_no": None,
-                "p_emission_date": datetime.now().date(),
-                "p_wait": True,
-                "p_description": f"Ajuste de inventario (Faltantes) {store.description if store else store_code}",
-                "p_user_code": user_code,
-                "p_station": "00",
-                "p_store": store_code,
-                "p_locations": "00",
-                "p_destination_store": store_code,
-                "p_destination_location": "00",
-                "p_operation_comments": "Generado desde conteo físico Toolbox (faltantes)",
-                "p_total_amount": 0.0,
-                "p_total_net": 0.0,
-                "p_total_tax": 0.0,
-                "p_total": 0.0,
-                "p_coin_code": "02",
-                "p_internal_use": False,
-            }
-
-            download_correlative = db.session.execute(
-                sql_header, header_params_down
-            ).scalar()
-            if not download_correlative:
-                raise Exception("La DB no devolvió ID de operación de descarga.")
-
-            for code, data in negative_diffs.items():
-                data_row = (
-                    db.session.query(ProductsUnit, Product, Tax)
-                    .join(Product, ProductsUnit.product_code == Product.code)
-                    .outerjoin(Tax, Product.buy_tax == Tax.code)
-                    .filter(
-                        ProductsUnit.product_code == code,
-                        ProductsUnit.main_unit == True,
-                    )
-                    .first()
-                )
-
-                if not data_row:
-                    print(f"OMITIDO (descarga): {code} falta info maestra.")
-                    continue
-
-                pu, prod, tax = data_row
-
-                detail_params = {
-                    "p_main_correlative": download_correlative,
-                    "p_line": 0,
-                    "p_code_product": code,
-                    "p_description_product": prod.description,
-                    "p_referenc": prod.referenc,
-                    "p_mark": prod.mark,
-                    "p_model": prod.model,
-                    "p_amount": abs(
-                        float(data["difference"])
-                    ),  # usar valor absoluto de la diferencia negativa
-                    "p_store": store_code,
-                    "p_locations": "00",
-                    "p_destination_store": store_code,
-                    "p_destination_location": "00",
-                    "p_unit": int(pu.correlative),
-                    "p_conversion_factor": 0.0,
-                    "p_unit_type": 0,
-                    "p_unitary_cost": 0.0,
-                    "p_buy_tax": prod.buy_tax,
-                    "p_aliquot": tax.aliquot if tax else 0.0,
-                    "p_total_cost": 0.0,
-                    "p_total_tax": 0.0,
-                    "p_total": 0.0,
-                    "p_coin_code": "02",
-                    "p_change_price": False,
-                }
-                db.session.execute(sql_detail, detail_params)
-
-        # Registrar / actualizar historial de conteo por producto
-        today = datetime.now().date()
-        # Identificador lógico para este conteo (mismo para todos los productos de esta ejecución)
-        count_batch_id = str(uuid4())
-        for code, item in store_counters.items():
-            if isinstance(item, dict):
-                system_qty = float(item.get("system_qty", 0) or 0)
-                counted = float(item.get("counted", 0) or 0)
-                difference = float(item.get("difference", counted - system_qty) or 0)
-            else:
-                counted = float(item or 0)
-                system_qty = 0.0
-                difference = counted - system_qty
-
-            history = ProductsCounterHistory.query.filter_by(
-                product_code=code, store_code=store_code
-            ).first()
-            if not history:
-                history = ProductsCounterHistory(
-                    product_code=code,
-                    store_code=store_code,
-                    user_code=user_code,
-                )
-                db.session.add(history)
-
-            history.user_code = user_code
-            history.count_batch_id = count_batch_id
-            history.count_date = today
-            history.system_qty = system_qty
-            history.counted_qty = counted
-            history.difference = difference
-
-            # Asociar operaciones de carga/descarga según el signo de la diferencia
-            if difference > 0 and load_correlative:
-                history.operation_correlative_up = load_correlative
-                history.operation_correlative_down = None
-            elif difference < 0 and download_correlative:
-                history.operation_correlative_down = download_correlative
-                history.operation_correlative_up = None
-            else:
-                # Sin ajuste
-                history.operation_correlative_up = None
-                history.operation_correlative_down = None
-
-        db.session.commit()
+        count_batch_id = inventory_service.save_counter_adjustments(
+            store_code=store_code,
+            user_code=user_code,
+            store_counters=store_counters,
+        )
         flash("Operaciones de ajuste de inventario generadas correctamente.", "success")
 
         # Limpiar los contadores de sesión para este usuario y depósito, ya procesados
@@ -3401,7 +1940,7 @@ def save_products_counter(store_code):
         )
 
     except Exception as e:
-        db.session.rollback()
+        inventory_service.rollback_session()
         print(f"Error al generar operaciones de ajuste: {e}")
         flash("Error al generar las operaciones de ajuste de inventario.", "error")
 
@@ -3419,17 +1958,7 @@ def product_counter_report_pdf(count_batch_id):
     download = request.args.get("download", "0") == "1"
 
     # Traer todas las filas del historial para este conteo, con sus relaciones
-    items = (
-        ProductsCounterHistory.query.filter_by(count_batch_id=count_batch_id)
-        .options(
-            joinedload(ProductsCounterHistory.product),
-            joinedload(ProductsCounterHistory.store),
-            joinedload(ProductsCounterHistory.user),
-            joinedload(ProductsCounterHistory.load_operation),
-            joinedload(ProductsCounterHistory.download_operation),
-        )
-        .all()
-    )
+    items = inventory_service.get_counter_history_items(count_batch_id)
 
     if not items:
         return (
@@ -3484,10 +2013,7 @@ def product_counter_report(count_batch_id):
     # Normalizar el ID de batch igual que en la versión PDF
     count_batch_id = (count_batch_id or "").strip().strip('"').strip("'")
 
-    user = current_user
-    history_records = ProductsCounterHistory.query.filter_by(
-        count_batch_id=count_batch_id
-    ).all()
+    history_records = inventory_service.get_counter_history_records(count_batch_id)
 
     if not history_records:
         flash(
@@ -3530,15 +2056,18 @@ def modal_product_params(product_code=None, store=None):
     store = store or request.values.get("store")
 
     if request.method == "POST":
-        form_product_code = _normalize_code(request.form.get("product_code") or product_code)
+        form_product_code = inventory_service.normalize_code(request.form.get("product_code") or product_code)
         form_store_code = (request.form.get("store_code") or store or "").strip()
 
         if not form_product_code or not form_store_code:
             return "Datos incompletos para guardar parametros.", 400
 
-        main_code = _resolve_main_code(form_product_code)
-        product_info = Product.query.filter_by(code=main_code).first()
-        store_info = Store.query.filter_by(code=form_store_code).first()
+        modal_data = inventory_service.get_modal_product_params_data(
+            form_product_code, form_store_code
+        )
+        main_code = modal_data["main_code"]
+        product_info = modal_data["product"]
+        store_info = modal_data["store"]
 
         if not product_info:
             return "Producto no encontrado.", 404
@@ -3560,55 +2089,35 @@ def modal_product_params(product_code=None, store=None):
             if minimal_stock > maximum_stock:
                 return "El stock minimo no puede ser mayor al stock maximo.", 422
 
-            failure = ProductsFailure.query.filter_by(
-                product_code=main_code, store_code=form_store_code
-            ).first()
-
-            if not failure:
-                failure = ProductsFailure(
-                    product_code=main_code,
-                    store_code=form_store_code,
-                    minimal_stock=minimal_stock,
-                    maximum_stock=maximum_stock,
-                    location="",
-                )
-                db.session.add(failure)
-            else:
-                failure.minimal_stock = minimal_stock
-                failure.maximum_stock = maximum_stock
-
-            db.session.commit()
+            inventory_service.upsert_product_params(
+                form_store_code,
+                main_code,
+                minimal_stock,
+                maximum_stock,
+                "",
+            )
             return "Parametros guardados correctamente.", 200
         except Exception as exc:
-            db.session.rollback()
+            inventory_service.rollback_session()
             return f"Error al guardar parametros: {exc}", 500
 
     if not product_code or not store:
         return "Código de producto o depósito no proporcionado.", 400
 
-    main_code = _resolve_main_code(product_code)
-
-    product_info = Product.query.filter_by(code=main_code).first()
+    modal_data = inventory_service.get_modal_product_params_data(product_code, store)
+    product_info = modal_data["product"]
 
     if not product_info:
         return "Producto no encontrado.", 404
 
-    store_info = Store.query.filter_by(code=store).first()
+    store_info = modal_data["store"]
     if not store_info:
         return "Depósito no encontrado.", 404
 
-    product_params = ProductsFailure.query.filter_by(
-        product_code=main_code, store_code=store
-    ).first()
-
-    # Unidad principal para mostrar en el modal
-    unit_row = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
     return render_template(
-        "partials/modal_product_parmams.html",
-        product_params=product_params,
+        "partials/modal_product_params.html",
+        product_params=modal_data["product_params"],
         product=product_info,
         store=store_info,
-        unit=unit_row.unit1 if unit_row else None,
+        unit=modal_data["unit"],
     )
-
-    
