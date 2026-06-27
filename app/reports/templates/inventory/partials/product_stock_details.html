@@ -1,74 +1,72 @@
 {% if error %}
-<div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+<div class="alert alert-danger" role="alert">
     {{ error }}
 </div>
 {% elif product %}
-<div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-    <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Detalle del producto</h2>
-        <div class="mt-3 grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2 md:grid-cols-2 dark:text-gray-300">
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Codigo:</span> {{ product.code }}</div>
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Referencia:</span> {{ product.referenc or '-' }}</div>
-            <div class="sm:col-span-2 md:col-span-2"><span class="font-semibold text-gray-900 dark:text-gray-100">Descripcion:</span> {{ product.description or '-' }}</div>
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Marca:</span> {{ product.mark_description or '-' }}</div>
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Departamento:</span> {{ product.department_description or '-' }}</div>
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Unidad:</span> {{ product.unit_description or '-' }}</div>
-            <div><span class="font-semibold text-gray-900 dark:text-gray-100">Stock total:</span> {{ '%.2f'|format(stock_total or 0) }}</div>
+<div class="card shadow-sm border-0 bg-body">
+    <div class="card-header bg-body-tertiary">
+        <h2 class="h5 fw-semibold mb-0">Detalle del producto</h2>
+        <div class="row row-cols-1 row-cols-sm-2 g-2 mt-3 small">
+            <div><span class="fw-semibold">Código:</span> {{ product.code }}</div>
+            <div><span class="fw-semibold">Referencia:</span> {{ product.referenc or '-' }}</div>
+            <div class="col-sm-12"><span class="fw-semibold">Descripción:</span> {{ product.description or '-' }}</div>
+            <div><span class="fw-semibold">Marca:</span> {{ product.mark_description or '-' }}</div>
+            <div><span class="fw-semibold">Departamento:</span> {{ product.department_description or '-' }}</div>
+            <div><span class="fw-semibold">Unidad:</span> {{ product.unit_description or '-' }}</div>
+            <div><span class="fw-semibold">Stock total:</span> {{ '%.2f'|format(stock_total or 0) }}</div>
         </div>
     </div>
 
-    <div class="px-5 py-4">
-        <h3 class="mb-3 text-base font-semibold text-gray-900 dark:text-gray-100">Existencia por deposito</h3>
-        
-        <div class="block space-y-3 md:hidden">
+    <div class="card-body">
+        <h3 class="h6 fw-semibold mb-3">Existencia por depósito</h3>
+
+        <div class="d-block d-md-none vstack gap-3">
             {% for product_stock in product_stocks %}
-            <div class="rounded-md border border-gray-150 p-3 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/30 {% if (product_stock.stock or 0) <= 0 %}opacity-60{% endif %}">
-                <div class="flex justify-between items-start mb-1">
-                    <span class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">Depósito</span>
-                    <span class="text-xs font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-600 dark:bg-gray-700 dark:text-gray-300">N° {{ product_stock.store_code }}</span>
+            <div class="card card-body border bg-body-tertiary {% if (product_stock.stock or 0) <= 0 %}opacity-50{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <span class="small fw-semibold text-uppercase text-body-secondary">Depósito</span>
+                    <span class="badge text-bg-light border font-monospace">N° {{ product_stock.store_code }}</span>
                 </div>
-                <div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    {{ product_stock.store_description or '-' }}
-                </div>
-                <div class="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700/50">
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Existencia:</span>
-                    <span class="text-sm font-bold text-blue-600 dark:text-blue-400">{{ '%.2f'|format(product_stock.stock or 0) }}</span>
+                <div class="fw-medium mb-2">{{ product_stock.store_description or '-' }}</div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+                    <span class="text-body-secondary">Existencia:</span>
+                    <span class="fw-bold text-primary">{{ '%.2f'|format(product_stock.stock or 0) }}</span>
                 </div>
             </div>
             {% else %}
-            <div class="px-4 py-6 text-center italic text-sm text-gray-500 dark:text-gray-400">
+            <div class="py-4 text-center fst-italic text-body-secondary small">
                 No hay depósitos registrados.
             </div>
             {% endfor %}
         </div>
 
-        <div class="hidden md:block overflow-x-auto">
-            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-secondary">
                     <tr>
-                        <th class="px-4 py-3">Deposito</th>
-                        <th class="px-4 py-3">Codigo</th>
-                        <th class="px-4 py-3 text-right">Existencia</th>
+                        <th scope="col">Depósito</th>
+                        <th scope="col">Código</th>
+                        <th scope="col" class="text-end">Existencia</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody>
                     {% for product_stock in product_stocks %}
-                    <tr class="transition duration-150 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 {% if (product_stock.stock or 0) <= 0 %}text-gray-400 dark:text-gray-500{% endif %}">
-                        <td class="px-4 py-3">{{ product_stock.store_description or '-' }}</td>
-                        <td class="px-4 py-3 font-mono text-xs">{{ product_stock.store_code }}</td>
-                        <td class="px-4 py-3 text-right font-semibold">{{ '%.2f'|format(product_stock.stock or 0) }}</td>
+                    <tr class="{% if (product_stock.stock or 0) <= 0 %}text-body-secondary{% endif %}">
+                        <td>{{ product_stock.store_description or '-' }}</td>
+                        <td class="font-monospace small">{{ product_stock.store_code }}</td>
+                        <td class="text-end fw-semibold">{{ '%.2f'|format(product_stock.stock or 0) }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="px-4 py-8 text-center italic text-gray-500 dark:text-gray-400">
-                            No hay depositos registrados.
+                        <td colspan="3" class="py-4 text-center fst-italic text-body-secondary small">
+                            No hay depósitos registrados.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        
+
     </div>
 </div>
 {% endif %}

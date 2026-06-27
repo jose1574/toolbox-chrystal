@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Traslados con diferencias{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="margin-left: 4.75rem; width: calc(100% - 4.75rem);">
+    <div class="card shadow-sm border-0 bg-body mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div>
+                    <h1 class="h3 fw-bold mb-1">Traslados con diferencias</h1>
+                    <p class="text-body-secondary mb-0">Listado de recepciones donde la cantidad contada no coincide con la cantidad esperada.</p>
+                </div>
+                <div class="card border-danger-subtle bg-danger-subtle">
+                    <div class="card-body py-2 px-3 text-danger-emphasis text-center">
+                        <div class="small fw-semibold text-uppercase">Total con diferencias</div>
+                        <div class="h4 fw-bold mb-0">{{ transfers|length }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="get" action="{{ url_for('reports.transfer_differences') }}" class="mt-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-4">
+                        <label for="q" class="form-label small fw-semibold mb-1">Buscar</label>
+                        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Correlativo, documento, depósito..." class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <label for="date_from" class="form-label small fw-semibold mb-1">Desde</label>
+                        <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12 col-lg-4 d-flex gap-2 justify-content-lg-end">
+                        <div class="flex-grow-1 flex-lg-grow-0" style="min-width: 140px;">
+                            <label for="date_to" class="form-label small fw-semibold mb-1">Hasta</label>
+                            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm">
+                        </div>
+                        <div class="d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm px-3">Filtrar</button>
+                            <a href="{{ url_for('reports.transfer_differences') }}" class="btn btn-outline-secondary btn-sm px-3">Limpiar</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 bg-body overflow-hidden">
+        <div class="card-header bg-body-tertiary border-0 px-4 py-3">
+            <h2 class="h5 fw-semibold mb-1">Recepciones con diferencias registradas</h2>
+            <p class="text-body-secondary small mb-0">Selecciona un traslado para abrir su reporte PDF de diferencias.</p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0" style="min-width: 1060px;">
+                <thead class="table-light text-uppercase small text-secondary">
+                    <tr>
+                        <th scope="col">Traslado</th>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Origen</th>
+                        <th scope="col">Destino</th>
+                        <th scope="col" class="text-center">Líneas</th>
+                        <th scope="col" class="text-end">Esperada</th>
+                        <th scope="col" class="text-end">Contada</th>
+                        <th scope="col" class="text-end">Diferencia</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col" class="text-end">Reporte</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transfer in transfers %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">#{{ transfer.operation_correlative }}</div>
+                            <div class="small text-body-secondary">Doc: {{ transfer.document_no or '-' }}</div>
+                        </td>
+                        <td>{{ transfer.emission_date or '-' }}</td>
+                        <td>{{ transfer.store_description or transfer.store or '-' }}</td>
+                        <td>{{ transfer.destination_store_description or transfer.destination_store or '-' }}</td>
+                        <td class="text-center fw-semibold">{{ transfer.difference_lines }}</td>
+                        <td class="text-end">{{ '%.2f'|format(transfer.expected_total or 0) }}</td>
+                        <td class="text-end">{{ '%.2f'|format(transfer.counted_total or 0) }}</td>
+                        <td class="text-end fw-bold {% if transfer.difference_total < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ '%.2f'|format(transfer.difference_total or 0) }}
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill {% if transfer.current_status == 'RECEIVED' %}text-bg-success{% elif transfer.current_status == 'IN_TRANSIT' %}text-bg-primary{% elif transfer.current_status == 'RECOLLECTION_CHECKED' %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">
+                                {{ status_labels.get(transfer.current_status, transfer.current_status) }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('reports.transfer_reception_differences_report', order_id=transfer.operation_correlative) }}" target="_blank" class="btn btn-sm btn-danger">Ver PDF</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="py-4 text-center text-body-secondary fst-italic">No hay traslados con diferencias para los filtros seleccionados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -70,7 +70,7 @@
                     <h2 class="h5 fw-semibold mb-1">Estado del flujo</h2>
                     <p class="small text-secondary mb-0">Distribución actual de traslados emitidos por la aplicación.</p>
                 </div>
-                <a href="{{ url_for('inventory.transfer_traceability') }}" class="small fw-semibold link-primary text-decoration-none">Ver trazabilidad</a>
+                <a href="{{ url_for('reports.transfer_traceability') }}" class="small fw-semibold link-primary text-decoration-none">Ver trazabilidad</a>
             </div>
             <div class="row g-2 mt-1">
                 {% for status in dashboard.status_cards %}

@@ -3,41 +3,41 @@
 {% block title %}Reporte de existencia de productos{% endblock %}
 
 {% block content %}
-<div class="p-4 ml-[4.5rem]">
-    <div class="mx-auto max-w-5xl">
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Reporte de existencia de productos</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Busca un producto por codigo o catalogo para ver su existencia en cada deposito.
+<div class="container-fluid py-4" style="margin-left: 4.75rem; width: calc(100% - 4.75rem);">
+    <div class="mx-auto" style="max-width: 72rem;">
+        <div class="mb-4">
+            <h1 class="h3 fw-bold mb-1">Reporte de existencia de productos</h1>
+            <p class="text-secondary mb-0">
+                Busca un producto por código o catálogo para ver su existencia en cada depósito.
             </p>
         </div>
 
-        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Buscar producto</h2>
-            
-            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-12 md:items-end">
-                
-                <div class="md:col-span-6">
-                    <label for="product-code-input" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Código</label>
-                    <input type="text" id="product-code-input" name="product_code" autocomplete="off"
-                        placeholder="CÓDIGO DE PRODUCTO"
-                        class="block h-10 w-full rounded-md border border-gray-300 px-3 text-sm uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+        <div class="card shadow-sm border-0 bg-body mb-4">
+            <div class="card-body">
+                <h2 class="h5 fw-semibold mb-3">Buscar producto</h2>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-6">
+                        <label for="product-code-input" class="form-label fw-semibold">Código</label>
+                        <input type="text" id="product-code-input" name="product_code" autocomplete="off"
+                            placeholder="CÓDIGO DE PRODUCTO"
+                            class="form-control text-uppercase">
+                    </div>
+
+                    <div class="col-12 col-md-auto d-grid gap-2 d-md-flex align-items-end">
+                        <button type="button" id="search-by-code" class="btn btn-primary px-4">
+                            Buscar
+                        </button>
+
+                        <button type="button" id="open-catalog-modal" class="btn btn-outline-success px-4 text-nowrap">
+                            Buscar en catálogo
+                        </button>
+                    </div>
                 </div>
-                
-                <button type="button" id="search-by-code"
-                    class="inline-flex h-10 w-full items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition duration-200 ease-in-out hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0 transform focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3">
-                    Buscar
-                </button>
-                
-                <button type="button" id="open-catalog-modal"
-                    class="inline-flex h-10 w-full items-center justify-center rounded-md border border-emerald-600 bg-transparent px-4 text-sm font-medium text-emerald-600 shadow-sm transition duration-200 ease-in-out hover:bg-emerald-600 hover:text-white hover:-translate-y-0.5 active:translate-y-0 transform focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-600 dark:hover:text-white md:col-span-3 whitespace-nowrap">
-                    Buscar en catálogo
-                </button>
-                
             </div>
         </div>
 
-        <div id="product-stock-details" class="mt-4"></div>
+        <div id="product-stock-details"></div>
     </div>
 </div>
 
@@ -65,7 +65,7 @@
                 detailsContainer.innerHTML = await response.text();
                 codeInput.value = code.toUpperCase();
             } catch (err) {
-                detailsContainer.innerHTML = '<div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">No se pudo cargar la existencia del producto.</div>';
+                detailsContainer.innerHTML = '<div class="alert alert-danger mb-0" role="alert">No se pudo cargar la existencia del producto.</div>';
             }
         }
 
@@ -81,7 +81,7 @@
                 });
                 document.getElementById('modal-products-stock').innerHTML = await response.text();
             } catch (err) {
-                detailsContainer.innerHTML = '<div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">No se pudo abrir el catalogo de productos.</div>';
+                detailsContainer.innerHTML = '<div class="alert alert-danger mb-0" role="alert">No se pudo abrir el catálogo de productos.</div>';
             }
         }
 

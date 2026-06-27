@@ -1,5 +1,9 @@
-from flask import render_template, request
-from flask_login import login_required
+from io import BytesIO
+from datetime import datetime
+
+import xlwt
+from flask import Response, make_response, render_template, request, send_file
+from flask_login import current_user, login_required
 from sqlalchemy import func, select
 
 from app import db
@@ -14,6 +18,8 @@ from app.models import (
     Unit,
 )
 from app.reports import reports_bp
+from app.reports.utils import generate_barcode, render_pdf
+from app.inventory.services import inventory_service
 
 
 def _normalize_code(code: str) -> str:
@@ -224,4 +230,223 @@ def modal_producs_stock():
         page=current_page,
         total_pages=total_pages,
         total_products=total_products,
+    )
+
+
+FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
+FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"
+FLOW_IN_TRANSIT = "IN_TRANSIT"
+FLOW_RECEIVED = "RECEIVED"
+
+TRANSFER_FLOW_STEPS = [
+    {
+        "key": "recollection_issued",
+        "label": "Orden de recolección",
+        "user_field": "recollection_issued_user",
+        "user_name_field": "recollection_issued_user_name",
+        "date_field": "recollection_issued_at",
+    },
+    {
+        "key": "checked",
+        "label": "Chequeo de orden de recolección",
+        "user_field": "checking_user",
+        "user_name_field": "checking_user_name",
+        "date_field": "checked_at",
+    },
+    {
+        "key": "in_transit",
+        "label": "Firma digital del responsable de carga",
+        "user_field": "in_transit_user",
+        "user_name_field": "in_transit_user_name",
+        "date_field": "in_transit_at",
+    },
+    {
+        "key": "received",
+        "label": "Recepción de traslado procesada",
+        "user_field": "receiving_user",
+        "user_name_field": "receiving_user_name",
+        "date_field": "received_at",
+    },
+]
+
+TRANSFER_STATUS_LABELS = {
+    FLOW_RECOLLECTION_ISSUED: "Orden emitida",
+    FLOW_RECOLLECTION_CHECKED: "Orden chequeada",
+    FLOW_IN_TRANSIT: "En tránsito",
+    FLOW_RECEIVED: "Recepcionado y procesado",
+}
+
+
+@reports_bp.route("/transfer_traceability", methods=["GET"])
+@login_required
+def transfer_traceability():
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
+    return render_template(
+        "reports/transfer_traceability.html",
+        transfers=transfers,
+        filters=filters,
+        flow_steps=TRANSFER_FLOW_STEPS,
+        status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@reports_bp.route("/transfer_differences", methods=["GET"])
+@login_required
+def transfer_differences():
+    filters = inventory_service.build_transfer_differences_filters(
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_differences_rows(filters)
+    return render_template(
+        "reports/transfer_differences.html",
+        transfers=transfers,
+        filters=filters,
+        status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@reports_bp.route("/transfer_traceability/pdf", methods=["GET"])
+@login_required
+def transfer_traceability_pdf():
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
+    pdf = render_pdf(
+        "reports/transfer_traceability_pdf.html",
+        {
+            "transfers": transfers,
+            "filters": filters,
+            "flow_steps": TRANSFER_FLOW_STEPS,
+            "status_labels": TRANSFER_STATUS_LABELS,
+            "now": datetime.now(),
+            "user": current_user,
+        },
+        paper_format="Letter",
+        orientation="Landscape",
+    )
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "inline; filename=trazabilidad_traslados.pdf"},
+    )
+
+
+@reports_bp.route("/transfer_traceability/excel", methods=["GET"])
+@login_required
+def transfer_traceability_excel():
+    filters = inventory_service.build_transfer_traceability_filters(
+        request.args.get("status"),
+        request.args.get("date_from"),
+        request.args.get("date_to"),
+        request.args.get("q"),
+    )
+    transfers = inventory_service.get_transfer_traceability_rows(filters)
+
+    output = BytesIO()
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet("Trazabilidad")
+
+    header_style = xlwt.easyxf("font: bold on; pattern: pattern solid, fore_colour gray25;")
+    text_style = xlwt.easyxf(num_format_str="@")
+    date_style = xlwt.easyxf(num_format_str="DD/MM/YYYY HH:MM")
+
+    columns = [
+        "Correlativo",
+        "Documento",
+        "Fecha emisión",
+        "Descripción",
+        "Depósito origen",
+        "Depósito destino",
+        "Estado",
+        "Orden usuario",
+        "Orden fecha",
+        "Chequeo usuario",
+        "Chequeo fecha",
+        "Carga usuario",
+        "Carga fecha",
+        "Recepción usuario",
+        "Recepción fecha",
+    ]
+
+    for col_idx, title in enumerate(columns):
+        ws.write(0, col_idx, title, header_style)
+
+    def write_value(row_idx, col_idx, value):
+        if isinstance(value, datetime):
+            ws.write(row_idx, col_idx, value, date_style)
+        else:
+            ws.write(row_idx, col_idx, "" if value is None else str(value), text_style)
+
+    for row_idx, transfer in enumerate(transfers, start=1):
+        values = [
+            transfer.operation_correlative,
+            transfer.document_no,
+            transfer.emission_date,
+            transfer.description,
+            f"{transfer.store_description or ''} ({transfer.store or ''})",
+            f"{transfer.destination_store_description or ''} ({transfer.destination_store or ''})",
+            TRANSFER_STATUS_LABELS.get(transfer.current_status, transfer.current_status),
+            transfer.recollection_issued_user_name or transfer.recollection_issued_user,
+            transfer.recollection_issued_at,
+            transfer.checking_user_name or transfer.checking_user,
+            transfer.checked_at,
+            transfer.in_transit_user_name or transfer.in_transit_user,
+            transfer.in_transit_at,
+            transfer.receiving_user_name or transfer.receiving_user,
+            transfer.received_at,
+        ]
+        for col_idx, value in enumerate(values):
+            write_value(row_idx, col_idx, value)
+
+    for col_idx, title in enumerate(columns):
+        ws.col(col_idx).width = min(max(len(title) + 4, 14), 45) * 256
+
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="trazabilidad_traslados.xls",
+        mimetype="application/vnd.ms-excel",
+    )
+
+
+@reports_bp.route("/transfer_operation/reception_differences_report/<int:order_id>")
+@login_required
+def transfer_reception_differences_report(order_id):
+    user = current_user
+    order, differences = inventory_service.get_transfer_reception_differences_report_data(order_id)
+
+    barcode_base64 = generate_barcode(order.correlative)
+
+    return Response(
+        render_pdf(
+            "reports/transfer_reception_differences_pdf.html",
+            {
+                "order": order,
+                "differences": differences,
+                "title": f"Diferencias de recepción de traslado {order.correlative}",
+                "now": datetime.now(),
+                "barcode_base64": barcode_base64,
+                "user": user,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=diferencias_traslado_{order.correlative}.pdf"
+        },
     )
