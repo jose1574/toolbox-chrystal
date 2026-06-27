@@ -71,25 +71,25 @@ def get_dashboard_data():
             "code": "RECOLLECTION_ISSUED",
             "label": STATUS_LABELS["RECOLLECTION_ISSUED"],
             "count": metrics["issued_count"],
-            "class": "bg-amber-50 text-amber-800 border-amber-200",
+            "class": "bg-warning-subtle text-warning-emphasis border-warning-subtle",
         },
         {
             "code": "RECOLLECTION_CHECKED",
             "label": STATUS_LABELS["RECOLLECTION_CHECKED"],
             "count": metrics["checked_count"],
-            "class": "bg-teal-50 text-teal-800 border-teal-200",
+            "class": "bg-info-subtle text-info-emphasis border-info-subtle",
         },
         {
             "code": "IN_TRANSIT",
             "label": STATUS_LABELS["IN_TRANSIT"],
             "count": metrics["transit_count"],
-            "class": "bg-blue-50 text-blue-800 border-blue-200",
+            "class": "bg-primary-subtle text-primary-emphasis border-primary-subtle",
         },
         {
             "code": "RECEIVED",
             "label": STATUS_LABELS["RECEIVED"],
             "count": metrics["received_count"],
-            "class": "bg-green-50 text-green-800 border-green-200",
+            "class": "bg-success-subtle text-success-emphasis border-success-subtle",
         },
     ]
 

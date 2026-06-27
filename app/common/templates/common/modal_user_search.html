@@ -1,61 +1,54 @@
-<div id="modalUserSearch" tabindex="-1" aria-hidden="true" class="fixed top-0 left-0 right-0 z-50 w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
-    <div class="relative w-full max-w-4xl max-h-full">
-        <!-- Modal content -->
-        <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
-            <!-- Modal header -->
-            <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600">
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                    Seleccionar Usuario
-                </h3>
-                <button type="button" onclick="document.getElementById('modalUserSearch').remove()" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white">
-                    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                    </svg>
-                    <span class="sr-only">Cerrar</span>
-                </button>
-            </div>
-            <!-- Modal body -->
-            <div class="p-6 space-y-6">
-                {% if not users %}
-                <div class="p-4 text-center text-gray-500">
-                    No se encontraron usuarios.
+{% extends 'base.html' %}
+
+{% block title %}Seleccionar Usuario{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 ps-5">
+    <div id="modalUserSearch" class="modal fade show d-block" tabindex="-1" aria-hidden="true" role="dialog" aria-modal="true" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h3 class="modal-title h5 mb-0">
+                        Seleccionar Usuario
+                    </h3>
+                    <button type="button" class="btn-close" aria-label="Cerrar" onclick="document.getElementById('modalUserSearch').remove()"></button>
                 </div>
-                {% else %}
-                <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th scope="col" class="px-6 py-3">Código</th>
-                                <th scope="col" class="px-6 py-3">Nombre</th>
-                                <th scope="col" class="px-6 py-3">Correo Electrónico</th>
-                                <th scope="col" class="px-6 py-3 text-right">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for user in users %}
-                            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer" 
-                                onclick="selectUser('{{ user.code }}', '{{ user.description }}')">
-                                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                    {{ user.code }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ user.description }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ user.email }}
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <button type="button" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                        Seleccionar
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="modal-body">
+                    {% if not users %}
+                    <div class="text-center text-body-secondary py-4">
+                        No se encontraron usuarios.
+                    </div>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-uppercase small text-secondary">
+                                <tr>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Nombre</th>
+                                    <th scope="col">Correo Electrónico</th>
+                                    <th scope="col" class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr role="button" onclick="selectUser('{{ user.code }}', '{{ user.description }}')">
+                                    <td class="fw-semibold text-body">{{ user.code }}</td>
+                                    <td>{{ user.description }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none">
+                                            Seleccionar
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
