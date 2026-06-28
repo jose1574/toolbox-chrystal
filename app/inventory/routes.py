@@ -389,8 +389,8 @@ def manual_order_product_lookup():
     store_origin = request.args.get("store_origin")
     code = request.args.get("code")
     entered_code = inventory_service.normalize_code(code)
-    main_code = inventory_service.resolve_main_code(code)
-    product = inventory_service.get_product_for_manual_order(code, store_origin)
+    main_code = inventory_service._resolver_main_code(code)
+    product = inventory_service.get_product_for_manual_order(main_code, store_origin)
 
     if not product or float(product.stock_origin or 0) <= 0:
         return jsonify({"ok": False, "message": "Producto no encontrado o sin stock en origen."}), 404
@@ -417,6 +417,7 @@ def manual_order_product_lookup():
 @login_required
 def manual_order_products_modal():
     store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
     query = request.args.get("q", "")
     page = request.args.get("page", 1, type=int)
     products, total_products, total_pages, current_page = inventory_service.search_products_for_manual_order(
@@ -427,9 +428,43 @@ def manual_order_products_modal():
         products=products,
         query=query,
         store_origin=store_origin,
+        store_dst=store_dst,
         page=current_page,
         total_pages=total_pages,
         total_products=total_products,
+    )
+
+
+@inventory_bp.route("/manual_order_collection/product_detail", methods=["GET"])
+@login_required
+def manual_order_product_detail():
+    store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
+    product_code = request.args.get("product_code")
+
+    detail_data = inventory_service.get_manual_order_product_detail_data(
+        product_code, store_origin, store_dst
+    )
+
+    if detail_data is None:
+        return render_template(
+            "partials/manual_order_product_detail.html",
+            product_detail=None,
+            error_message="Selecciona un producto para ver su detalle.",
+            store_origin=store_origin,
+            store_dst=store_dst,
+        )
+
+    store_origin_obj = inventory_service.get_store_by_code(store_origin) if store_origin else None
+    store_dst_obj = inventory_service.get_store_by_code(store_dst) if store_dst else None
+
+    return render_template(
+        "partials/manual_order_product_detail.html",
+        product_detail=detail_data,
+        store_origin=store_origin_obj,
+        store_dst=store_dst_obj,
+        store_origin_code=store_origin,
+        store_dst_code=store_dst,
     )
 
 

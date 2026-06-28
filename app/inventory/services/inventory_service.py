@@ -207,12 +207,16 @@ def normalize_code(code: str) -> str:
   return (code or "").strip().upper()
 
 
-def resolve_main_code(code: str) -> str:
+def _resolver_main_code(code: str) -> str:
   normalized = normalize_code(code)
   mapping = ProductsCode.query.filter(
     func.upper(func.trim(ProductsCode.other_code)) == normalized
   ).first()
   return normalize_code(mapping.main_code) if mapping else normalized
+
+
+def resolve_main_code(code: str) -> str:
+  return _resolver_main_code(code)
 
 
 def find_detail_by_codes(order_id, codes):
@@ -278,7 +282,7 @@ def build_products_list_df():
 
 
 def get_product_for_manual_order(product_code, store_origin):
-  main_code = resolve_main_code(product_code)
+  main_code = _resolver_main_code(product_code)
   if not main_code or not store_origin:
     return None
 
@@ -310,6 +314,72 @@ def get_product_for_manual_order(product_code, store_origin):
     .where(func.upper(func.trim(Product.code)) == main_code)
   )
   return db.session.execute(stmt).first()
+
+
+def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
+  main_code = _resolver_main_code(product_code)
+  if not main_code or not store_origin or not store_dst:
+    return None
+
+  product = Product.query.filter_by(code=main_code).first()
+  if not product:
+    return None
+
+  unit_row = ProductsUnit.query.filter_by(product_code=main_code, main_unit=True).first()
+  mark_row = Mark.query.filter_by(code=product.mark).first() if product.mark else None
+  department_row = Department.query.filter_by(code=product.department).first() if product.department else None
+  product_params = ProductsFailure.query.filter_by(
+    product_code=main_code,
+    store_code=store_dst,
+  ).first()
+
+  stock_rows = (
+    db.session.query(
+      ProductsStock.store.label("store_code"),
+      Store.description.label("store_description"),
+      func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+    )
+    .outerjoin(Store, Store.code == ProductsStock.store)
+    .filter(ProductsStock.product_code == main_code)
+    .group_by(ProductsStock.store, Store.description)
+    .order_by(Store.description.asc())
+    .all()
+  )
+
+  stock_by_store = [
+    {
+      "store_code": row.store_code,
+      "store_description": row.store_description or row.store_code,
+      "stock": float(row.stock_total or 0),
+    }
+    for row in stock_rows
+  ]
+
+  stock_global = sum(row["stock"] for row in stock_by_store)
+  stock_origin = next(
+    (row["stock"] for row in stock_by_store if normalize_code(row["store_code"]) == normalize_code(store_origin)),
+    0,
+  )
+  stock_destination = next(
+    (row["stock"] for row in stock_by_store if normalize_code(row["store_code"]) == normalize_code(store_dst)),
+    0,
+  )
+
+  return {
+    "main_code": main_code,
+    "product": product,
+    "unit": unit_row.unit1 if unit_row else None,
+    "mark_description": mark_row.description if mark_row else "",
+    "department_description": department_row.description if department_row else "",
+    "stock_global": float(stock_global or 0),
+    "stock_origin": float(stock_origin or 0),
+    "stock_destination": float(stock_destination or 0),
+    "stock_by_store": stock_by_store,
+    "minimum_stock": float(product_params.minimal_stock or 0) if product_params else 0,
+    "maximum_stock": float(product_params.maximum_stock or 0) if product_params else 0,
+    "location": product_params.location if product_params and product_params.location else "",
+    "resolved_from_alternate": normalize_code(product_code) != main_code,
+  }
 
 
 def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
@@ -913,11 +983,7 @@ def normalize_code(code: str) -> str:
 
 
 def resolve_main_code(code: str) -> str:
-  normalized = normalize_code(code)
-  mapping = ProductsCode.query.filter(
-    func.upper(func.trim(ProductsCode.other_code)) == normalized
-  ).first()
-  return normalize_code(mapping.main_code) if mapping else normalized
+  return _resolver_main_code(code)
 
 
 def find_detail_by_codes(order_id, codes):
@@ -982,7 +1048,7 @@ def build_products_list_df():
 
 
 def get_product_for_manual_order(product_code, store_origin):
-  main_code = resolve_main_code(product_code)
+  main_code = _resolver_main_code(product_code)
   if not main_code or not store_origin:
     return None
 

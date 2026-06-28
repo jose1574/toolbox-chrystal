@@ -1,0 +1,103 @@
+<div id="manual-product-detail" class="d-flex flex-column h-100 rounded border border-secondary-subtle bg-body shadow-sm overflow-hidden" style="min-height: 0;">
+    <div class="border-bottom border-secondary-subtle px-4 py-3 d-flex align-items-start justify-content-between gap-2">
+        <div>
+            <h3 class="h6 fw-semibold text-body mb-1">Detalle del producto</h3>
+            <p class="small text-body-secondary mb-0">Revisa existencias y define la cantidad antes de agregarlo a la orden.</p>
+        </div>
+        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" data-close-manual-product-detail>
+            Limpiar
+        </button>
+    </div>
+
+    {% if error_message %}
+    <div class="px-4 py-3">
+        <div class="alert alert-secondary mb-0 small" role="alert">{{ error_message }}</div>
+    </div>
+    {% elif not product_detail %}
+    <div class="flex-grow-1 d-flex align-items-center justify-content-center px-4 py-5 text-center text-body-secondary small">
+        Selecciona un producto de la lista para ver su detalle y completar la cantidad.
+    </div>
+    {% else %}
+    <div class="flex-grow-1 overflow-auto px-4 py-3 d-grid gap-3" style="min-height: 0;" data-code="{{ product_detail.main_code }}" data-description="{{ product_detail.product.description or '' }}" data-unit="{{ product_detail.unit.description if product_detail.unit else '' }}" data-mark="{{ product_detail.mark_description or '' }}" data-department="{{ product_detail.department_description or '' }}" data-origin-stock="{{ product_detail.stock_origin }}" data-global-stock="{{ product_detail.stock_global }}" data-destination-stock="{{ product_detail.stock_destination }}" data-minimum-stock="{{ product_detail.minimum_stock }}" data-maximum-stock="{{ product_detail.maximum_stock }}" data-location="{{ product_detail.location }}">
+        <div class="rounded border border-secondary-subtle bg-body-tertiary p-3">
+            <div class="small text-body-secondary mb-1">Código</div>
+            <div class="fw-semibold text-body">{{ product_detail.main_code }}</div>
+            {% if product_detail.resolved_from_alternate %}
+            <div class="small text-success mt-1">Se resolvió desde un código alterno.</div>
+            {% endif %}
+        </div>
+
+        <div class="rounded border border-secondary-subtle p-3">
+            <div class="small text-body-secondary mb-1">Descripción</div>
+            <div class="fw-semibold text-body">{{ product_detail.product.description or '-' }}</div>
+            <div class="small text-body-secondary mt-1">{{ product_detail.product.referenc or '-' }}</div>
+            <div class="small text-body-secondary mt-1">Marca: {{ product_detail.mark_description or '-' }} | Departamento: {{ product_detail.department_description or '-' }}</div>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-12 col-md-6">
+                <div class="rounded border border-secondary-subtle p-3 h-100">
+                    <div class="small text-body-secondary mb-1">Unidad</div>
+                    <div class="fw-semibold text-body">{{ product_detail.unit.description if product_detail.unit else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="rounded border border-secondary-subtle p-3 h-100">
+                    <div class="small text-body-secondary mb-1">Ubicación destino</div>
+                    <div class="fw-semibold text-body">{{ product_detail.location or '-' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded border border-secondary-subtle p-3 d-grid gap-2">
+            <div class="d-flex justify-content-between gap-3 small"><span class="text-body-secondary">Existencia global</span><strong class="text-body">{{ '%.2f'|format(product_detail.stock_global or 0) }}</strong></div>
+            <div class="d-flex justify-content-between gap-3 small"><span class="text-body-secondary">Existencia en origen</span><strong class="text-body">{{ '%.2f'|format(product_detail.stock_origin or 0) }}</strong></div>
+            <div class="d-flex justify-content-between gap-3 small"><span class="text-body-secondary">Existencia en destino</span><strong class="text-body">{{ '%.2f'|format(product_detail.stock_destination or 0) }}</strong></div>
+            <div class="d-flex justify-content-between gap-3 small"><span class="text-body-secondary">Existencia mínima destino</span><strong class="text-body">{{ '%.2f'|format(product_detail.minimum_stock or 0) }}</strong></div>
+            <div class="d-flex justify-content-between gap-3 small"><span class="text-body-secondary">Existencia máxima destino</span><strong class="text-body">{{ '%.2f'|format(product_detail.maximum_stock or 0) }}</strong></div>
+        </div>
+
+        <div class="rounded border border-secondary-subtle p-3">
+            <div class="small text-body-secondary mb-2">Existencia por depósito</div>
+            <div class="table-responsive" style="max-height: 11rem;">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="small text-uppercase bg-body-tertiary sticky-top">
+                        <tr>
+                            <th class="px-0 py-2">Depósito</th>
+                            <th class="px-0 py-2 text-end">Exist.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for store_row in product_detail.stock_by_store %}
+                        <tr>
+                            <td class="px-0 py-2 small text-body">{{ store_row.store_description }}</td>
+                            <td class="px-0 py-2 small text-body text-end">{{ '%.2f'|format(store_row.stock or 0) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="px-0 py-2 small text-body-secondary fst-italic">Sin existencias registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <form id="manual-product-detail-form" class="d-grid gap-3 mt-auto">
+            <input type="hidden" name="product_code" value="{{ product_detail.main_code }}">
+            <div class="d-flex align-items-end gap-2">
+                <div class="flex-grow-1">
+                    <label for="manual-product-quantity" class="form-label small fw-semibold text-body-secondary mb-1">Cantidad a agregar</label>
+                    <input type="number" id="manual-product-quantity" name="quantity" class="form-control form-control-sm" min="0.01" step="0.01" value="1">
+                </div>
+                <button type="submit" class="btn btn-success btn-sm px-4">
+                    Agregar a la orden
+                </button>
+            </div>
+            <div class="small text-body-secondary">
+                Usa esta cantidad para crear la línea en la orden manual.
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
