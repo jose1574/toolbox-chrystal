@@ -1,0 +1,69 @@
+<div id="manual-order-search-results" class="d-flex flex-column flex-grow-1 min-h-0 overflow-hidden">
+    <div class="flex-grow-1 min-h-0 overflow-y-auto d-grid pe-1 search-results-list" style="align-content: start;">
+        {% for product in products %}
+        <div class="card border-secondary-subtle product-card{% if loop.first %} shadow-sm{% endif %}" style="cursor: pointer;"
+            tabindex="0"
+            role="button"
+            hx-get="{{ url_for('inventory.manual_order_product_detail') }}"
+            hx-target="#manual-product-detail"
+            hx-swap="outerHTML"
+            hx-vals='{{ {"store_origin": store_origin, "store_dst": store_dst, "product_code": product.code}|tojson }}'>
+            <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                <div>
+                    <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                        <span class="text-body-secondary fw-normal">{{ product.code }}</span> - {{ product.description or '-' }}
+                    </h6>
+                    <div class="text-body-secondary" style="font-size: 11px;">Marca: {{ product.mark_description or '-' }} · Departamento: {{ product.department_description or '-' }}</div>
+                    <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: {{ '%.2f'|format(product.stock_origin or 0) }} {{ product.unit_description or '' }}</span>
+                </div>
+                <button type="button"
+                    class="btn btn-sm btn-outline-secondary product-action"
+                    aria-label="Seleccionar {{ product.description or product.code }}">❯</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="rounded border border-secondary-subtle bg-body-tertiary p-3 text-center small text-body-secondary fst-italic">
+            {% if query %}
+            No se encontraron productos para la busqueda aplicada.
+            {% else %}
+            No hay productos para los filtros seleccionados.
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-2 pt-2 border-top border-secondary-subtle d-flex align-items-center justify-content-between small text-body-secondary flex-shrink-0">
+        <span>
+            Mostrando
+            {% if total_products > 0 %}
+            {{ ((page - 1) * 10) + 1 }}-{{ [page * 10, total_products]|min }}
+            {% else %}
+            0-0
+            {% endif %}
+            de {{ total_products }} productos
+        </span>
+        <nav aria-label="Paginacion de productos">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <button class="page-link"
+                        type="button"
+                        {% if page <= 1 %}disabled aria-disabled="true"{% endif %}
+                        hx-get="{{ url_for('inventory.manual_order_search_results') }}"
+                        hx-target="#manual-order-search-results"
+                        hx-swap="outerHTML"
+                        hx-vals='{{ {"store_origin": store_origin, "store_dst": store_dst, "q": query, "mark": selected_mark, "department": selected_department, "stock": selected_stock_filter, "page": page - 1}|tojson }}'>Anterior</button>
+                </li>
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ page }}</span></li>
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <button class="page-link"
+                        type="button"
+                        {% if page >= total_pages %}disabled aria-disabled="true"{% endif %}
+                        hx-get="{{ url_for('inventory.manual_order_search_results') }}"
+                        hx-target="#manual-order-search-results"
+                        hx-swap="outerHTML"
+                        hx-vals='{{ {"store_origin": store_origin, "store_dst": store_dst, "q": query, "mark": selected_mark, "department": selected_department, "stock": selected_stock_filter, "page": page + 1}|tojson }}'>Siguiente</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>

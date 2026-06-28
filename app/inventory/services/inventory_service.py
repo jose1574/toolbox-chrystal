@@ -382,8 +382,57 @@ def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
   }
 
 
-def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
+def get_manual_order_filter_options(store_origin):
+  if not store_origin:
+    return [], []
+
+  stock_totals = (
+    select(
+      ProductsStock.product_code.label("product_code"),
+      func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+    )
+    .where(ProductsStock.store == store_origin)
+    .group_by(ProductsStock.product_code)
+    .subquery()
+  )
+
+  marks = db.session.execute(
+    select(Mark.code, Mark.description)
+    .join(Product, Product.mark == Mark.code)
+    .join(stock_totals, stock_totals.c.product_code == Product.code)
+    .where(func.coalesce(stock_totals.c.stock_total, 0) > 0)
+    .group_by(Mark.code, Mark.description)
+    .order_by(Mark.description.asc())
+  ).all()
+
+  departments = db.session.execute(
+    select(Department.code, Department.description)
+    .join(Product, Product.department == Department.code)
+    .join(stock_totals, stock_totals.c.product_code == Product.code)
+    .where(func.coalesce(stock_totals.c.stock_total, 0) > 0)
+    .group_by(Department.code, Department.description)
+    .order_by(Department.description.asc())
+  ).all()
+
+  return marks, departments
+
+
+def search_products_for_manual_order(
+  store_origin,
+  query,
+  page=1,
+  per_page=10,
+  mark_code="",
+  department_code="",
+  stock_filter="with_stock",
+  store_dst="",
+):
   query = (query or "").strip()
+  mark_code = normalize_code(mark_code)
+  department_code = normalize_code(department_code)
+  stock_filter = (stock_filter or "with_stock").strip().lower()
+  store_dst = normalize_code(store_dst)
+
   if not store_origin:
     return [], 0, 1, 1
 
@@ -400,7 +449,29 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
     .subquery()
   )
 
-  filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
+  destination_params = aliased(ProductsFailure)
+
+  filters = []
+  stock_total_expr = func.coalesce(stock_totals.c.stock_total, 0)
+
+  if stock_filter == "all":
+    pass
+  elif stock_filter == "out_stock":
+    filters.append(stock_total_expr <= 0)
+  elif stock_filter == "low_stock":
+    filters.append(stock_total_expr > 0)
+    if store_dst:
+      filters.append(stock_total_expr <= func.coalesce(destination_params.minimal_stock, 0))
+      filters.append(func.coalesce(destination_params.minimal_stock, 0) > 0)
+  else:
+    filters.append(stock_total_expr > 0)
+
+  if mark_code:
+    filters.append(func.upper(func.trim(Product.mark)) == mark_code)
+
+  if department_code:
+    filters.append(func.upper(func.trim(Product.department)) == department_code)
+
   if query:
     if "*" in query:
       wildcard_pattern = query.replace("\\", "\\\\")
@@ -423,16 +494,23 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
       Product.code,
       Product.description,
       Product.referenc,
+      Product.mark.label("mark_code"),
+      Product.department.label("department_code"),
       Unit.description.label("unit_description"),
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
-      func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+      stock_total_expr.label("stock_origin"),
     )
     .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
     .join(Unit, Unit.code == ProductsUnit.unit)
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
-    .join(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(
+      destination_params,
+      (destination_params.product_code == Product.code)
+      & (destination_params.store_code == store_dst),
+    )
     .where(*filters)
     .order_by(Product.code.asc())
   )
@@ -1085,8 +1163,22 @@ def get_product_for_manual_order(product_code, store_origin):
   return db.session.execute(stmt).first()
 
 
-def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
+def search_products_for_manual_order(
+  store_origin,
+  query,
+  page=1,
+  per_page=10,
+  mark_code="",
+  department_code="",
+  stock_filter="with_stock",
+  store_dst="",
+):
   query = (query or "").strip()
+  mark_code = normalize_code(mark_code)
+  department_code = normalize_code(department_code)
+  stock_filter = (stock_filter or "with_stock").strip().lower()
+  store_dst = normalize_code(store_dst)
+
   if not store_origin:
     return [], 0, 1, 1
 
@@ -1103,7 +1195,29 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
     .subquery()
   )
 
-  filters = [func.coalesce(stock_totals.c.stock_total, 0) > 0]
+  destination_params = aliased(ProductsFailure)
+
+  filters = []
+  stock_total_expr = func.coalesce(stock_totals.c.stock_total, 0)
+
+  if stock_filter == "all":
+    pass
+  elif stock_filter == "out_stock":
+    filters.append(stock_total_expr <= 0)
+  elif stock_filter == "low_stock":
+    filters.append(stock_total_expr > 0)
+    if store_dst:
+      filters.append(stock_total_expr <= func.coalesce(destination_params.minimal_stock, 0))
+      filters.append(func.coalesce(destination_params.minimal_stock, 0) > 0)
+  else:
+    filters.append(stock_total_expr > 0)
+
+  if mark_code:
+    filters.append(func.upper(func.trim(Product.mark)) == mark_code)
+
+  if department_code:
+    filters.append(func.upper(func.trim(Product.department)) == department_code)
+
   if query:
     if "*" in query:
       wildcard_pattern = query.replace("\\", "\\\\")
@@ -1126,10 +1240,12 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
       Product.code,
       Product.description,
       Product.referenc,
+      Product.mark.label("mark_code"),
+      Product.department.label("department_code"),
       Unit.description.label("unit_description"),
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
-      func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+      stock_total_expr.label("stock_origin"),
     )
     .join(
       ProductsUnit,
@@ -1138,7 +1254,12 @@ def search_products_for_manual_order(store_origin, query, page=1, per_page=10):
     .join(Unit, Unit.code == ProductsUnit.unit)
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
-    .join(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(
+      destination_params,
+      (destination_params.product_code == Product.code)
+      & (destination_params.store_code == store_dst),
+    )
     .where(*filters)
     .order_by(Product.code.asc())
   )

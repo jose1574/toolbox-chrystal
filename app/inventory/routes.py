@@ -363,6 +363,12 @@ def manual_order_collection():
     new_order_id = request.args.get("new_order_id")
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
+    query = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
+    selected_mark = request.args.get("mark", "")
+    selected_department = request.args.get("department", "")
+    selected_stock_filter = request.args.get("stock", "with_stock")
+    selected_product_code = request.args.get("product_code", "")
 
     if store_origin and store_dst and store_origin == store_dst:
         flash("El depósito origen y destino no pueden ser el mismo.", "warning")
@@ -372,14 +378,94 @@ def manual_order_collection():
     store_origin_obj = inventory_service.get_store_by_code(store_origin) if store_origin else None
     store_dst_obj = inventory_service.get_store_by_code(store_dst) if store_dst else None
 
+    products = []
+    total_products = 0
+    total_pages = 1
+    current_page = 1
+    marks = []
+    departments = []
+
+    if store_origin and store_dst:
+        marks, departments = inventory_service.get_manual_order_filter_options(store_origin)
+        products, total_products, total_pages, current_page = inventory_service.search_products_for_manual_order(
+            store_origin=store_origin,
+            query=query,
+            page=page,
+            per_page=10,
+            mark_code=selected_mark,
+            department_code=selected_department,
+            stock_filter=selected_stock_filter,
+            store_dst=store_dst,
+        )
+
+    selected_product_detail = inventory_service.get_manual_order_product_detail_data(
+        selected_product_code,
+        store_origin,
+        store_dst,
+    )
+    if selected_product_detail is None and products:
+        selected_product_detail = inventory_service.get_manual_order_product_detail_data(
+            products[0].code,
+            store_origin,
+            store_dst,
+        )
+
     return render_template(
         "manual_order_collection.html",
         stores=stores,
         store_origin=store_origin,
         store_dst=store_dst,
+        products=products,
+        total_products=total_products,
+        total_pages=total_pages,
+        page=current_page,
+        query=query,
+        selected_mark=selected_mark,
+        selected_department=selected_department,
+        selected_stock_filter=selected_stock_filter,
+        marks=marks,
+        departments=departments,
+        selected_product_detail=selected_product_detail,
         store_origin_name=store_origin_obj.description if store_origin_obj else "",
         store_dst_name=store_dst_obj.description if store_dst_obj else "",
         new_order_id=new_order_id,
+    )
+
+
+@inventory_bp.route("/manual_order_collection/search_results", methods=["GET"])
+@login_required
+def manual_order_search_results():
+    store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
+    query = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
+    selected_mark = request.args.get("mark", "")
+    selected_department = request.args.get("department", "")
+    selected_stock_filter = request.args.get("stock", "with_stock")
+
+    products, total_products, total_pages, current_page = inventory_service.search_products_for_manual_order(
+        store_origin=store_origin,
+        query=query,
+        page=page,
+        per_page=10,
+        mark_code=selected_mark,
+        department_code=selected_department,
+        stock_filter=selected_stock_filter,
+        store_dst=store_dst,
+    )
+
+    return render_template(
+        "partials/manual_order_search_results.html",
+        products=products,
+        total_products=total_products,
+        total_pages=total_pages,
+        page=current_page,
+        query=query,
+        selected_mark=selected_mark,
+        selected_department=selected_department,
+        selected_stock_filter=selected_stock_filter,
+        store_origin=store_origin,
+        store_dst=store_dst,
     )
 
 
@@ -447,12 +533,23 @@ def manual_order_product_detail():
     )
 
     if detail_data is None:
+        has_product_code = bool((product_code or "").strip())
+        message = (
+            "Producto no encontrado para el código leído."
+            if has_product_code
+            else "Selecciona un producto para ver su detalle."
+        )
+        if has_product_code:
+            flash(message, "warning")
+
         return render_template(
             "partials/manual_order_product_detail.html",
             product_detail=None,
-            error_message="Selecciona un producto para ver su detalle.",
+            error_message=(None if has_product_code else message),
             store_origin=store_origin,
             store_dst=store_dst,
+            store_origin_code=store_origin,
+            store_dst_code=store_dst,
         )
 
     store_origin_obj = inventory_service.get_store_by_code(store_origin) if store_origin else None
@@ -713,10 +810,9 @@ def add_product_to_order():
     order_id = request.form.get("order_id", type=int)
     code_product = inventory_service.normalize_code(request.form.get("code_product"))
 
-    print(f"Agregando producto: order_id={order_id}, code_product={code_product}")
 
     if not order_id or not code_product:
-        print("Datos incompletos")
+    
         error_payload = {
             "product-error": {
                 "message": "Error: datos incompletos para agregar el producto.",
@@ -729,7 +825,7 @@ def add_product_to_order():
 
     main_code = inventory_service.resolve_main_code(code_product)
 
-    print(f"Main code: {main_code}")
+    
 
     # Verificar si ya existe
     detail = inventory_service.find_detail_by_codes(order_id, [main_code, code_product])
@@ -795,8 +891,6 @@ def add_product_to_order():
     try:
         if error_code:
             raise RuntimeError(error_code)
-
-        print("Producto agregado exitosamente")
         unit = created_payload["unit"] if created_payload else None
         new_detail = created_payload["detail"] if created_payload else None
 
@@ -814,7 +908,6 @@ def add_product_to_order():
 
     except Exception as e:
         inventory_service.rollback_session()
-        print(f"Error al agregar producto: {e}")
         error_payload = {
             "product-error": {
                 "message": "Error al agregar producto. Intente nuevamente.",
