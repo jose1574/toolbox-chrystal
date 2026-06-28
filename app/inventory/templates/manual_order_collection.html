@@ -336,28 +336,101 @@
         <div class="h-100 d-flex flex-column border-end px-3 min-h-0 overflow-hidden" style="width: 35%;">
             <h5>Detalle del Producto Seleccionado</h5>
 
-            <h3 class="h4 fw-bold mb-3">Producto A</h3>
+            <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
+                <div class="rounded border border-secondary-subtle bg-body p-3 small mb-3">
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                        <div>
+                            <div class="text-body-secondary" style="font-size: 0.72rem;">Codigo FM232</div>
+                            <h3 class="h5 fw-bold mb-1">Producto A</h3>
+                            <div class="text-body-secondary" style="font-size: 0.78rem;">Referencia: REF-FM232-A</div>
+                        </div>
+                        <span class="badge text-bg-light border">Activo</span>
+                    </div>
 
-            <div class="card bg-body border-secondary-subtle p-3 mb-3 small">
-                <div class="fw-bold mb-2">[DESCRIPCIÓN TÉCNICA]</div>
-                <ul>
-                    <li>Característica técnica principal 1</li>
-                    <li>Medidas y materiales estandarizados</li>
-                </ul>
-                <div class="fw-bold mt-2">[UBICACIÓN EN ALMACÉN: PASILLO 3-B]</div>
-                <ul class="mb-0">
-                    <li>Estantería superior norte</li>
-                </ul>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
+                                <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Marca</div>
+                                <div class="fw-semibold">Makita</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
+                                <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Departamento</div>
+                                <div class="fw-semibold">Herramientas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded border border-secondary-subtle p-2 mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="fw-semibold">Existencias</div>
+                            <span class="badge bg-success-subtle text-success-emphasis">Stock total: 124 UND</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0 small">
+                                <thead class="text-body-secondary">
+                                    <tr>
+                                        <th class="border-0 ps-0">Deposito</th>
+                                        <th class="border-0 pe-0 text-end">Existencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="ps-0">Deposito Central</td>
+                                        <td class="pe-0 text-end fw-semibold">40 UND</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-0">Bodega Norte</td>
+                                        <td class="pe-0 text-end fw-semibold">32 UND</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-0">MISOP I RUIZ PINEDA</td>
+                                        <td class="pe-0 text-end fw-semibold">18 UND</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-0">Taller Operaciones</td>
+                                        <td class="pe-0 text-end fw-semibold">34 UND</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded border border-secondary-subtle p-2">
+                        <div class="fw-semibold mb-2">Parametros del producto Deposito Destino</div>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
+                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Minimo</div>
+                                    <div class="fw-bold">20</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
+                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Maximo</div>
+                                    <div class="fw-bold">80</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="rounded bg-warning-subtle border border-warning-subtle p-2 text-center h-100">
+                                    <div class="text-warning-emphasis text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Sugerido</div>
+                                    <div class="fw-bold text-warning-emphasis">46</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="mt-auto pt-2 bg-body">
+            <div class="pt-2 border-top bg-body flex-shrink-0">
                 <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                     <span class="small fw-semibold">CANTIDAD:</span>
                     <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">-</button>
                     <input type="text" class="form-control form-control-sm text-center fw-bold" value="2" style="width: 45px;">
                     <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">+</button>
                 </div>
-                <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;">Añadir al Pedido</button>
+                <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;">Añadir a Orden</button>
             </div>
         </div>
 
