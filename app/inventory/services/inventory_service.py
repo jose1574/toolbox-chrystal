@@ -382,6 +382,86 @@ def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
   }
 
 
+def get_manual_order_cart_context(store_origin, store_dst, cart_map):
+  if not store_origin or not store_dst:
+    return {
+      "items": [],
+      "total_lines": 0,
+      "total_quantity": 0.0,
+      "total_units": "",
+      "has_items": False,
+    }
+
+  normalized_items = {}
+  for code, quantity in (cart_map or {}).items():
+    main_code = resolve_main_code(code)
+    try:
+      qty_value = float(quantity)
+    except (TypeError, ValueError):
+      qty_value = 0
+
+    if main_code and qty_value > 0:
+      normalized_items[main_code] = normalized_items.get(main_code, 0) + qty_value
+
+  if not normalized_items:
+    return {
+      "items": [],
+      "total_lines": 0,
+      "total_quantity": 0.0,
+      "total_units": "",
+      "has_items": False,
+    }
+
+  stock_totals = (
+    select(
+      ProductsStock.product_code.label("product_code"),
+      func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+    )
+    .where(ProductsStock.store == store_origin)
+    .group_by(ProductsStock.product_code)
+    .subquery()
+  )
+
+  rows = db.session.execute(
+    select(
+      Product.code,
+      Product.description,
+      Unit.description.label("unit_description"),
+      func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+    )
+    .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
+    .join(Unit, Unit.code == ProductsUnit.unit)
+    .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .where(Product.code.in_(list(normalized_items.keys())))
+  ).all()
+
+  row_by_code = {normalize_code(row.code): row for row in rows}
+  items = []
+  for code in sorted(normalized_items.keys()):
+    row = row_by_code.get(code)
+    quantity = float(normalized_items[code])
+    unit_description = row.unit_description if row else "UND"
+    stock_origin = float(row.stock_origin or 0) if row else 0.0
+    items.append(
+      {
+        "code": code,
+        "description": row.description if row else "Producto no encontrado",
+        "quantity": quantity,
+        "unit_description": unit_description,
+        "stock_origin": stock_origin,
+        "is_over_stock": quantity > stock_origin,
+      }
+    )
+
+  return {
+    "items": items,
+    "total_lines": len(items),
+    "total_quantity": sum(item["quantity"] for item in items),
+    "total_units": items[0]["unit_description"] if items else "",
+    "has_items": bool(items),
+  }
+
+
 def get_manual_order_filter_options(store_origin):
   if not store_origin:
     return [], []

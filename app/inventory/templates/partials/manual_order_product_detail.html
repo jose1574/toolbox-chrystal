@@ -13,7 +13,7 @@
     {% endif %}
 {% endif %}
 
-<div id="manual-product-detail" class="d-flex flex-column flex-grow-1 h-100 min-h-0 overflow-hidden">
+<div id="manual-product-detail" class="d-flex flex-column flex-grow-1 h-100 min-h-0 overflow-hidden" data-tour="manual-order-detail-panel-root">
     <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1 pb-2">
         <div class="rounded border border-secondary-subtle bg-body p-3 small mb-3">
             <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
@@ -109,16 +109,23 @@
         </div>
     </div>
 
-    <form id="manual-order-quantity-form" class="pt-2 border-top bg-body flex-shrink-0 position-sticky bottom-0" style="z-index: 2;" autocomplete="off">
+    <form id="manual-order-quantity-form"
+        class="pt-2 border-top bg-body flex-shrink-0 position-sticky bottom-0"
+        style="z-index: 2;"
+        data-tour="manual-order-quantity-form"
+        autocomplete="off"
+        hx-post="{{ url_for('inventory.manual_order_cart_add') }}"
+        hx-target="#manual-order-cart"
+        hx-swap="outerHTML">
         <input type="hidden" name="product_code" value="{{ detail.main_code if detail else '' }}">
         <input type="hidden" name="store_origin" value="{{ store_origin_code if store_origin_code is defined else '' }}">
         <input type="hidden" name="store_dst" value="{{ store_dst_code if store_dst_code is defined else '' }}">
         <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
             <span class="small fw-semibold">CANTIDAD:</span>
             <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold" type="button" data-qty-action="decrement">-</button>
-            <input id="manual-product-quantity" name="quantity" type="text" class="form-control form-control-sm text-center fw-bold" value="{{ '%.2f'|format(suggested_qty or 1) if detail else '1' }}" style="width: 45px;" inputmode="decimal">
+            <input id="manual-product-quantity" name="quantity" type="text" class="form-control form-control-sm text-center fw-bold" value="{{ '%.2f'|format(suggested_qty or 1) if detail else '1' }}" style="width: 45px;" inputmode="decimal" data-tour="manual-order-quantity-input">
             <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold" type="button" data-qty-action="increment">+</button>
         </div>
-        <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;" type="submit" {% if not detail %}disabled{% endif %}>Añadir a Orden</button>
+        <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;" type="submit" data-tour="manual-order-add-button" {% if not detail %}disabled{% endif %}>Añadir a Orden</button>
     </form>
 </div>

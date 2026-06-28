@@ -1,0 +1,93 @@
+<div id="manual-order-cart" class="d-flex flex-column flex-grow-1 min-h-0 overflow-hidden" data-tour="manual-order-cart-root">
+    <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <h5>Mi Orden de Recoleccion</h5>
+        <span class="small text-decoration-underline text-muted" style="cursor: default;">{{ total_lines or 0 }} items</span>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-{% if message_category == 'success' %}success{% elif message_category == 'warning' %}warning{% elif message_category == 'error' %}danger{% else %}secondary{% endif %} py-2 px-2 small mb-2" role="alert">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
+        {% if has_items %}
+        <table class="table table-sm table-borderless align-middle small mb-0">
+            <tbody>
+                {% for item in items %}
+                <tr class="border-bottom">
+                    <td class="py-2">
+                        <div class="order-item-code text-body-secondary fw-semibold">{{ item.code }}</div>
+                        <div class="fw-semibold text-body">{{ item.description }}</div>
+                        <div class="order-item-meta text-body-secondary">
+                            Cantidad: {{ '%.2f'|format(item.quantity or 0) }} | Unidad: {{ item.unit_description or 'UND' }}
+                        </div>
+                        {% if item.is_over_stock %}
+                        <div class="small text-danger">Supera el stock disponible en origen ({{ '%.2f'|format(item.stock_origin or 0) }}).</div>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 text-end" style="width: 140px;">
+                        <form class="d-inline-flex gap-1 mb-1"
+                            hx-post="{{ url_for('inventory.manual_order_cart_update') }}"
+                            hx-target="#manual-order-cart"
+                            hx-swap="outerHTML">
+                            <input type="hidden" name="store_origin" value="{{ store_origin }}">
+                            <input type="hidden" name="store_dst" value="{{ store_dst }}">
+                            <input type="hidden" name="product_code" value="{{ item.code }}">
+                            <input type="number" step="0.01" min="0" name="quantity" value="{{ '%.2f'|format(item.quantity or 0) }}" class="form-control form-control-sm" style="width: 70px;">
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="submit">Editar</button>
+                        </form>
+                        <form class="d-inline"
+                            hx-post="{{ url_for('inventory.manual_order_cart_remove') }}"
+                            hx-target="#manual-order-cart"
+                            hx-swap="outerHTML">
+                            <input type="hidden" name="store_origin" value="{{ store_origin }}">
+                            <input type="hidden" name="store_dst" value="{{ store_dst }}">
+                            <input type="hidden" name="product_code" value="{{ item.code }}">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2" type="submit">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="rounded border border-secondary-subtle bg-body-tertiary p-3 text-center small text-body-secondary fst-italic">
+            Aun no agregaste productos a la orden manual.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-auto pt-3 border-top bg-body text-center">
+        <div class="small text-muted mb-1">Lineas: {{ total_lines or 0 }}</div>
+        <div class="small text-muted mb-2">Total articulos: {{ '%.2f'|format(total_quantity or 0) }}</div>
+
+        <form method="post"
+            action="{{ url_for('inventory.save_manual_order_collection') }}"
+            hx-post="{{ url_for('inventory.save_manual_order_collection') }}"
+            hx-target="#main-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            class="d-grid gap-2">
+            <input type="hidden" name="store_origin" value="{{ store_origin }}">
+            <input type="hidden" name="store_dst" value="{{ store_dst }}">
+            {% for item in items %}
+            <input type="hidden" name="product_code[]" value="{{ item.code }}">
+            <input type="hidden" name="quantity[]" value="{{ item.quantity }}">
+            {% endfor %}
+
+            <button class="btn btn-outline-dark w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;" type="submit" data-tour="manual-order-confirm-button" {% if not has_items %}disabled{% endif %}>
+                Confirmar Orden de Traslado
+            </button>
+        </form>
+
+        <form class="mt-2"
+            hx-post="{{ url_for('inventory.manual_order_cart_clear') }}"
+            hx-target="#manual-order-cart"
+            hx-swap="outerHTML">
+            <input type="hidden" name="store_origin" value="{{ store_origin }}">
+            <input type="hidden" name="store_dst" value="{{ store_dst }}">
+            <button type="submit" class="btn btn-sm btn-link text-danger">Limpiar orden</button>
+        </form>
+    </div>
+</div>

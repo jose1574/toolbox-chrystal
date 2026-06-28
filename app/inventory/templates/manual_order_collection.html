@@ -85,13 +85,18 @@
 <div class="container-fluid vh-100 d-flex flex-column pt-4 pb-2 px-3 px-lg-4 overflow-hidden">
     <div class="mb-4 d-flex flex-column flex-sm-row align-items-sm-start gap-3 flex-shrink-0 rounded border border-secondary-subtle bg-body p-3 shadow-sm">
         <div>
-            <h1 class="h3 fw-bold text-body mb-1">Orden manual de recoleccion</h1>
-            <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
-                class="btn btn-outline-secondary btn-sm">
-                Cambiar depositos
-            </button>
+            <h1 class="h3 fw-bold text-body mb-1" data-tour="manual-order-title">Orden manual de recoleccion</h1>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
+                    class="btn btn-outline-secondary btn-sm">
+                    Cambiar depositos
+                </button>
+                <button type="button" class="btn btn-dark btn-sm" data-tour-start="manual-order" data-tour="manual-order-start-button">
+                    Ver recorrido
+                </button>
+            </div>
             {% if store_origin and store_dst %}
-            <div class="small text-body-secondary mt-1 d-flex flex-wrap align-items-center gap-2">
+            <div class="small text-body-secondary mt-1 d-flex flex-wrap align-items-center gap-2" data-tour="manual-order-active-stores">
                 <span><span class="fw-semibold">Origen:</span> {{ store_origin_name }} ({{ store_origin }})</span>
                 <span><span class="fw-semibold">Destino:</span> {{ store_dst_name }} ({{ store_dst }})</span>
             </div>
@@ -112,14 +117,14 @@
     {% endwith %}
 
     {% if not store_origin or not store_dst %}
-    <div class="mx-auto w-100 rounded border border-secondary-subtle bg-body p-4 shadow-sm flex-shrink-0 mb-4" style="max-width: 48rem;">
+    <div class="mx-auto w-100 rounded border border-secondary-subtle bg-body p-4 shadow-sm flex-shrink-0 mb-4" style="max-width: 48rem;" data-tour="manual-order-store-form">
         <h2 class="mb-3 h5 fw-semibold text-body">Seleccionar depositos</h2>
         <form method="get" action="{{ url_for('inventory.manual_order_collection') }}" hx-get="{{ url_for('inventory.manual_order_collection') }}"
             hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="d-grid gap-3">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="store_origin" class="form-label small fw-semibold text-body-secondary">Deposito origen</label>
-                    <select id="store_origin" name="store_origin" required class="form-select form-select-sm">
+                    <select id="store_origin" name="store_origin" required class="form-select form-select-sm" data-tour="manual-order-store-origin">
                         <option value="">-- Seleccionar --</option>
                         {% for store in stores %}
                         <option value="{{ store.code }}" {% if store.code == store_origin %}selected{% endif %}>{{ store.description }}</option>
@@ -128,7 +133,7 @@
                 </div>
                 <div class="col-md-6">
                     <label for="store_dst" class="form-label small fw-semibold text-body-secondary">Deposito destino</label>
-                    <select id="store_dst" name="store_dst" required class="form-select form-select-sm">
+                    <select id="store_dst" name="store_dst" required class="form-select form-select-sm" data-tour="manual-order-store-destination">
                         <option value="">-- Seleccionar --</option>
                         {% for store in stores %}
                         <option value="{{ store.code }}" {% if store.code == store_dst %}selected{% endif %}>{{ store.description }}</option>
@@ -137,17 +142,17 @@
                 </div>
             </div>
             <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary btn-sm">Continuar</button>
+                <button type="submit" class="btn btn-primary btn-sm" data-tour="manual-order-store-submit">Continuar</button>
             </div>
         </form>
     </div>
     {% else %}
     <div class="container-fluid d-flex flex-column flex-grow-1 min-h-0 py-3 px-3 overflow-hidden">
         <div class="d-flex gap-3 flex-grow-1 min-h-0 overflow-hidden">
-            <div class="h-100 d-flex flex-column border-end pe-3 min-h-0 overflow-hidden" style="width: 40%;">
+            <div class="h-100 d-flex flex-column border-end pe-3 min-h-0 overflow-hidden" style="width: 40%;" data-tour="manual-order-search-panel">
                 <h5>Buscador y Resultados</h5>
 
-                <form id="manual-order-barcode-form" class="mb-2"
+                <form id="manual-order-barcode-form" class="mb-2" data-tour="manual-order-barcode-form"
                     hx-get="{{ url_for('inventory.manual_order_product_detail') }}"
                     hx-target="#manual-product-detail"
                     hx-swap="outerHTML"
@@ -156,7 +161,7 @@
                     <input type="hidden" name="store_origin" value="{{ store_origin }}">
                     <input type="hidden" name="store_dst" value="{{ store_dst }}">
                     <div class="input-group input-group-sm">
-                        <input id="manual-order-barcode-input" type="text" name="product_code" class="form-control"
+                        <input id="manual-order-barcode-input" type="text" name="product_code" class="form-control" data-tour="manual-order-barcode-input"
                             placeholder="Escanear codigo de barras (principal o alterno)" autocomplete="off">
                         <button class="btn btn-outline-primary" type="submit">Buscar</button>
                     </div>
@@ -171,7 +176,7 @@
                     <input type="hidden" name="store_origin" value="{{ store_origin }}">
                     <input type="hidden" name="store_dst" value="{{ store_dst }}">
                     <input type="hidden" name="page" value="1">
-                    <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-2 search-filters">
+                    <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-2 search-filters" data-tour="manual-order-filters">
                         <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-4">
                                 <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Marca</label>
@@ -203,7 +208,7 @@
                         </div>
                     </div>
                     <div class="input-group mb-1 search-toolbar">
-                        <input id="manual-order-search-q" type="text" name="q" value="{{ query or '' }}" class="form-control form-control-sm" placeholder="Buscar producto...">
+                        <input id="manual-order-search-q" type="text" name="q" value="{{ query or '' }}" class="form-control form-control-sm" placeholder="Buscar producto..." data-tour="manual-order-search-input">
 
                     </div>
                 </form>
@@ -213,127 +218,32 @@
                 {% include "partials/manual_order_search_results.html" %}
             </div>
 
-            <div class="h-100 d-flex flex-column border-end px-3 min-h-0 overflow-hidden" style="width: 35%;">
+            <div class="h-100 d-flex flex-column border-end px-3 min-h-0 overflow-hidden" style="width: 35%;" data-tour="manual-order-detail-panel">
                 <h5>Detalle del Producto Seleccionado</h5>
 
-                {% with product_detail=selected_product_detail, error_message=None %}
+                {% with product_detail=selected_product_detail, error_message=None, store_origin_code=store_origin, store_dst_code=store_dst %}
                 {% include "partials/manual_order_product_detail.html" %}
                 {% endwith %}
             </div>
 
-            <div class="h-100 d-flex flex-column ps-3 min-h-0 overflow-hidden" style="width: 25%;">
-                <div class="d-flex justify-content-between align-items-baseline mb-2">
-                    <h5>Mi Orden de Recoleccion</h5>
-                    <span class="small text-decoration-underline text-muted" style="cursor: pointer;">4 items</span>
-                </div>
-
-                <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
-                    <table class="table table-sm table-borderless align-middle small mb-0">
-                        <tbody>
-                            <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
-                                    <div class="fw-semibold text-body">Producto A</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end" style="width: 110px;">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                             <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
-                                    <div class="fw-semibold text-body">Producto A</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end" style="width: 110px;">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                             <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
-                                    <div class="fw-semibold text-body">Producto A</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end" style="width: 110px;">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                             <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
-                                    <div class="fw-semibold text-body">Producto A</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end" style="width: 110px;">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM112</div>
-                                    <div class="fw-semibold text-body">Producto C</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 1 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM904</div>
-                                    <div class="fw-semibold text-body">Producto D</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 4 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="border-bottom">
-                                <td class="py-2">
-                                    <div class="order-item-code text-body-secondary fw-semibold">FM350</div>
-                                    <div class="fw-semibold text-body">Producto E</div>
-                                    <div class="order-item-meta text-body-secondary">Cantidad: 3 | Unidad: UND</div>
-                                </td>
-                                <td class="py-2 text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-auto pt-3 border-top bg-body text-center">
-                    <div class="small text-muted mb-2">[Total Artículos: 10]</div>
-                    <button class="btn btn-outline-dark w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;">
-                        Confirmar Orden de Traslado
-                    </button>
-                </div>
+            <div class="h-100 d-flex flex-column ps-3 min-h-0 overflow-hidden" style="width: 25%;" data-tour="manual-order-cart-panel">
+                {% with
+                    items=manual_order_cart_context['items'],
+                    total_lines=manual_order_cart_context['total_lines'],
+                    total_quantity=manual_order_cart_context['total_quantity'],
+                    total_units=manual_order_cart_context['total_units'],
+                    has_items=manual_order_cart_context['has_items'],
+                    store_origin=manual_order_cart_context['store_origin'],
+                    store_dst=manual_order_cart_context['store_dst'],
+                    message=manual_order_cart_context['message'],
+                    message_category=manual_order_cart_context['message_category']
+                %}
+                {% include "partials/manual_order_cart.html" %}
+                {% endwith %}
             </div>
         </div>
     </div>
     {% endif %}
 </div>
+<script src="{{ url_for('inventory.static', filename='js/manual_order_collection_tour.js') }}"></script>
 {% endblock %}

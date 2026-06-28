@@ -1,9 +1,10 @@
-<div id="manual-order-search-results" class="d-flex flex-column flex-grow-1 min-h-0 overflow-hidden">
+<div id="manual-order-search-results" class="d-flex flex-column flex-grow-1 min-h-0 overflow-hidden" data-tour="manual-order-search-results">
     <div class="flex-grow-1 min-h-0 overflow-y-auto d-grid pe-1 search-results-list" style="align-content: start;">
         {% for product in products %}
         <div class="card border-secondary-subtle product-card{% if loop.first %} shadow-sm{% endif %}" style="cursor: pointer;"
             tabindex="0"
             role="button"
+            data-tour="manual-order-result-card{% if loop.first %}-first{% endif %}"
             hx-get="{{ url_for('inventory.manual_order_product_detail') }}"
             hx-target="#manual-product-detail"
             hx-swap="outerHTML"

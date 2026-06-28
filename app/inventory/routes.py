@@ -72,6 +72,81 @@ TRANSFER_STATUS_LABELS = {
     FLOW_RECEIVED: "Recepcionado y procesado",
 }
 
+MANUAL_ORDER_CART_SESSION_KEY = "manual_order_cart"
+
+
+def _get_manual_order_cart_scope(store_origin, store_dst):
+    origin_code = inventory_service.normalize_code(store_origin)
+    destination_code = inventory_service.normalize_code(store_dst)
+    if not origin_code or not destination_code:
+        return ""
+    return f"{origin_code}::{destination_code}"
+
+
+def _get_manual_order_cart_map(store_origin, store_dst):
+    scope = _get_manual_order_cart_scope(store_origin, store_dst)
+    if not scope:
+        return {}
+
+    all_carts = session.get(MANUAL_ORDER_CART_SESSION_KEY, {}) or {}
+    user_carts = all_carts.get(current_user.code, {}) or {}
+    scoped_cart = user_carts.get(scope, {}) or {}
+
+    normalized_cart = {}
+    for product_code, quantity in scoped_cart.items():
+        normalized_code = inventory_service.normalize_code(product_code)
+        try:
+            qty_value = float(quantity)
+        except (TypeError, ValueError):
+            qty_value = 0
+
+        if normalized_code and qty_value > 0:
+            normalized_cart[normalized_code] = normalized_cart.get(normalized_code, 0) + qty_value
+
+    return normalized_cart
+
+
+def _set_manual_order_cart_map(store_origin, store_dst, cart_map):
+    scope = _get_manual_order_cart_scope(store_origin, store_dst)
+    if not scope:
+        return
+
+    clean_cart = {}
+    for product_code, quantity in (cart_map or {}).items():
+        normalized_code = inventory_service.normalize_code(product_code)
+        try:
+            qty_value = float(quantity)
+        except (TypeError, ValueError):
+            qty_value = 0
+
+        if normalized_code and qty_value > 0:
+            clean_cart[normalized_code] = qty_value
+
+    all_carts = session.get(MANUAL_ORDER_CART_SESSION_KEY, {}) or {}
+    user_carts = all_carts.get(current_user.code, {}) or {}
+
+    if clean_cart:
+        user_carts[scope] = clean_cart
+    else:
+        user_carts.pop(scope, None)
+
+    if user_carts:
+        all_carts[current_user.code] = user_carts
+    else:
+        all_carts.pop(current_user.code, None)
+
+    session[MANUAL_ORDER_CART_SESSION_KEY] = all_carts
+
+
+def _build_manual_order_cart_context(store_origin, store_dst, message="", message_category="info"):
+    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+    cart_context = inventory_service.get_manual_order_cart_context(store_origin, store_dst, cart_map)
+    cart_context["store_origin"] = store_origin
+    cart_context["store_dst"] = store_dst
+    cart_context["message"] = message
+    cart_context["message_category"] = message_category
+    return cart_context
+
 
 @inventory_bp.route("/listado-productos", methods=["GET"])
 @login_required
@@ -410,6 +485,8 @@ def manual_order_collection():
             store_dst,
         )
 
+    manual_order_cart_context = _build_manual_order_cart_context(store_origin, store_dst)
+
     return render_template(
         "manual_order_collection.html",
         stores=stores,
@@ -429,7 +506,117 @@ def manual_order_collection():
         store_origin_name=store_origin_obj.description if store_origin_obj else "",
         store_dst_name=store_dst_obj.description if store_dst_obj else "",
         new_order_id=new_order_id,
+        manual_order_cart_context=manual_order_cart_context,
     )
+
+
+@inventory_bp.route("/manual_order_collection/cart", methods=["GET"])
+@login_required
+def manual_order_cart():
+    store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
+    cart_context = _build_manual_order_cart_context(store_origin, store_dst)
+    return render_template("partials/manual_order_cart.html", **cart_context)
+
+
+@inventory_bp.route("/manual_order_collection/cart/add", methods=["POST"])
+@login_required
+def manual_order_cart_add():
+    store_origin = request.form.get("store_origin")
+    store_dst = request.form.get("store_dst")
+    product_code = request.form.get("product_code")
+    quantity = request.form.get("quantity", type=float)
+
+    if not store_origin or not store_dst:
+        cart_context = _build_manual_order_cart_context(
+            store_origin,
+            store_dst,
+            message="Selecciona depósitos origen y destino antes de agregar productos.",
+            message_category="warning",
+        )
+        return render_template("partials/manual_order_cart.html", **cart_context)
+
+    if not product_code:
+        cart_context = _build_manual_order_cart_context(
+            store_origin,
+            store_dst,
+            message="Selecciona un producto válido para agregar.",
+            message_category="warning",
+        )
+        return render_template("partials/manual_order_cart.html", **cart_context)
+
+    if quantity is None or quantity <= 0:
+        cart_context = _build_manual_order_cart_context(
+            store_origin,
+            store_dst,
+            message="La cantidad debe ser mayor a cero.",
+            message_category="warning",
+        )
+        return render_template("partials/manual_order_cart.html", **cart_context)
+
+    main_code = inventory_service.resolve_main_code(product_code)
+    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+    cart_map[main_code] = float(cart_map.get(main_code, 0)) + float(quantity)
+    _set_manual_order_cart_map(store_origin, store_dst, cart_map)
+
+    cart_context = _build_manual_order_cart_context(
+        store_origin,
+        store_dst,
+        message="Producto agregado a la orden.",
+        message_category="success",
+    )
+    return render_template("partials/manual_order_cart.html", **cart_context)
+
+
+@inventory_bp.route("/manual_order_collection/cart/update", methods=["POST"])
+@login_required
+def manual_order_cart_update():
+    store_origin = request.form.get("store_origin")
+    store_dst = request.form.get("store_dst")
+    product_code = inventory_service.resolve_main_code(request.form.get("product_code"))
+    quantity = request.form.get("quantity", type=float)
+
+    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+    if product_code in cart_map:
+        if quantity is None or quantity <= 0:
+            cart_map.pop(product_code, None)
+        else:
+            cart_map[product_code] = float(quantity)
+        _set_manual_order_cart_map(store_origin, store_dst, cart_map)
+
+    cart_context = _build_manual_order_cart_context(store_origin, store_dst)
+    return render_template("partials/manual_order_cart.html", **cart_context)
+
+
+@inventory_bp.route("/manual_order_collection/cart/remove", methods=["POST"])
+@login_required
+def manual_order_cart_remove():
+    store_origin = request.form.get("store_origin")
+    store_dst = request.form.get("store_dst")
+    product_code = inventory_service.resolve_main_code(request.form.get("product_code"))
+
+    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+    cart_map.pop(product_code, None)
+    _set_manual_order_cart_map(store_origin, store_dst, cart_map)
+
+    cart_context = _build_manual_order_cart_context(store_origin, store_dst)
+    return render_template("partials/manual_order_cart.html", **cart_context)
+
+
+@inventory_bp.route("/manual_order_collection/cart/clear", methods=["POST"])
+@login_required
+def manual_order_cart_clear():
+    store_origin = request.form.get("store_origin")
+    store_dst = request.form.get("store_dst")
+    _set_manual_order_cart_map(store_origin, store_dst, {})
+
+    cart_context = _build_manual_order_cart_context(
+        store_origin,
+        store_dst,
+        message="Orden manual limpiada.",
+        message_category="info",
+    )
+    return render_template("partials/manual_order_cart.html", **cart_context)
 
 
 @inventory_bp.route("/manual_order_collection/search_results", methods=["GET"])
@@ -572,6 +759,12 @@ def save_manual_order_collection():
     store_dst = request.form.get("store_dst")
     product_codes = request.form.getlist("product_code[]")
     quantities = request.form.getlist("quantity[]")
+
+    if not product_codes or not quantities:
+        cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+        product_codes = list(cart_map.keys())
+        quantities = [str(cart_map[code]) for code in product_codes]
+
     selected_items = [
         {"code": code, "quantity": quantity}
         for code, quantity in zip(product_codes, quantities)
@@ -583,6 +776,7 @@ def save_manual_order_collection():
         )
         inventory_service.commit_session()
         inventory_service.register_flow_step1(document_no, current_user.code)
+        _set_manual_order_cart_map(store_origin, store_dst, {})
         flash(f"Orden manual #{document_no} guardada correctamente.", "success")
 
         if request.headers.get("HX-Request"):
