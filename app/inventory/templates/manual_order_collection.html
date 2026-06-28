@@ -73,17 +73,23 @@
         transform: translateX(0);
         pointer-events: auto;
     }
+
+    .order-item-code {
+        font-size: 0.68rem;
+    }
+
+    .order-item-meta {
+        font-size: 0.7rem;
+    }
 </style>
 <div class="container-fluid vh-100 d-flex flex-column pt-4 pb-2 px-3 px-lg-4 overflow-hidden">
-    
     <div class="mb-4 d-flex flex-column flex-sm-row align-items-sm-start gap-3 flex-shrink-0 rounded border border-secondary-subtle bg-body p-3 shadow-sm">
-
         <div>
             <h1 class="h3 fw-bold text-body mb-1">Orden manual de recoleccion</h1>
-                    <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
-            class="btn btn-outline-secondary btn-sm">
-            Cambiar depositos
-        </button>
+            <button type="button" hx-get="{{ url_for('inventory.index') }}" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
+                class="btn btn-outline-secondary btn-sm">
+                Cambiar depositos
+            </button>
             {% if store_origin and store_dst %}
             <div class="small text-body-secondary mt-1 d-flex flex-wrap align-items-center gap-2">
                 <span><span class="fw-semibold">Origen:</span> {{ store_origin_name }} ({{ store_origin }})</span>
@@ -135,840 +141,401 @@
             </div>
         </form>
     </div>
-    {% endif %} 
-
+    {% else %}
     <div class="container-fluid d-flex flex-column flex-grow-1 min-h-0 py-3 px-3 overflow-hidden">
+        <div class="d-flex gap-3 flex-grow-1 min-h-0 overflow-hidden">
+            <div class="h-100 d-flex flex-column border-end pe-3 min-h-0 overflow-hidden" style="width: 40%;">
+                <h5>Buscador y Resultados</h5>
 
-    <div class="d-flex gap-3 flex-grow-1 min-h-0 overflow-hidden">
-        
-        <div class="h-100 d-flex flex-column border-end pe-3 min-h-0 overflow-hidden" style="width: 40%;">
-            <h5>Buscador y Resultados</h5>
-            
-            <div class="input-group mb-1 search-toolbar">
-                <input type="text" class="form-control form-control-sm" placeholder="Buscar producto...">
-                <button class="btn btn-outline-primary btn-sm" type="button">Catalogo</button>
-            </div>
-            <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-2 search-filters">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-4">
-                        <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Marca</label>
-                        <select class="form-select form-select-sm">
-                            <option>Todos</option>
-                            <option>Makita</option>
-                            <option>Bosch</option>
-                            <option>Stanley</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Departamento</label>
-                        <select class="form-select form-select-sm">
-                            <option>Todos</option>
-                            <option>Repuestos</option>
-                            <option>Herramientas</option>
-                            <option>Electricidad</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Stock</label>
-                        <select class="form-select form-select-sm">
-                            <option>Todos</option>
-                            <option>Con stock</option>
-                            <option>Bajo minimo</option>
-                            <option>Sin stock</option>
-                        </select>
+                <div class="input-group mb-1 search-toolbar">
+                    <input type="text" class="form-control form-control-sm" placeholder="Buscar producto...">
+                    <button class="btn btn-outline-primary btn-sm" type="button">Catalogo</button>
+                </div>
+                <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-2 search-filters">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Marca</label>
+                            <select class="form-select form-select-sm">
+                                <option>Todos</option>
+                                <option>Makita</option>
+                                <option>Bosch</option>
+                                <option>Stanley</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Departamento</label>
+                            <select class="form-select form-select-sm">
+                                <option>Todos</option>
+                                <option>Repuestos</option>
+                                <option>Herramientas</option>
+                                <option>Electricidad</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label form-label-sm mb-1 small fw-semibold text-body-secondary">Stock</label>
+                            <select class="form-select form-select-sm">
+                                <option>Todos</option>
+                                <option>Con stock</option>
+                                <option>Bajo minimo</option>
+                                <option>Sin stock</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-           
-
-            <div class="flex-grow-1 min-h-0 overflow-y-auto d-grid gap-2 pe-1 search-results-list" style="align-content: start;">
-                
-                <div class="card border-secondary-subtle shadow-sm product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2">
+                <div class="flex-grow-1 min-h-0 overflow-y-auto d-grid gap-2 pe-1 search-results-list" style="align-content: start;">
+                    <div class="card border-secondary-subtle shadow-sm product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <div>
+                                    <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                        <span class="text-body-secondary fw-normal">FM232</span> - Producto A
+                                    </h6>
+                                    <div class="text-body-secondary" style="font-size: 11px;">Marca: Makita · Departamento: Herramientas</div>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 40 UND</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto A">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
                             <div>
                                 <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                    <span class="text-body-secondary fw-normal">FM232</span> - Producto A
+                                    <span class="text-body-secondary fw-normal">FM678</span> - Producto B
                                 </h6>
-                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Makita · Departamento: Herramientas</div>
-                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 40 UND</span>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Bosch · Departamento: Repuestos</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 15 UND</span>
                             </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto B">❯</button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto A">❯</button>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM112</span> - Producto C
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Stanley · Departamento: Electricidad</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 8 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto C">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM904</span> - Producto D
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Truper · Departamento: Herramientas</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 62 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto D">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM350</span> - Producto E
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: DeWalt · Departamento: Repuestos</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 21 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto E">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM781</span> - Producto F
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Total · Departamento: Electricidad</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 7 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto F">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM499</span> - Producto G
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Pretul · Departamento: Herramientas</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 13 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto G">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM223</span> - Producto H
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Milwaukee · Departamento: Repuestos</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 35 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto H">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM615</span> - Producto I
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Hyundai · Departamento: Electricidad</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 18 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto I">❯</button>
+                        </div>
+                    </div>
+                    <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
+                        <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
+                            <div>
+                                <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
+                                    <span class="text-body-secondary fw-normal">FM901</span> - Producto J
+                                </h6>
+                                <div class="text-body-secondary" style="font-size: 11px;">Marca: Ingco · Departamento: Herramientas</div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 9 UND</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto J">❯</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" id="description_product_b" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM678</span> - Producto B
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Bosch · Departamento: Repuestos</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 15 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto B">❯</button>
-                    </div>
+                <div class="mt-2 pt-2 border-top border-secondary-subtle d-flex align-items-center justify-content-between small text-body-secondary flex-shrink-0">
+                    <span>Mostrando 1-10 de 56 productos</span>
+                    <nav aria-label="Paginacion de productos">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Anterior</a></li>
+                            <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item"><a class="page-link" href="#">Siguiente</a></li>
+                        </ul>
+                    </nav>
                 </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" id="description_product_c" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM112</span> - Producto C
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Stanley · Departamento: Electricidad</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 8 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto C">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM904</span> - Producto D
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Truper · Departamento: Herramientas</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 62 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto D">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM350</span> - Producto E
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: DeWalt · Departamento: Repuestos</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 21 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto E">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM781</span> - Producto F
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Total · Departamento: Electricidad</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 7 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto F">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM499</span> - Producto G
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Pretul · Departamento: Herramientas</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 13 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto G">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM223</span> - Producto H
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Milwaukee · Departamento: Repuestos</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 35 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto H">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM615</span> - Producto I
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Hyundai · Departamento: Electricidad</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 18 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto I">❯</button>
-                    </div>
-                </div>
-
-                <div class="card border-secondary-subtle product-card" style="cursor: pointer;">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-                        <div>
-                            <h6 class="mb-0 small fw-semibold" style="font-size: 0.78rem;">
-                                <span class="text-body-secondary fw-normal">FM901</span> - Producto J
-                            </h6>
-                            <div class="text-body-secondary" style="font-size: 11px;">Marca: Ingco · Departamento: Herramientas</div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: 9 UND</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary product-action" aria-label="Seleccionar producto J">❯</button>
-                    </div>
-                </div>
-
             </div>
 
-            <div class="mt-2 pt-2 border-top border-secondary-subtle d-flex align-items-center justify-content-between small text-body-secondary flex-shrink-0">
-                <span>Mostrando 1-10 de 56 productos</span>
-                <nav aria-label="Paginacion de productos">
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Anterior</a></li>
-                        <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item"><a class="page-link" href="#">Siguiente</a></li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
+            <div class="h-100 d-flex flex-column border-end px-3 min-h-0 overflow-hidden" style="width: 35%;">
+                <h5>Detalle del Producto Seleccionado</h5>
 
-        <div class="h-100 d-flex flex-column border-end px-3 min-h-0 overflow-hidden" style="width: 35%;">
-            <h5>Detalle del Producto Seleccionado</h5>
-
-            <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
-                <div class="rounded border border-secondary-subtle bg-body p-3 small mb-3">
-                    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                        <div>
-                            <div class="text-body-secondary" style="font-size: 0.72rem;">Codigo FM232</div>
-                            <h3 class="h5 fw-bold mb-1">Producto A</h3>
-                            <div class="text-body-secondary" style="font-size: 0.78rem;">Referencia: REF-FM232-A</div>
-                        </div>
-                        <span class="badge text-bg-light border">Activo</span>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
-                                <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Marca</div>
-                                <div class="fw-semibold">Makita</div>
+                <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
+                    <div class="rounded border border-secondary-subtle bg-body p-3 small mb-3">
+                        <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                            <div>
+                                <div class="text-body-secondary" style="font-size: 0.72rem;">Codigo FM232</div>
+                                <h3 class="h5 fw-bold mb-1">Producto A</h3>
+                                <div class="text-body-secondary" style="font-size: 0.78rem;">Referencia: REF-FM232-A</div>
                             </div>
+                            <span class="badge text-bg-light border">Activo</span>
                         </div>
-                        <div class="col-6">
-                            <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
-                                <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Departamento</div>
-                                <div class="fw-semibold">Herramientas</div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="rounded border border-secondary-subtle p-2 mb-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="fw-semibold">Existencias</div>
-                            <span class="badge bg-success-subtle text-success-emphasis">Stock total: 124 UND</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0 small">
-                                <thead class="text-body-secondary">
-                                    <tr>
-                                        <th class="border-0 ps-0">Deposito</th>
-                                        <th class="border-0 pe-0 text-end">Existencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="ps-0">Deposito Central</td>
-                                        <td class="pe-0 text-end fw-semibold">40 UND</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-0">Bodega Norte</td>
-                                        <td class="pe-0 text-end fw-semibold">32 UND</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-0">MISOP I RUIZ PINEDA</td>
-                                        <td class="pe-0 text-end fw-semibold">18 UND</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-0">Taller Operaciones</td>
-                                        <td class="pe-0 text-end fw-semibold">34 UND</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="rounded border border-secondary-subtle p-2">
-                        <div class="fw-semibold mb-2">Parametros del producto Deposito Destino</div>
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
-                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Minimo</div>
-                                    <div class="fw-bold">20</div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
+                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Marca</div>
+                                    <div class="fw-semibold">Makita</div>
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
-                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Maximo</div>
-                                    <div class="fw-bold">80</div>
+                            <div class="col-6">
+                                <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 h-100">
+                                    <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Departamento</div>
+                                    <div class="fw-semibold">Herramientas</div>
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="rounded bg-warning-subtle border border-warning-subtle p-2 text-center h-100">
-                                    <div class="text-warning-emphasis text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Sugerido</div>
-                                    <div class="fw-bold text-warning-emphasis">46</div>
+                        </div>
+
+                        <div class="rounded border border-secondary-subtle p-2 mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="fw-semibold">Existencias</div>
+                                <span class="badge bg-success-subtle text-success-emphasis">Stock total: 124 UND</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 small">
+                                    <thead class="text-body-secondary">
+                                        <tr>
+                                            <th class="border-0 ps-0">Deposito</th>
+                                            <th class="border-0 pe-0 text-end">Existencia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="ps-0">Deposito Central</td>
+                                            <td class="pe-0 text-end fw-semibold">40 UND</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">Bodega Norte</td>
+                                            <td class="pe-0 text-end fw-semibold">32 UND</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">MISOP I RUIZ PINEDA</td>
+                                            <td class="pe-0 text-end fw-semibold">18 UND</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-0">Taller Operaciones</td>
+                                            <td class="pe-0 text-end fw-semibold">34 UND</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="rounded border border-secondary-subtle p-2">
+                            <div class="fw-semibold mb-2">Parametros del producto Deposito Destino</div>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
+                                        <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Minimo</div>
+                                        <div class="fw-bold">20</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
+                                        <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Maximo</div>
+                                        <div class="fw-bold">80</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="rounded bg-warning-subtle border border-warning-subtle p-2 text-center h-100">
+                                        <div class="text-warning-emphasis text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Sugerido</div>
+                                        <div class="fw-bold text-warning-emphasis">46</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="pt-2 border-top bg-body flex-shrink-0">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-                    <span class="small fw-semibold">CANTIDAD:</span>
-                    <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">-</button>
-                    <input type="text" class="form-control form-control-sm text-center fw-bold" value="2" style="width: 45px;">
-                    <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">+</button>
-                </div>
-                <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;">Añadir a Orden</button>
-            </div>
-        </div>
-
-        <div class="h-100 d-flex flex-column ps-3 min-h-0 overflow-hidden" style="width: 25%;">
-            <div class="d-flex justify-content-between align-items-baseline mb-2">
-                <h5>Mi Pedido Actual</h5>
-                <span class="small text-decoration-underline text-muted" style="cursor: pointer;">3 items</span>
-            </div>
-
-            <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
-                <table class="table table-sm table-borderless align-middle small mb-0">
-                    <tbody>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_a">1. Producto A</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_a">x2</td>
-                            <td class="py-2 text-end" style="width: 30px;">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                        <tr class="border-bottom">
-                            <td class="py-2 fw-semibold text-body" id="description_product_c">2. Producto C</td>
-                            <td class="py-2 text-end text-muted" id="amount_product_c">x1</td>
-                            <td class="py-2 text-end">
-                                <button class="btn btn-sm btn-light border py-0 px-1 text-danger small">✕</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mt-auto pt-3 border-top bg-body text-center">
-                <div class="small text-muted mb-2">[Total Artículos: 3]</div>
-                <button class="btn btn-outline-dark w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;">
-                    Confirmar Orden de Traslado
-                </button>
-            </div>
-        </div>
-
-    </div>
-</div>
-{# 
-    <div class="row g-3">
-        <div class="col-12 col-xl-4">
-        <div class="rounded border border-secondary-subtle bg-body p-3 shadow-sm h-100">
-            <h2 class="h5 fw-semibold text-body">Agregar producto</h2>
-            <div class="mt-3 d-grid gap-2">
-                <div>
-                    <label for="manual-product-code" class="form-label small fw-semibold text-body-secondary">Codigo</label>
-                    <div class="d-flex gap-2">
-                        <input type="text" id="manual-product-code" autocomplete="off" placeholder="Codigo de producto"
-                            class="form-control form-control-sm">
-                        <button type="button" id="manual-code-add"
-                            class="btn btn-primary btn-sm">
-                            Agregar
-                        </button>
+                <div class="pt-2 border-top bg-body flex-shrink-0">
+                    <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                        <span class="small fw-semibold">CANTIDAD:</span>
+                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">-</button>
+                        <input type="text" class="form-control form-control-sm text-center fw-bold" value="2" style="width: 45px;">
+                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold">+</button>
                     </div>
+                    <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;">Añadir a Orden</button>
                 </div>
-                <button type="button" id="open-product-modal"
-                    class="btn btn-outline-secondary btn-sm w-100">
-                    Buscar en catalogo
-                </button>
-                <p id="manual-order-message" class="d-none rounded px-3 py-2 small"></p>
             </div>
-        </div>
-        <div id="manual-product-detail" class="mt-3 rounded border border-secondary-subtle bg-body shadow-sm overflow-hidden h-100">
-            {% include "partials/manual_order_product_detail.html" %}
-        </div>
-        </div>
 
-        <div class="col-12 col-xl-8">
-        <div class="rounded border border-secondary-subtle bg-body shadow-sm">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 border-bottom border-secondary-subtle px-3 py-3">
-                <div>
-                    <h2 class="h5 fw-semibold text-body mb-0">Productos agregados</h2>
-                    <p class="small text-body-secondary mb-0">Ajusta cantidades antes de generar la orden.</p>
+            <div class="h-100 d-flex flex-column ps-3 min-h-0 overflow-hidden" style="width: 25%;">
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <h5>Mi Orden de Recoleccion</h5>
+                    <span class="small text-decoration-underline text-muted" style="cursor: pointer;">4 items</span>
                 </div>
-                <div class="small text-body-secondary">Items: <span id="cart-count">0</span></div>
-            </div>
-            <form id="manual-order-form" method="post" action="{{ url_for('inventory.save_manual_order_collection') }}"
-                hx-post="{{ url_for('inventory.save_manual_order_collection') }}" hx-target="#main-content" hx-swap="innerHTML" hx-trigger="submit">
-                <input type="hidden" name="store_origin" value="{{ store_origin }}">
-                <input type="hidden" name="store_dst" value="{{ store_dst }}">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0" style="min-width: 760px;">
-                        <thead class="bg-body-tertiary small text-uppercase">
-                            <tr>
-                                <th class="px-4 py-3">Codigo</th>
-                                <th class="px-4 py-3">Descripcion</th>
-                                <th class="px-4 py-3">Unidad</th>
-                                <th class="px-4 py-3">Stock origen</th>
-                                <th class="px-4 py-3">Cantidad</th>
-                                <th class="px-4 py-3 text-right">Accion</th>
+
+                <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1">
+                    <table class="table table-sm table-borderless align-middle small mb-0">
+                        <tbody>
+                            <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
+                                    <div class="fw-semibold text-body">Producto A</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end" style="width: 110px;">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody id="manual-cart-body">
-                            <tr id="empty-cart-row">
-                                <td colspan="6" class="px-4 py-4 text-center text-body-secondary fst-italic">Aun no hay productos agregados.</td>
+                             <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
+                                    <div class="fw-semibold text-body">Producto A</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end" style="width: 110px;">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                             <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
+                                    <div class="fw-semibold text-body">Producto A</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end" style="width: 110px;">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                             <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM232</div>
+                                    <div class="fw-semibold text-body">Producto A</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 2 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end" style="width: 110px;">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM112</div>
+                                    <div class="fw-semibold text-body">Producto C</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 1 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM904</div>
+                                    <div class="fw-semibold text-body">Producto D</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 4 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="py-2">
+                                    <div class="order-item-code text-body-secondary fw-semibold">FM350</div>
+                                    <div class="fw-semibold text-body">Producto E</div>
+                                    <div class="order-item-meta text-body-secondary">Cantidad: 3 | Unidad: UND</div>
+                                </td>
+                                <td class="py-2 text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button">Eliminar</button>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 border-top border-secondary-subtle px-3 py-3">
-                    <p class="small text-body-secondary mb-0">La orden quedara en espera para chequeo de recoleccion.</p>
-                    <button type="submit" id="create-manual-order" disabled
-                        class="btn btn-success btn-sm disabled:bg-secondary-subtle">
-                        Crear orden de recoleccion
+
+                <div class="mt-auto pt-3 border-top bg-body text-center">
+                    <div class="small text-muted mb-2">[Total Artículos: 10]</div>
+                    <button class="btn btn-outline-dark w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;">
+                        Confirmar Orden de Traslado
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
         </div>
     </div>
     {% endif %}
 </div>
-
-<div id="manual-product-modal"></div> #}
-
-{% if store_origin and store_dst %}
-<script>
-    (function () {
-        if (!window.__openPdfListenerAttached) {
-            window.addEventListener('open-pdf', function (e) {
-                if (e.detail && e.detail.url) {
-                    window.open(e.detail.url, '_blank');
-                }
-            });
-            window.__openPdfListenerAttached = true;
-        }
-
-        const storeOrigin = {{ store_origin|tojson }};
-        const cartBody = document.getElementById('manual-cart-body');
-        const emptyRow = document.getElementById('empty-cart-row');
-        const codeInput = document.getElementById('manual-product-code');
-        const addCodeButton = document.getElementById('manual-code-add');
-        const openModalButton = document.getElementById('open-product-modal');
-        const createButton = document.getElementById('create-manual-order');
-        const manualOrderForm = document.getElementById('manual-order-form');
-        const cartCount = document.getElementById('cart-count');
-        const messageBox = document.getElementById('manual-order-message');
-        const cart = new Map();
-        const storeDst = {{ store_dst|tojson }};
-
-        function showMessage(message, type) {
-            messageBox.textContent = message;
-            messageBox.className = 'rounded px-3 py-2 small ' + (type === 'error'
-                ? 'bg-danger-subtle text-danger-emphasis border border-danger-subtle'
-                : 'bg-success-subtle text-success-emphasis border border-success-subtle');
-        }
-
-        function clearMessage() {
-            messageBox.textContent = '';
-            messageBox.className = 'd-none rounded px-3 py-2 small';
-        }
-
-        function escapeHtml(value) {
-            return String(value || '').replace(/[&<>'"]/g, function (char) {
-                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char];
-            });
-        }
-
-        function renderCart() {
-            cartBody.innerHTML = '';
-            if (cart.size === 0) {
-                cartBody.appendChild(emptyRow);
-            } else {
-                cart.forEach(product => {
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-bottom bg-body';
-                    tr.dataset.code = product.code;
-                    tr.innerHTML = `
-                        <td class="px-4 py-3 fw-semibold text-body">
-                            ${escapeHtml(product.code)}
-                            <input type="hidden" name="product_code[]" value="${escapeHtml(product.code)}">
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="fw-semibold text-body">${escapeHtml(product.description)}</div>
-                            <div class="small text-body-secondary">${escapeHtml(product.mark_description)} ${escapeHtml(product.department_description)}</div>
-                        </td>
-                        <td class="px-4 py-3">${escapeHtml(product.unit_description)}</td>
-                        <td class="px-4 py-3">${Number(product.stock_origin || 0).toFixed(2)}</td>
-                        <td class="px-4 py-3">
-                            <input type="number" name="quantity[]" min="0.01" step="0.01" max="${Number(product.stock_origin || 0)}" value="${Number(product.quantity || 1)}"
-                                class="manual-qty form-control form-control-sm" style="max-width: 7rem;">
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <button type="button" class="remove-cart-item btn btn-sm btn-outline-danger">Quitar</button>
-                        </td>
-                    `;
-                    cartBody.appendChild(tr);
-                });
-            }
-
-            cartCount.textContent = cart.size.toString();
-            createButton.disabled = cart.size === 0;
-        }
-
-        function addProduct(product, quantity, options) {
-            const addOptions = options || {};
-            const stock = Number(product.stock_origin || 0);
-            const requested = Number(quantity || 1);
-            if (!product.code) {
-                showMessage('Producto invalido.', 'error');
-                return;
-            }
-            if (stock <= 0) {
-                showMessage('El producto no tiene stock disponible en origen.', 'error');
-                return;
-            }
-            if (requested <= 0) {
-                showMessage('La cantidad debe ser mayor a cero.', 'error');
-                return;
-            }
-
-            const existing = cart.get(product.code);
-            const nextQuantity = existing ? Number(existing.quantity || 0) + requested : requested;
-            if (nextQuantity > stock) {
-                showMessage('La cantidad supera el stock disponible en origen.', 'error');
-                return;
-            }
-
-            cart.set(product.code, { ...product, quantity: nextQuantity });
-            renderCart();
-            if (product.resolved_from_alternate && product.entered_code) {
-                showMessage(`Codigo alterno ${product.entered_code} agregado como ${product.code}.`, 'success');
-            } else {
-                clearMessage();
-            }
-            codeInput.value = '';
-            if (addOptions.keepModalFocus) {
-                focusManualProductSearchInput();
-            } else {
-                codeInput.focus();
-            }
-        }
-
-        function focusManualProductQuantityInput() {
-            const quantityInput = document.getElementById('manual-product-quantity');
-            if (!quantityInput) return;
-
-            quantityInput.focus();
-            quantityInput.select();
-        }
-
-        function focusManualProductSearchInput() {
-            const searchInput = document.getElementById('manual-product-search-input');
-            if (!searchInput) return;
-
-            searchInput.focus();
-            const valueLength = String(searchInput.value || '').length;
-            const selectionStart = Number.isInteger(manualSearchSelectionStart) ? manualSearchSelectionStart : valueLength;
-            const selectionEnd = Number.isInteger(manualSearchSelectionEnd) ? manualSearchSelectionEnd : valueLength;
-            searchInput.setSelectionRange(
-                Math.max(0, Math.min(selectionStart, valueLength)),
-                Math.max(0, Math.min(selectionEnd, valueLength))
-            );
-        }
-
-        function getManualProductRows() {
-            return Array.from(document.querySelectorAll('[data-select-manual-product]'));
-        }
-
-        function focusManualProductRow(index) {
-            const rows = getManualProductRows();
-            if (!rows.length) return;
-
-            const nextIndex = Math.max(0, Math.min(index, rows.length - 1));
-            rows[nextIndex].focus();
-        }
-
-        async function loadManualProductDetail(productCode) {
-            const normalizedCode = String(productCode || '').trim();
-            if (!normalizedCode) {
-                showMessage('Ingresa un codigo de producto.', 'error');
-                return;
-            }
-
-            try {
-                const params = new URLSearchParams({
-                    store_origin: storeOrigin,
-                    store_dst: storeDst,
-                    product_code: normalizedCode,
-                });
-                const response = await fetch(`{{ url_for('inventory.manual_order_product_detail') }}?${params.toString()}`, {
-                    credentials: 'same-origin',
-                    headers: { 'HX-Request': 'true' },
-                });
-                const detailPanel = document.getElementById('manual-product-detail');
-                if (!detailPanel) return;
-                detailPanel.outerHTML = await response.text();
-                window.setTimeout(focusManualProductQuantityInput, 0);
-            } catch (err) {
-                showMessage('No se pudo cargar el detalle del producto.', 'error');
-            }
-        }
-
-        async function openProductModal(query, page, options) {
-            try {
-                const params = new URLSearchParams({
-                    store_origin: storeOrigin,
-                    store_dst: storeDst,
-                    q: query || '',
-                    page: page || 1,
-                });
-                const response = await fetch(`{{ url_for('inventory.manual_order_products_modal') }}?${params.toString()}`, {
-                    credentials: 'same-origin',
-                    headers: { 'HX-Request': 'true' },
-                });
-                document.getElementById('manual-product-modal').outerHTML = await response.text();
-
-                if (window.htmx) {
-                    const modalElement = document.getElementById('manual-product-modal');
-                    if (modalElement) {
-                        window.htmx.process(modalElement);
-                    }
-                }
-
-                window.setTimeout(function () {
-                    focusManualProductSearchInput();
-                }, 0);
-            } catch (err) {
-                showMessage('No se pudo abrir el catalogo de productos.', 'error');
-            }
-        }
-
-        addCodeButton.addEventListener('click', async function () {
-            const code = codeInput.value.trim();
-            if (!code) {
-                showMessage('Ingresa un codigo de producto.', 'error');
-                return;
-            }
-
-            await openProductModal(code, 1);
-            await loadManualProductDetail(code);
-        });
-        codeInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addCodeButton.click();
-            }
-        });
-        manualOrderForm.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-            }
-        });
-        openModalButton.addEventListener('click', function () {
-            openProductModal(codeInput.value.trim());
-        });
-
-        document.addEventListener('click', function (e) {
-            const closeModal = e.target.closest('[data-close-manual-product-modal]');
-            if (closeModal || e.target.id === 'manual-product-modal') {
-                document.getElementById('manual-product-modal').outerHTML = '<div id="manual-product-modal"></div>';
-                return;
-            }
-
-            const removeButton = e.target.closest('.remove-cart-item');
-            if (removeButton) {
-                const row = removeButton.closest('tr');
-                cart.delete(row.dataset.code);
-                renderCart();
-            }
-        });
-
-        document.addEventListener('keydown', function (e) {
-            const searchInput = e.target.closest('#manual-product-search-input');
-            if (searchInput) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    return;
-                }
-
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    focusManualProductRow(0);
-                    return;
-                }
-
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    focusManualProductRow(getManualProductRows().length - 1);
-                    return;
-                }
-            }
-
-            const productRow = e.target.closest('[data-select-manual-product]');
-            if (!productRow) return;
-
-            const rows = getManualProductRows();
-            const currentIndex = rows.indexOf(productRow);
-
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                productRow.click();
-                return;
-            }
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                focusManualProductRow(currentIndex + 1);
-                return;
-            }
-
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (currentIndex <= 0) {
-                    focusManualProductSearchInput();
-                    return;
-                }
-                focusManualProductRow(currentIndex - 1);
-            }
-        });
-
-        document.addEventListener('submit', function (e) {
-            const detailForm = e.target.closest('#manual-product-detail-form');
-            if (!detailForm) return;
-
-            e.preventDefault();
-            const detailPanel = detailForm.closest('#manual-product-detail');
-            if (!detailPanel) return;
-
-            const quantityInput = detailForm.querySelector('#manual-product-quantity');
-            const quantity = Number(quantityInput ? quantityInput.value : 0);
-            addProduct({
-                code: detailPanel.dataset.code,
-                description: detailPanel.dataset.description,
-                unit_description: detailPanel.dataset.unit,
-                mark_description: detailPanel.dataset.mark,
-                department_description: detailPanel.dataset.department,
-                stock_origin: Number(detailPanel.dataset.originStock || 0),
-                global_stock: Number(detailPanel.dataset.globalStock || 0),
-                stock_destination: Number(detailPanel.dataset.destinationStock || 0),
-                minimum_stock: Number(detailPanel.dataset.minimumStock || 0),
-                maximum_stock: Number(detailPanel.dataset.maximumStock || 0),
-                location: detailPanel.dataset.location || '',
-            }, quantity, { keepModalFocus: true });
-        });
-
-        document.addEventListener('htmx:afterSwap', function (e) {
-            if (e.target && e.target.id === 'manual-product-detail') {
-                window.setTimeout(focusManualProductQuantityInput, 0);
-            }
-        });
-
-        cartBody.addEventListener('input', function (e) {
-            if (!e.target.classList.contains('manual-qty')) return;
-            const row = e.target.closest('tr');
-            const product = cart.get(row.dataset.code);
-            const quantity = Number(e.target.value || 0);
-            const stock = Number(product.stock_origin || 0);
-            if (quantity > stock) {
-                e.target.value = stock;
-                product.quantity = stock;
-                showMessage('La cantidad fue ajustada al stock disponible.', 'error');
-            } else {
-                product.quantity = quantity;
-            }
-        });
-
-        renderCart();
-    })();
-</script>
-{% endif %}
 {% endblock %}
