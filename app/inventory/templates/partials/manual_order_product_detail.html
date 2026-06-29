@@ -126,6 +126,8 @@
             <input id="manual-product-quantity" name="quantity" type="text" class="form-control form-control-sm text-center fw-bold" value="{{ '%.2f'|format(suggested_qty or 1) if detail else '1' }}" style="width: 45px;" inputmode="decimal" data-tour="manual-order-quantity-input">
             <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold" type="button" data-qty-action="increment">+</button>
         </div>
-        <button class="btn btn-dark w-100 py-2 fw-bold text-uppercase mb-1" style="letter-spacing: 0.5px;" type="submit" data-tour="manual-order-add-button" {% if not detail %}disabled{% endif %}>Añadir a Orden</button>
+        <div class="container pb-4">
+            <button class="btn btn-primary w-100 py-2 fw-bold text-uppercase mb-1 shadow-sm" type="submit" data-tour="manual-order-add-button" {% if not detail %}disabled{% endif %}>Añadir a Orden</button>        
+        </div>
     </form>
 </div>

@@ -4,7 +4,7 @@ from app.dashboard import dashboard_bp
 from app.dashboard.service import get_dashboard_data
 
 
-@dashboard_bp.route('/dashboard')
+@dashboard_bp.route('/')
 @login_required
 def dashboard():
     return render_template(

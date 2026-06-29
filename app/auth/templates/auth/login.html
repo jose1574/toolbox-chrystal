@@ -1,68 +1,202 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <title>Document</title>
+    <title>Toolbox Crystal | Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --login-primary: #0d6efd;
+            --login-secondary: #198754;
+            --login-ink: #12213a;
+            --login-muted: #667085;
+            --login-surface: #ffffff;
+            --login-soft: #edf3ff;
+        }
+
+        body {
+            min-height: 100vh;
+            color: var(--login-ink);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(13, 110, 253, 0.18), transparent 36%),
+                radial-gradient(circle at 85% 12%, rgba(25, 135, 84, 0.18), transparent 30%),
+                linear-gradient(140deg, #f8fbff 0%, #eef5ff 52%, #f4fbf7 100%);
+        }
+
+        .login-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .login-card {
+            width: min(1040px, 100%);
+            border: 0;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            box-shadow: 0 24px 55px rgba(18, 33, 58, 0.14);
+        }
+
+        .welcome-panel {
+            color: #fff;
+            background: linear-gradient(155deg, #0d6efd 0%, #0d5cd6 55%, #198754 100%);
+            position: relative;
+            isolation: isolate;
+        }
+
+        .welcome-panel::before,
+        .welcome-panel::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .welcome-panel::before {
+            width: 320px;
+            height: 320px;
+            top: -140px;
+            right: -110px;
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .welcome-panel::after {
+            width: 230px;
+            height: 230px;
+            bottom: -90px;
+            left: -70px;
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .feature-badge {
+            background-color: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 0.8rem;
+            padding: 0.8rem 0.9rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .login-form-panel {
+            background: var(--login-surface);
+        }
+
+        .form-control,
+        .form-control:focus {
+            border-radius: 0.75rem;
+        }
+
+        .form-control {
+            border: 1px solid #d7deea;
+            padding: 0.75rem 0.9rem;
+        }
+
+        .form-control:focus {
+            border-color: rgba(13, 110, 253, 0.45);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.14);
+        }
+
+        .btn-login {
+            border-radius: 0.75rem;
+            padding-top: 0.72rem;
+            padding-bottom: 0.72rem;
+            font-weight: 600;
+        }
+
+        .helper-text {
+            font-size: 0.92rem;
+            color: var(--login-muted);
+        }
+
+        .htmx-indicator {
+            display: none;
+        }
+
+        .htmx-request .htmx-indicator {
+            display: inline-flex;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="login-shell">
+        <div class="card login-card">
+            <div class="row g-0">
+                <div class="col-lg-6 welcome-panel p-4 p-lg-5 d-flex flex-column justify-content-between">
+                    <div>
+                        <p class="small text-white-50 text-uppercase fw-semibold mb-2">Version 2.0</p>
+                        <h1 class="h2 fw-bold lh-sm mb-3">Bienvenido a Toolbox Chrystal</h1>
+                        <p class="mb-4 text-white-50">
+                            Centraliza las operaciones de inventario, documentos y reportes para que tu equipo
+                            trabaje con mas orden, menos retrabajo y mejor trazabilidad.
+                        </p>
+                    </div>
 
-    <div class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div
-            class="w-full max-w-md p-6 bg-white rounded-lg shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700">
-            <div class="space-y-6">
-                <h2 class="text-2xl font-bold text-center text-gray-900 dark:text-white">
-                    Iniciar Sesión
-                </h2>
-                
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="space-y-2">
-                    {% for category, message in messages %}
-                        <div class="p-4 mb-4 text-sm rounded-lg {% if category == 'error' %}text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400{% elif category == 'success' %}text-green-800 bg-green-50 dark:bg-gray-800 dark:text-green-400{% else %}text-blue-800 bg-blue-50 dark:bg-gray-800 dark:text-blue-400{% endif %}" role="alert">
-                            {{ message }}
+                    <div class="d-grid gap-3">
+                        <div class="feature-badge">
+                            <p class="mb-1 fw-semibold">Gestion de inventario en tiempo real</p>
+                            <small class="text-white-50">Controla traslados, conteos y ordenes de recoleccion desde una sola vista.</small>
                         </div>
-                    {% endfor %}
+                        <div class="feature-badge">
+                            <p class="mb-1 fw-semibold">Reportes y etiquetas listos para operar</p>
+                            <small class="text-white-50">Genera documentos clave para seguimiento de productos y procesos.</small>
+                        </div>
+                        <div class="feature-badge">
+                            <p class="mb-1 fw-semibold">Interfaz simple para equipos operativos</p>
+                            <small class="text-white-50">Disenada para tareas de piso con flujos rapidos y claros.</small>
+                        </div>
                     </div>
-                {% endif %}
-                {% endwith %}
+                </div>
 
-                <!-- Contenedor para mensajes de error/éxito retornados por HTMX -->
-                <div id="login-response"></div>
+                <div class="col-lg-6 login-form-panel p-4 p-lg-5">
+                    <div class="mx-auto" style="max-width: 420px;">
+                        <h2 class="h4 fw-bold mb-2">Iniciar sesion</h2>
+                        <p class="helper-text mb-4">Ingresa con tu usuario para acceder a las herramientas de la plataforma.</p>
 
-                <form hx-post="{{ url_for('auth.login') }}" hx-target="#login-response" hx-swap="innerHTML"
-                    hx-indicator="#loading-spinner" class="space-y-4">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        <div class="mb-3">
+                            {% for category, message in messages %}
+                            <div class="alert {% if category == 'error' %}alert-danger{% elif category == 'success' %}alert-success{% else %}alert-info{% endif %} py-2 mb-2" role="alert">
+                                {{ message }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% endwith %}
 
-                    <div>
-                        <label for="username"
-                            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Usuario</label>
-                        <input type="text" name="username" id="username" 
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                            placeholder="Ingresa tu código de usuario" required>
+                        <div id="login-response" class="mb-3"></div>
+
+                        <form hx-post="{{ url_for('auth.login') }}" hx-target="#login-response" hx-swap="innerHTML" hx-indicator="#loading-spinner" class="d-grid gap-3">
+                            <div>
+                                <label for="username" class="form-label fw-semibold">Usuario</label>
+                                <input type="text" name="username" id="username" class="form-control" placeholder="Ingresa tu codigo de usuario" autocomplete="username" required>
+                            </div>
+
+                            <div>
+                                <label for="password" class="form-label fw-semibold">Contrasena</label>
+                                <input type="password" name="password" id="password" class="form-control" autocomplete="current-password" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-login d-flex align-items-center justify-content-center gap-2">
+                                <span>Ingresar</span>
+                                <span id="loading-spinner" class="htmx-indicator spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            </button>
+                        </form>
+
+                        <p class="helper-text mt-4 mb-0">
+                            Si aun no tienes acceso, solicita tus credenciales al administrador del sistema.
+                        </p>
                     </div>
-
-                    <div>
-                        <label for="password"
-                            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contraseña</label>
-                        <input type="password" name="password" id="password" 
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                            required>
-                    </div>
-
-                    <button type="submit"
-                        class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 flex items-center justify-center">
-                        Ingresar
-                    </button>
-                </form>
+                </div>
             </div>
         </div>
     </div>
-    <script src="{{ url_for('static', filename='js/flowbite.min.js') }}"></script>
-</body>
 
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
-<!-- Cargar HTMX solo para esta vista si no está en base.html -->

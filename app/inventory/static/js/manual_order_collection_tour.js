@@ -126,14 +126,14 @@
             steps,
             '[data-tour="manual-order-filters"]',
             'Filtros',
-            'Refina por marca, departamento y estado de stock para acotar resultados.',
+            'Filtra por marca, departamento y estado de stock para resultados mas precisos.',
             'right'
         );
         addStep(
             steps,
             '[data-tour="manual-order-search-input"]',
             'Busqueda principal',
-            'Escribe descripcion o codigo. La lista se actualiza automaticamente con HTMX.'
+            'Escribe descripcion o codigo. La lista se actualiza automaticamente.'
         );
         addStep(
             steps,

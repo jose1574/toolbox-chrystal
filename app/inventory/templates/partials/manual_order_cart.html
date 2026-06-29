@@ -75,10 +75,11 @@
             <input type="hidden" name="product_code[]" value="{{ item.code }}">
             <input type="hidden" name="quantity[]" value="{{ item.quantity }}">
             {% endfor %}
-
-            <button class="btn btn-outline-dark w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;" type="submit" data-tour="manual-order-confirm-button" {% if not has_items %}disabled{% endif %}>
-                Confirmar Orden de Traslado
-            </button>
+            <div class="container">
+                <button class="btn btn-success w-100 py-2 fw-bold text-uppercase shadow-sm" style="border-width: 2px;" type="submit" data-tour="manual-order-confirm-button" {% if not has_items %}disabled{% endif %}>
+                    Confirmar Orden de Traslado
+                </button>
+            </div>
         </form>
 
         <form class="mt-2"
