@@ -4,6 +4,25 @@
 {% block content %}
 <div class="p-4 ms-5">
     <div class="d-flex flex-column gap-4">
+    <div id="v2-party-alert" class="alert border-0 shadow-sm mb-0 position-relative overflow-hidden" role="alert" data-party-banner="true">
+        <div class="d-flex align-items-start justify-content-between gap-3 position-relative" style="z-index: 2;">
+            <div>
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                    <span class="badge" data-party-chip="new">Nuevo</span>
+                    <span class="badge" data-party-chip="version">v2.0</span>
+                    <strong>Toolbox 2.0 ya esta aqui</strong>
+                </div>
+                <p class="mb-0 small text-body-emphasis">
+                    Mejoramos velocidad, experiencia de uso y ayudas guiadas. Gracias por ser parte de esta nueva etapa.
+                </p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button id="v2-party-trigger" type="button" class="btn btn-sm">Celebrar</button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
+
     <section class="card shadow-sm border-0">
         <div class="card-body p-4">
         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3">
@@ -14,8 +33,8 @@
                     Resumen operativo de traslados emitidos, chequeados, en tránsito y recepcionados desde el flujo logístico de la aplicación.
                 </p>
             </div>
-            <div class="rounded-3 bg-dark text-white px-4 py-3 shadow-sm">
-                <div class="small text-uppercase text-secondary">Traslados emitidos por Toolbox</div>
+            <div class="rounded-3 bg-body-tertiary text-body px-4 py-3 shadow-sm border border-secondary-subtle">
+                <div class="small text-uppercase text-body-secondary">Traslados emitidos por Toolbox</div>
                 <div class="display-6 fw-bold lh-1 mt-1">{{ dashboard.metrics.app_transfers }}</div>
             </div>
         </div>
@@ -129,4 +148,5 @@
     </section>
     </div>
 </div>
+<script src="{{ url_for('dashboard.static', filename='js/dashboard_party_welcome.js') }}"></script>
 {% endblock %}
