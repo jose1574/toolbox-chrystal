@@ -1152,16 +1152,28 @@ def update_counted_amount():
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    expected = detail.amount
-    diff = counted_amount - expected
+    expected = float(detail.amount or 0)
+    diff = float(counted_amount) - expected
+    has_difference = abs(diff) > 1e-9
 
-    status_html = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">Contado</span>'
+    if has_difference:
+        status_html = (
+            '<span class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold '
+            'bg-warning-subtle text-warning-emphasis border border-warning-subtle">'
+            f'Contado (Dif. {diff:.2f})</span>'
+        )
+    else:
+        status_html = (
+            '<span class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold '
+            'bg-success-subtle text-success-emphasis border border-success-subtle">Contado</span>'
+        )
 
     trigger_payload = {
         "counted-updated": {
             "code_product": code_product,
             "counted_amount": f"{counted_amount:.2f}",
             "status_html": status_html,
+            "has_difference": has_difference,
         }
     }
 
@@ -1614,7 +1626,10 @@ def update_count(operation_id, product_code=None, destination_store=None):
     difference_amount = payload["difference_amount"]
     counted_amount = payload["counted_amount"]
 
-    # Devolver siempre la fila actualizada (aunque no haya diferencia) para permitir re-conteos posteriores
+    if float(difference_amount) == 0:
+        return ""
+
+    # Keep rows with differences visible for follow-up recounts
     return render_template(
         "partials/table_row.html",
         detail=detail,

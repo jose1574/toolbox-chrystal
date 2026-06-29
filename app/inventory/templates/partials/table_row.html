@@ -1,18 +1,18 @@
 {% set expected_amount = expected_amount|default(detail.amount) %}
 {% set difference_amount = difference_amount|default(counted_amount - expected_amount) %}
 {% set has_diff = difference_amount != 0 %}
-<tr id="row-{{ detail.code_product }}" data-counted="true"{% if has_diff %} class="row-diff"{% endif %}>
-    <td class="px-3 py-2 small fw-semibold text-body{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.code_product }}</td>
-    <td class="px-3 py-2 small text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.description_product }}</td>
-    <td class="px-3 py-2 small text-body-secondary d-none d-md-table-cell{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.referenc }}</td>
-    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ expected_amount }}</td>
-    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
+<tr id="row-{{ detail.code_product }}" data-counted="true"{% if has_diff %} class="row-diff" style="background-color:#fff3cd;"{% endif %}>
+    <td class="px-3 py-2 small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.code_product }}</td>
+    <td class="px-3 py-2 small text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.description_product }}</td>
+    <td class="px-3 py-2 small text-body-secondary d-none d-md-table-cell{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.referenc }}</td>
+    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ expected_amount }}</td>
+    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
         {{ counted_amount }}
     </td>
-    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
+    <td class="px-3 py-2 small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
         {{ difference_amount }}
         {% if has_diff %}
-        <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-danger-subtle px-2 py-0 small fw-semibold text-danger">Dif.</span>
+        <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>
         {% endif %}
     </td>
 </tr>

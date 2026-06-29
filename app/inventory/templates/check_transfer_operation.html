@@ -134,18 +134,18 @@
 					{% set counted_display = reception_difference.counted_amount if reception_difference else 0 %}
 					{% set difference_display = reception_difference.difference if reception_difference else 0 %}
 					{% set has_diff = (reception_difference and reception_difference.difference != 0) %}
-					<tr id="row-{{ detail.code_product }}" data-counted="{% if flow_status == 'IN_TRANSIT' and not reception_difference %}false{% else %}true{% endif %}"{% if has_diff %} class="bg-red-100" style="background-color:#fee2e2;"{% endif %}>
-						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.code_product }}</td>
-						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.description_product }}</td>
-						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ detail.referenc }}</td>
-						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}">{{ expected_amount }}</td>
-						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
+					<tr id="row-{{ detail.code_product }}" data-counted="{% if flow_status == 'IN_TRANSIT' and not reception_difference %}false{% else %}true{% endif %}"{% if has_diff %} class="row-diff" style="background-color:#fff3cd;"{% endif %}>
+						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.code_product }}</td>
+						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.description_product }}</td>
+						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.referenc }}</td>
+						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ expected_amount }}</td>
+						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
 							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ counted_display if flow_status == 'IN_TRANSIT' else detail.amount }}{% endif %}
 						</td>
-						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-danger-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
+						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
 							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ difference_display if flow_status == 'IN_TRANSIT' else 0 }}{% endif %}
 							{% if has_diff %}
-							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-danger-subtle px-2 py-0 small fw-semibold text-danger-emphasis">Dif.</span>
+							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>
 							{% endif %}
 						</td>
 					</tr>
@@ -207,6 +207,8 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		receiveBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
 	}
 
+	window.updateTransferReceiveButton = updateReceiveButton;
+
 	document.body.addEventListener('htmx:afterSwap', function(evt) {
 		const target = evt.detail && evt.detail.target;
 		if (!target) return;
@@ -214,6 +216,14 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		if (isProductRow) {
 			// Marcar la fila como contada si viene de un update
 			target.setAttribute('data-counted', 'true');
+			updateReceiveButton();
+		}
+	});
+
+	document.body.addEventListener('htmx:afterRequest', function(evt) {
+		if (!evt.detail || !evt.detail.successful) return;
+		const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
+		if (path.indexOf('/inventory/check_transfer_operation/update_count/') !== -1) {
 			updateReceiveButton();
 		}
 	});
