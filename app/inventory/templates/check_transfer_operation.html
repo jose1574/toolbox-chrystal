@@ -237,6 +237,12 @@ if (!window.__transferCheckPdfHandlerAdded) {
 			window.open(detail.url, '_blank');
 		}
 	});
+	document.addEventListener('redirect-transfer-check', (event) => {
+		const detail = event.detail || {};
+		if (detail.url) {
+			window.location.href = detail.url;
+		}
+	});
 }
 </script>
 {% endblock %}

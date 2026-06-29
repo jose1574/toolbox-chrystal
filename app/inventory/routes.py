@@ -1418,7 +1418,10 @@ def receive_transfer_operation(operation_id):
                 "url": url_for(
                     "inventory.transfer_operation_report", order_id=operation_id
                 )
-            }
+            },
+            "redirect-transfer-check": {
+                "url": url_for("inventory.check_transfer_operation")
+            },
         }
         if has_reception_differences:
             trigger_payload["open-differences-pdf"] = {
@@ -1427,13 +1430,12 @@ def receive_transfer_operation(operation_id):
                     order_id=operation_id,
                 )
             }
-        resp = make_response(
-            render_template("index.html")
-        )
+        resp = make_response("", 200)
         resp.headers["HX-Trigger"] = json.dumps(trigger_payload)
+        resp.headers["HX-Reswap"] = "none"
         return resp
 
-    return redirect(url_for("inventory.index"))
+    return redirect(url_for("inventory.check_transfer_operation"))
 
 
 @inventory_bp.route(
