@@ -9280,3 +9280,212 @@ class ProductsCounterHistory(db.Model):
         primaryjoin="ProductsCounterHistory.user_code == User.code",
         backref="products_counter_history",
     )
+
+
+class InventoryOperationPackage(db.Model):
+    __tablename__ = "inventory_operation_package"
+    __table_args__ = (
+        db.UniqueConstraint("operation_correlative", "package_number"),
+        db.CheckConstraint("status IN ('OPEN', 'CLOSED', 'VOID')"),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    package_number = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(16), nullable=False, server_default="OPEN")
+    opened_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    opened_user = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    closed_at = db.Column(db.DateTime)
+    closed_user = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE")
+    )
+    locked_at = db.Column(db.DateTime)
+
+    inventory_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="InventoryOperationPackage.operation_correlative == InventoryOperation.correlative",
+        backref="operation_packages",
+    )
+    opened_by = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationPackage.opened_user == User.code",
+        foreign_keys=[opened_user],
+        backref="opened_inventory_packages",
+    )
+    closed_by = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationPackage.closed_user == User.code",
+        foreign_keys=[closed_user],
+        backref="closed_inventory_packages",
+    )
+
+
+class InventoryOperationPackageDetail(db.Model):
+    __tablename__ = "inventory_operation_package_detail"
+    __table_args__ = (
+        db.UniqueConstraint("package_correlative", "product_code"),
+        db.CheckConstraint("packed_amount > 0"),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    package_correlative = db.Column(
+        db.ForeignKey(
+            "toolbox.inventory_operation_package.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    packed_amount = db.Column(db.Double(53), nullable=False)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_user = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+
+    package = db.relationship(
+        "InventoryOperationPackage",
+        primaryjoin="InventoryOperationPackageDetail.package_correlative == InventoryOperationPackage.correlative",
+        backref="package_details",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="InventoryOperationPackageDetail.product_code == Product.code",
+        backref="inventory_operation_package_details",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationPackageDetail.updated_user == User.code",
+        backref="inventory_operation_package_details",
+    )
+
+
+class InventoryOperationCheckingProgress(db.Model):
+    __tablename__ = "inventory_operation_checking_progress"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "operation_correlative",
+            "user_code",
+            "product_code",
+            name="uq_inventory_operation_checking_progress",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    counted_amount = db.Column(db.Double(53), nullable=False)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    inventory_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="InventoryOperationCheckingProgress.operation_correlative == InventoryOperation.correlative",
+        backref="checking_progress_entries",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationCheckingProgress.user_code == User.code",
+        backref="inventory_operation_checking_progress_entries",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="InventoryOperationCheckingProgress.product_code == Product.code",
+        backref="inventory_operation_checking_progress_entries",
+    )
+
+
+class InventoryOperationReceptionProgress(db.Model):
+    __tablename__ = "inventory_operation_reception_progress"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "operation_correlative",
+            "user_code",
+            "product_code",
+            name="uq_inventory_operation_reception_progress",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.inventory_operation.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    counted_amount = db.Column(db.Double(53), nullable=False)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    inventory_operation = db.relationship(
+        "InventoryOperation",
+        primaryjoin="InventoryOperationReceptionProgress.operation_correlative == InventoryOperation.correlative",
+        backref="reception_progress_entries",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationReceptionProgress.user_code == User.code",
+        backref="inventory_operation_reception_progress_entries",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="InventoryOperationReceptionProgress.product_code == Product.code",
+        backref="inventory_operation_reception_progress_entries",
+    )

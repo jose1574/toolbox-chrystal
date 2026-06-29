@@ -5,9 +5,10 @@
 {% set operation = operation|default(None) %}
 {% set flow_status = flow_status|default('') %}
 {% set reception_differences = reception_differences|default({}) %}
+{% set reception_progress_map = reception_progress_map|default({}) %}
 
 {% block content %}
-<div class="container-fluid py-4 px-4 ms-5">
+<div class="container-fluid py-4">
 	<div class="bg-body shadow-sm border border-secondary-subtle rounded p-4">
 		<h1 class="h3 fw-bold text-body mb-4">Recepción de traslado</h1>
 
@@ -109,6 +110,8 @@
 					hx-select="#main-content"
 					hx-swap="innerHTML"
 					onsubmit="return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');">
+					<input type="hidden" id="total-products-count" value="{{ details|length }}">
+					<input type="hidden" id="counted-codes" name="counted_codes" value="">
 					<button type="submit" id="receive-button" disabled
 						class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 text-body-secondary" style="cursor: not-allowed;">
 						<span>Cerrar, Recepcionar y Procesar</span>
@@ -130,20 +133,26 @@
 				<tbody id="products-table">
 					{% for detail in details %}
 					{% set reception_difference = reception_differences.get(detail.line) %}
+					{% set progress_counted = reception_progress_map.get(detail.code_product|string|trim|upper) %}
 					{% set expected_amount = reception_difference.original_amount if reception_difference else detail.amount %}
-					{% set counted_display = reception_difference.counted_amount if reception_difference else 0 %}
-					{% set difference_display = reception_difference.difference if reception_difference else 0 %}
-					{% set has_diff = (reception_difference and reception_difference.difference != 0) %}
-					<tr id="row-{{ detail.code_product }}" data-counted="{% if flow_status == 'IN_TRANSIT' and not reception_difference %}false{% else %}true{% endif %}"{% if has_diff %} class="row-diff" style="background-color:#fff3cd;"{% endif %}>
-						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.code_product }}</td>
+					{% set counted_display = reception_difference.counted_amount if reception_difference else (progress_counted if progress_counted is not none else none) %}
+					{% set difference_display = reception_difference.difference if reception_difference else ((counted_display - expected_amount) if counted_display is not none else none) %}
+					{% set has_counted = (counted_display is not none) %}
+					{% set has_diff = has_counted and difference_display != 0 %}
+					{% set must_hide = has_counted and not has_diff %}
+					<tr id="row-{{ detail.code_product }}" data-counted="{% if has_counted %}true{% else %}false{% endif %}" class="{% if has_diff %}row-diff{% endif %}{% if has_diff and must_hide %} {% endif %}{% if must_hide %}d-none{% endif %}"{% if has_diff %} style="background-color:#fff3cd;"{% endif %}>
+						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">
+							<input type="hidden" id="row-hidden-{{ detail.code_product }}" value="{% if must_hide %}1{% else %}0{% endif %}">
+							{{ detail.code_product }}
+						</td>
 						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.description_product }}</td>
 						<td class="px-3 py-3 text-nowrap small text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ detail.referenc }}</td>
 						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}">{{ expected_amount }}</td>
 						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="counted-{{ detail.code_product }}">
-							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ counted_display if flow_status == 'IN_TRANSIT' else detail.amount }}{% endif %}
+							{% if has_counted %}{{ counted_display }}{% else %}--{% endif %}
 						</td>
 						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
-							{% if flow_status == 'IN_TRANSIT' and not reception_difference %}--{% else %}{{ difference_display if flow_status == 'IN_TRANSIT' else 0 }}{% endif %}
+							{% if has_counted %}{{ difference_display }}{% else %}--{% endif %}
 							{% if has_diff %}
 							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>
 							{% endif %}
@@ -184,16 +193,50 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 // Habilitar cierre de recepcion cuando todos los productos esten contados
 (function() {
 	const receiveBtn = document.getElementById('receive-button');
+	const receiveForm = document.getElementById('receive-form');
+	const countedCodesInput = document.getElementById('counted-codes');
+	const totalProductsCountInput = document.getElementById('total-products-count');
+	const countedCodesSet = new Set();
 
-	function allRowsCounted() {
+	function initializeCountedCodesSet() {
 		const rows = document.querySelectorAll('#products-table tr[id^="row-"]');
-		if (!rows.length) return false;
 		for (const row of rows) {
 			if (row.getAttribute('data-counted') !== 'true') {
-				return false;
+				continue;
+			}
+			const rowId = row.getAttribute('id') || '';
+			if (!rowId.startsWith('row-')) {
+				continue;
+			}
+			const code = rowId.slice(4).trim();
+			if (code) {
+				countedCodesSet.add(code);
 			}
 		}
-		return true;
+	}
+
+	function hideCountedRowsFromView() {
+		const rows = document.querySelectorAll('#products-table tr[id^="row-"]');
+		for (const row of rows) {
+			const rowId = row.getAttribute('id') || '';
+			if (!rowId.startsWith('row-')) {
+				continue;
+			}
+			const code = rowId.slice(4).trim();
+			const hiddenFlag = document.getElementById('row-hidden-' + code);
+			if (hiddenFlag && hiddenFlag.value === '1') {
+				row.classList.add('d-none');
+			}
+		}
+	}
+
+	function allRowsCounted() {
+		const totalProducts = parseInt((totalProductsCountInput && totalProductsCountInput.value) || '0', 10);
+		return totalProducts > 0;
+	}
+
+	function collectCountedCodes() {
+		return Array.from(countedCodesSet.values());
 	}
 
 	function updateReceiveButton() {
@@ -207,28 +250,79 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		receiveBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
 	}
 
-	window.updateTransferReceiveButton = updateReceiveButton;
+	function updateCountedCodesInput() {
+		if (!countedCodesInput) return;
+		countedCodesInput.value = collectCountedCodes().join(',');
+	}
 
-	document.body.addEventListener('htmx:afterSwap', function(evt) {
-		const target = evt.detail && evt.detail.target;
-		if (!target) return;
-		const isProductRow = target.id && target.id.startsWith('row-');
-		if (isProductRow) {
-			// Marcar la fila como contada si viene de un update
-			target.setAttribute('data-counted', 'true');
-			updateReceiveButton();
-		}
-	});
+	window.updateTransferReceiveButton = updateReceiveButton;
 
 	document.body.addEventListener('htmx:afterRequest', function(evt) {
 		if (!evt.detail || !evt.detail.successful) return;
 		const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
 		if (path.indexOf('/inventory/check_transfer_operation/update_count/') !== -1) {
+			updateCountedCodesInput();
 			updateReceiveButton();
 		}
 	});
 
+	document.addEventListener('transfer-counted-updated', function(event) {
+		const detail = event.detail || {};
+		const code = (detail.code_product || '').trim();
+		if (!code) {
+			return;
+		}
+
+		const countedAmount = parseFloat(detail.counted_amount || 0);
+		const expectedAmount = parseFloat(detail.expected_amount || 0);
+		const differenceAmount = parseFloat(detail.difference_amount || 0);
+		const hasDiff = Math.abs(differenceAmount) > 1e-9;
+
+		countedCodesSet.add(code);
+		const row = document.getElementById('row-' + code);
+		if (row) {
+			row.setAttribute('data-counted', 'true');
+			const countedCell = document.getElementById('counted-' + code);
+			const diffCell = document.getElementById('diff-' + code);
+			if (countedCell) {
+				countedCell.textContent = countedAmount.toFixed(2);
+			}
+			if (diffCell) {
+				diffCell.innerHTML = hasDiff
+					? `${differenceAmount.toFixed(2)} <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>`
+					: differenceAmount.toFixed(2);
+			}
+
+			const hiddenFlag = document.getElementById('row-hidden-' + code);
+			if (hiddenFlag) {
+				hiddenFlag.value = hasDiff ? '0' : '1';
+			}
+
+			if (hasDiff) {
+				row.classList.remove('d-none');
+				row.classList.add('row-diff');
+				row.style.backgroundColor = '#fff3cd';
+			} else {
+				row.classList.remove('row-diff');
+				row.style.backgroundColor = '';
+				row.classList.add('d-none');
+			}
+		}
+
+		updateCountedCodesInput();
+		updateReceiveButton();
+	});
+
+	if (receiveForm) {
+		receiveForm.addEventListener('submit', function() {
+			updateCountedCodesInput();
+		});
+	}
+
 	window.addEventListener('DOMContentLoaded', function() {
+		initializeCountedCodesSet();
+		hideCountedRowsFromView();
+		updateCountedCodesInput();
 		updateReceiveButton();
 	});
 })();

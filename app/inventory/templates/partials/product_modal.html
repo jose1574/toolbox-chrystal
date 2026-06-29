@@ -22,7 +22,7 @@
         </div>
         <form class="mt-4"
             hx-post="{{ url_for('inventory.update_count', operation_id=operation_id) }}"
-            hx-target="[id='row-{{ detail.code_product }}']" hx-swap="outerHTML"
+            hx-target="#products-table" hx-swap="none"
             hx-on:htmx:after-request="if(event.detail.successful){const search=document.getElementById('product_code'); if(search){search.value=''; search.focus();} document.getElementById('productModal').remove();}">
 
             <input type="hidden" name="product_code" value="{{ detail.code_product }}">

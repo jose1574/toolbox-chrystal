@@ -88,19 +88,36 @@
     </div>
 
 
-    <div class="w-100" style="max-width: 40rem;">
-        <form class="d-grid gap-2 m-4">
-            <label for="code-product" class="form-label small fw-semibold text-body mb-0 h3">Buscar código de
-                producto</label>
-            <input type="text" id="code-product" name="code-product"
+    <div class="w-100">
+    <div class="row">
+        <div class="col">
+            <form class="d-grid gap-2 m-4">
+                <input type="text" id="code-product" name="code-product"
                 class="form-control bg-body-tertiary border border-secondary-subtle text-body small"
                 placeholder="código de producto" hx-get="{{ url_for('inventory.search_product') }}"
                 hx-target="#product-modal-container" hx-include="[name='order_id']" hx-trigger="keydown[key=='Enter']"
                 hx-on:htmx:afterRequest="if (event.detail && event.detail.elt === this) { this.value=''; this.focus(); }"
                 oninput="this.value = this.value.toUpperCase();"
                 onkeydown="if(event.key==='Enter') event.preventDefault();">
-            <input type="hidden" name="order_id" value="{{ order.correlative }}">
-        </form>
+                <input type="hidden" name="order_id" value="{{ order.correlative }}">
+            </form>
+        </div>
+        <div class="col-auto d-flex align-items-center gap-2 py-3 pe-3">
+            <a href="{{ url_for('inventory.checked_order_packages', correlative=order.correlative) }}" class="btn btn-outline-primary">
+                Ver Bultos de la Orden
+            </a>
+            <form hx-post="{{ url_for('inventory.open_package') }}" hx-target="#package-feedback" hx-swap="innerHTML" class="m-0">
+                <input type="hidden" name="order_id" value="{{ order.correlative }}">
+                <button type="submit" class="btn btn-warning">Abrir Bulto Nuevo</button>
+            </form>
+            <form hx-post="{{ url_for('inventory.close_package') }}" hx-target="#package-feedback" hx-swap="innerHTML" class="m-0">
+                <input type="hidden" name="order_id" value="{{ order.correlative }}">
+                <button type="submit" class="btn btn-outline-warning">Cerrar Bulto Abierto</button>
+            </form>
+        </div>
+    </div>
+    <div id="open-package-progress" class="mx-4 mb-2"></div>
+    <div id="package-feedback" class="mx-4 mb-3"></div>
     </div>
 
     <div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body">
@@ -118,8 +135,12 @@
             </thead>
             <tbody id="products-tbody">
                 {% for item in details %}
+                {% set code_key = item.code_product|string|trim|upper %}
+                {% set persisted_count = counted_by_code.get(code_key) if counted_by_code else none %}
+                {% set has_persisted = persisted_count is not none %}
+                {% set diff = (persisted_count - item.amount) if has_persisted else 0 %}
                 <tr id="row-{{ item.code_product }}" data-code="{{ item.code_product }}"
-                    data-expected="{{ item.amount }}">
+                    data-expected="{{ item.amount }}" class="{% if has_persisted %}{% if diff != 0 %}row-counted-diff{% else %}row-counted-match{% endif %}{% endif %}">
                     <td class="px-4 py-3 fw-semibold text-body">{{ item.code_product }}</td>
                     <td class="px-4 py-3 small fw-semibold leading-relaxed">
                         {{ item.product_description }}
@@ -131,13 +152,18 @@
                         {{ item.amount }}
                     </td>
                     <td class="px-4 py-3 text-center" id="counted-{{ item.code_product }}">
-                        --
+                        {% if has_persisted %}{{ "%.2f"|format(persisted_count) }}{% else %}--{% endif %}
                     </td>
                     <td class="px-4 py-3 text-center" id="status-{{ item.code_product }}">
-                        <span
-                            class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-body-tertiary text-body border border-secondary-subtle">
-                            Pendiente
-                        </span>
+                        {% if has_persisted %}
+                            {% if diff != 0 %}
+                            <span class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-warning-subtle text-warning-emphasis border border-warning-subtle">Contado (Dif. {{ "%.2f"|format(diff) }})</span>
+                            {% else %}
+                            <span class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-success-subtle text-success-emphasis border border-success-subtle">Contado</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-body-tertiary text-body border border-secondary-subtle">Pendiente</span>
+                        {% endif %}
                     </td>
                     <td class="px-4 py-3 text-center">
                         <button type="button" hx-post="{{ url_for('inventory.delete_product_from_order') }}"
@@ -163,7 +189,7 @@
             <input type="hidden" name="order_id" value="{{ order.correlative }}">
             {% for item in details %}
             <input type="hidden" name="counted_{{ item.code_product }}" id="hidden-counted-{{ item.code_product }}"
-                value="">
+                value="{% if counted_by_code and counted_by_code.get(item.code_product|string|trim|upper) is not none %}{{ '%.2f'|format(counted_by_code.get(item.code_product|string|trim|upper)) }}{% endif %}">
             {% endfor %}
             <button id="save-button" type="button" onclick="generateOrder()" class="btn btn-success w-100 fw-bold py-2">
                 Confirmar Chequeo
@@ -179,6 +205,7 @@
 
     <script>
         let autoSubmitted = false;
+        let pendingSubmitAfterPackageClose = false;
 
         function submitCheckOrder() {
             const saveForm = document.getElementById('save-form');
@@ -194,6 +221,43 @@
             }, 500);
         }
 
+        function hasOpenPackageInProgressPanel() {
+            const panel = document.querySelector('#open-package-progress [data-open-package]');
+            if (!panel) {
+                return false;
+            }
+            return panel.getAttribute('data-open-package') === '1';
+        }
+
+        function closeOpenPackageInline(orderId) {
+            if (!orderId || !window.htmx) {
+                return;
+            }
+
+            htmx.ajax('POST', "{{ url_for('inventory.close_package') }}", {
+                target: '#package-feedback',
+                swap: 'innerHTML',
+                values: {
+                    order_id: orderId
+                }
+            });
+        }
+
+        function submitCheckOrderEnsuringLastLabel() {
+            const orderId = getCurrentOrderId();
+            if (!orderId) {
+                return;
+            }
+
+            if (hasOpenPackageInProgressPanel()) {
+                pendingSubmitAfterPackageClose = true;
+                closeOpenPackageInline(orderId);
+                return;
+            }
+
+            submitCheckOrder();
+        }
+
         function checkAllCounted() {
             const rows = document.querySelectorAll('tbody tr');
             if (!rows.length) return;
@@ -207,7 +271,7 @@
                 const confirmed = confirm('Se contaron todos los productos. ¿Desea confirmar el chequeo de recolección?');
                 if (!confirmed) return;
                 autoSubmitted = true;
-                submitCheckOrder();
+                submitCheckOrderEnsuringLastLabel();
             }
         }
 
@@ -223,7 +287,7 @@
             if (pendingRows.length) {
                 const confirmed = confirm('aun hay productos que no se han terminado de contar, ¿deseas confirmar el chequeo y eliminar estos productos de la orden?');
                 if (confirmed) {
-                    submitCheckOrder();
+                    submitCheckOrderEnsuringLastLabel();
                 }
                 return;
             }
@@ -231,7 +295,7 @@
             if (rows.length) {
                 const confirmed = confirm('¿Confirmar chequeo de recolección?');
                 if (confirmed) {
-                    submitCheckOrder();
+                    submitCheckOrderEnsuringLastLabel();
                 }
             }
         }
@@ -289,6 +353,41 @@
             }
         }
 
+        function openPackageInline(orderId) {
+            if (!orderId || !window.htmx) {
+                return;
+            }
+
+            htmx.ajax('POST', "{{ url_for('inventory.open_package') }}", {
+                target: '#package-feedback',
+                swap: 'innerHTML',
+                values: {
+                    order_id: orderId
+                }
+            });
+        }
+
+        function getCurrentOrderId() {
+            const input = document.querySelector("input[name='order_id']");
+            if (!input) {
+                return '';
+            }
+            return input.value || '';
+        }
+
+        function refreshOpenPackageProgress() {
+            const orderId = getCurrentOrderId();
+            if (!orderId || !window.htmx) {
+                return;
+            }
+
+            const progressUrl = "{{ url_for('inventory.package_progress') }}" + '?order_id=' + encodeURIComponent(orderId);
+            htmx.ajax('GET', progressUrl, {
+                target: '#open-package-progress',
+                swap: 'innerHTML'
+            });
+        }
+
         document.body.addEventListener('counted-updated', (event) => {
             const detail = event.detail || {};
             const code = detail.code_product;
@@ -313,12 +412,21 @@
             ensureHiddenCountedInput(code, detail.counted_amount);
             closeModal();
             focusSearchInput();
+            refreshOpenPackageProgress();
             checkAllCounted();
         });
 
         document.body.addEventListener('counted-error', (event) => {
             const detail = event.detail || {};
-            if (detail.message) {
+            if (detail.can_open_package && detail.order_id) {
+                const shouldOpen = confirm(
+                    (detail.message || 'Debe abrir un bulto antes de contar productos.') +
+                    '\n\n¿Deseas abrir un bulto ahora?'
+                );
+                if (shouldOpen) {
+                    openPackageInline(detail.order_id);
+                }
+            } else if (detail.message) {
                 alert(detail.message);
             }
             const focusId = detail.focus_id;
@@ -370,6 +478,21 @@
             focusSearchInput();
         });
 
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            if (!event.target || event.target.id !== 'package-feedback') return;
+            refreshOpenPackageProgress();
+
+            if (!pendingSubmitAfterPackageClose) {
+                return;
+            }
+
+            const feedbackText = (event.target.textContent || '').toLowerCase();
+            const closeFailed = feedbackText.includes('error') || feedbackText.includes('no se puede') || feedbackText.includes('no hay un bulto abierto');
+            if (closeFailed) {
+                pendingSubmitAfterPackageClose = false;
+            }
+        });
+
         if (!window.__checkOrderPdfHandlerAdded) {
             window.__checkOrderPdfHandlerAdded = true;
             document.addEventListener('open-pdf', (event) => {
@@ -378,8 +501,17 @@
                     window.open(detail.url, '_blank');
                 }
             });
+
+            document.addEventListener('package-closed', () => {
+                if (!pendingSubmitAfterPackageClose) {
+                    return;
+                }
+                pendingSubmitAfterPackageClose = false;
+                submitCheckOrder();
+            });
         }
 
+        refreshOpenPackageProgress();
         checkAllCounted();
     </script>
 </div>

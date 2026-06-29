@@ -33,6 +33,10 @@ from app.models import (
   Tax,
   InventoryOperation,
   InventoryOperationDetail,
+  InventoryOperationCheckingProgress,
+  InventoryOperationReceptionProgress,
+  InventoryOperationPackage,
+  InventoryOperationPackageDetail,
   InventoryOperationReceptionDifference,
   ProductsCode,
   ProductsCounterHistory,
@@ -1606,6 +1610,78 @@ def get_order_by_id(order_id):
   return InventoryOperation.query.get(order_id)
 
 
+def get_order_details(order_id):
+  return InventoryOperationDetail.query.filter_by(main_correlative=order_id).all()
+
+
+def get_user_checking_progress_map(operation_correlative, user_code):
+  if not operation_correlative or not user_code:
+    return {}
+
+  rows = InventoryOperationCheckingProgress.query.filter_by(
+    operation_correlative=operation_correlative,
+    user_code=user_code,
+  ).all()
+
+  return {
+    normalize_code(row.product_code): float(row.counted_amount or 0.0)
+    for row in rows
+  }
+
+
+def upsert_user_checking_progress(operation_correlative, user_code, product_code, counted_amount):
+  normalized_code = normalize_code(product_code)
+  if not operation_correlative or not user_code or not normalized_code:
+    raise ValueError("Missing required fields to persist checking progress.")
+
+  existing = InventoryOperationCheckingProgress.query.filter_by(
+    operation_correlative=operation_correlative,
+    user_code=user_code,
+    product_code=normalized_code,
+  ).first()
+
+  if existing:
+    existing.counted_amount = float(counted_amount)
+    existing.updated_at = datetime.now()
+    db.session.flush()
+    return existing
+
+  record = InventoryOperationCheckingProgress(
+    operation_correlative=operation_correlative,
+    user_code=user_code,
+    product_code=normalized_code,
+    counted_amount=float(counted_amount),
+    updated_at=datetime.now(),
+  )
+  db.session.add(record)
+  db.session.flush()
+  return record
+
+
+def delete_user_checking_progress_item(operation_correlative, user_code, product_code):
+  normalized_code = normalize_code(product_code)
+  if not operation_correlative or not user_code or not normalized_code:
+    return 0
+
+  deleted = InventoryOperationCheckingProgress.query.filter_by(
+    operation_correlative=operation_correlative,
+    user_code=user_code,
+    product_code=normalized_code,
+  ).delete(synchronize_session=False)
+  return deleted
+
+
+def clear_user_checking_progress(operation_correlative, user_code):
+  if not operation_correlative or not user_code:
+    return 0
+
+  deleted = InventoryOperationCheckingProgress.query.filter_by(
+    operation_correlative=operation_correlative,
+    user_code=user_code,
+  ).delete(synchronize_session=False)
+  return deleted
+
+
 def get_check_order_rows(order_id):
   io = aliased(InventoryOperation)
   iod = aliased(InventoryOperationDetail)
@@ -1800,6 +1876,94 @@ def get_operation_detail_by_code(operation_id, product_code):
     )
     .first()
   )
+
+
+def register_missing_reception_differences(operation_id, counted_codes, user_code):
+  counted_set = {normalize_code(code) for code in (counted_codes or set()) if code}
+  details = InventoryOperationDetail.query.filter_by(main_correlative=operation_id).all()
+
+  created = 0
+  for detail in details:
+    product_code = normalize_code(detail.code_product)
+    if product_code in counted_set:
+      continue
+
+    existing_difference = get_reception_difference(operation_id, detail.line)
+    if existing_difference:
+      continue
+
+    original_amount = float(detail.amount or 0.0)
+    if abs(original_amount) <= 1e-9:
+      continue
+
+    missing_difference = InventoryOperationReceptionDifference(
+      operation_correlative=operation_id,
+      detail_line=detail.line,
+      product_code=detail.code_product,
+      original_amount=original_amount,
+      counted_amount=0.0,
+      difference=-original_amount,
+      user_code=user_code,
+    )
+    db.session.add(missing_difference)
+    detail.amount = 0.0
+    created += 1
+
+  db.session.flush()
+  return created
+
+
+def get_user_transfer_reception_progress_map(operation_id, user_code):
+  if not operation_id or not user_code:
+    return {}
+
+  rows = InventoryOperationReceptionProgress.query.filter_by(
+    operation_correlative=operation_id,
+    user_code=user_code,
+  ).all()
+  return {
+    normalize_code(row.product_code): float(row.counted_amount or 0.0)
+    for row in rows
+  }
+
+
+def upsert_user_transfer_reception_progress(operation_id, user_code, product_code, counted_amount):
+  normalized_code = normalize_code(product_code)
+  if not operation_id or not user_code or not normalized_code:
+    raise ValueError("Missing required fields to persist reception progress.")
+
+  existing = InventoryOperationReceptionProgress.query.filter_by(
+    operation_correlative=operation_id,
+    user_code=user_code,
+    product_code=normalized_code,
+  ).first()
+
+  if existing:
+    existing.counted_amount = float(counted_amount)
+    existing.updated_at = datetime.now()
+    db.session.flush()
+    return existing
+
+  progress = InventoryOperationReceptionProgress(
+    operation_correlative=operation_id,
+    user_code=user_code,
+    product_code=normalized_code,
+    counted_amount=float(counted_amount),
+    updated_at=datetime.now(),
+  )
+  db.session.add(progress)
+  db.session.flush()
+  return progress
+
+
+def clear_transfer_reception_progress(operation_id):
+  if not operation_id:
+    return 0
+
+  deleted = InventoryOperationReceptionProgress.query.filter_by(
+    operation_correlative=operation_id,
+  ).delete(synchronize_session=False)
+  return deleted
 
 
 def get_failure_info(product_code, store_code):
@@ -2027,6 +2191,13 @@ def apply_transfer_reception_count(
     if existing_difference:
       detail.amount = original_amount
       db.session.delete(existing_difference)
+
+  upsert_user_transfer_reception_progress(
+    operation_id,
+    user_code,
+    detail.code_product,
+    counted_amount,
+  )
 
   db.session.commit()
   return {
@@ -2345,6 +2516,266 @@ def get_modal_product_params_data(product_code, store_code):
     "product_params": product_params,
     "unit": unit_row.unit1 if unit_row else None,
   }
+
+
+def get_open_package(operation_correlative):
+  return (
+    InventoryOperationPackage.query.filter_by(
+      operation_correlative=operation_correlative,
+      status="OPEN",
+    )
+    .order_by(InventoryOperationPackage.package_number.desc())
+    .first()
+  )
+
+
+def get_package_by_id(package_id):
+  return (
+    InventoryOperationPackage.query.filter_by(correlative=package_id)
+    .options(
+      joinedload(InventoryOperationPackage.inventory_operation),
+      joinedload(InventoryOperationPackage.package_details).joinedload(
+        InventoryOperationPackageDetail.product
+      ),
+    )
+    .first()
+  )
+
+
+def open_package_for_operation(operation_correlative, user_code):
+  flow = get_inventory_operation_flow(operation_correlative)
+  if not flow:
+    raise ValueError("La orden no tiene flujo de traslado registrado.")
+  if flow["current_status"] != FLOW_RECOLLECTION_ISSUED:
+    raise ValueError("La orden ya no permite abrir bultos para embalaje.")
+
+  open_package = get_open_package(operation_correlative)
+  if open_package:
+    raise ValueError(
+      f"Ya existe un bulto abierto (Bulto {open_package.package_number})."
+    )
+
+  max_number = (
+    db.session.query(func.max(InventoryOperationPackage.package_number))
+    .filter(InventoryOperationPackage.operation_correlative == operation_correlative)
+    .scalar()
+  )
+
+  package = InventoryOperationPackage(
+    operation_correlative=operation_correlative,
+    package_number=(max_number or 0) + 1,
+    status="OPEN",
+    opened_user=user_code,
+  )
+  db.session.add(package)
+  db.session.flush()
+  return package
+
+
+def close_open_package_for_operation(operation_correlative, user_code):
+  flow = get_inventory_operation_flow(operation_correlative)
+  if not flow:
+    raise ValueError("La orden no tiene flujo de traslado registrado.")
+  if flow["current_status"] != FLOW_RECOLLECTION_ISSUED:
+    raise ValueError("La orden ya no permite cerrar bultos para embalaje.")
+
+  package = get_open_package(operation_correlative)
+  if not package:
+    raise ValueError("No hay un bulto abierto para cerrar.")
+  if not package.package_details:
+    raise ValueError("No se puede cerrar un bulto vacio.")
+
+  package.status = "CLOSED"
+  package.closed_user = user_code
+  package.closed_at = datetime.now()
+  db.session.flush()
+  return package
+
+
+def close_all_open_packages_for_operation(operation_correlative, user_code):
+  closed_packages = []
+
+  while True:
+    open_package = get_open_package(operation_correlative)
+    if not open_package:
+      break
+
+    if not open_package.package_details:
+      raise ValueError(
+        f"No se puede cerrar el bulto abierto {open_package.package_number} porque esta vacio."
+      )
+
+    open_package.status = "CLOSED"
+    open_package.closed_user = user_code
+    open_package.closed_at = datetime.now()
+    closed_packages.append(open_package)
+
+  db.session.flush()
+  return closed_packages
+
+
+def _get_counted_amount_by_product(operation_correlative):
+  rows = (
+    db.session.query(
+      InventoryOperationDetail.code_product,
+      func.coalesce(func.sum(InventoryOperationDetail.amount), 0.0),
+    )
+    .filter(InventoryOperationDetail.main_correlative == operation_correlative)
+    .group_by(InventoryOperationDetail.code_product)
+    .all()
+  )
+  return {normalize_code(code): float(total or 0.0) for code, total in rows}
+
+
+def _get_packed_amount_by_product(operation_correlative):
+  rows = (
+    db.session.query(
+      InventoryOperationPackageDetail.product_code,
+      func.coalesce(func.sum(InventoryOperationPackageDetail.packed_amount), 0.0),
+    )
+    .join(
+      InventoryOperationPackage,
+      InventoryOperationPackage.correlative
+      == InventoryOperationPackageDetail.package_correlative,
+    )
+    .filter(
+      InventoryOperationPackage.operation_correlative == operation_correlative,
+      InventoryOperationPackage.status.in_(["OPEN", "CLOSED"]),
+    )
+    .group_by(InventoryOperationPackageDetail.product_code)
+    .all()
+  )
+  return {normalize_code(code): float(total or 0.0) for code, total in rows}
+
+
+def upsert_open_package_product(operation_correlative, product_code, packed_amount, user_code):
+  normalized_code = normalize_code(product_code)
+  if not normalized_code:
+    raise ValueError("Debe indicar un codigo de producto valido.")
+  if packed_amount is None:
+    raise ValueError("La cantidad embalada es obligatoria.")
+
+  package = get_open_package(operation_correlative)
+  if not package:
+    raise ValueError("Debe abrir un bulto antes de embalar productos.")
+
+  detail = find_detail_by_codes(operation_correlative, [normalized_code])
+  if not detail:
+    raise ValueError("El producto no pertenece a la orden de recoleccion.")
+
+  counted_map = _get_counted_amount_by_product(operation_correlative)
+  counted_amount = float(counted_map.get(normalized_code, 0.0))
+
+  packed_map = _get_packed_amount_by_product(operation_correlative)
+  current_total = float(packed_map.get(normalized_code, 0.0))
+
+  existing_line = InventoryOperationPackageDetail.query.filter_by(
+    package_correlative=package.correlative,
+    product_code=normalized_code,
+  ).first()
+  previous_amount = float(existing_line.packed_amount) if existing_line else 0.0
+
+  # Si el usuario deja el conteo en 0, removemos el producto del bulto abierto.
+  if float(packed_amount) <= 0:
+    if existing_line:
+      db.session.delete(existing_line)
+      db.session.flush()
+    return None
+
+  projected_total = current_total - previous_amount + float(packed_amount)
+  if projected_total > counted_amount + 1e-9:
+    raise ValueError(
+      "La cantidad embalada supera el total contado para este producto."
+    )
+
+  if not existing_line:
+    existing_line = InventoryOperationPackageDetail(
+      package_correlative=package.correlative,
+      product_code=normalized_code,
+      packed_amount=float(packed_amount),
+      updated_user=user_code,
+    )
+    db.session.add(existing_line)
+  else:
+    existing_line.packed_amount = float(packed_amount)
+    existing_line.updated_user = user_code
+    existing_line.updated_at = datetime.now()
+
+  db.session.flush()
+  return existing_line
+
+
+def get_open_package_progress(operation_correlative):
+  package = get_open_package(operation_correlative)
+  if not package:
+    return None
+
+  details = package.package_details or []
+  product_lines = len(details)
+  total_units = sum(float(item.packed_amount or 0.0) for item in details)
+
+  return {
+    "package_id": package.correlative,
+    "package_number": package.package_number,
+    "product_lines": product_lines,
+    "total_units": float(total_units),
+  }
+
+
+def get_operation_packages(operation_correlative):
+  return (
+    InventoryOperationPackage.query.filter_by(
+      operation_correlative=operation_correlative,
+    )
+    .options(
+      joinedload(InventoryOperationPackage.package_details).joinedload(
+        InventoryOperationPackageDetail.product
+      ),
+      joinedload(InventoryOperationPackage.opened_by),
+      joinedload(InventoryOperationPackage.closed_by),
+    )
+    .order_by(InventoryOperationPackage.package_number.asc())
+    .all()
+  )
+
+
+def validate_packing_matches_counted(operation_correlative):
+  open_package = get_open_package(operation_correlative)
+  counted_map = _get_counted_amount_by_product(operation_correlative)
+  packed_map = _get_packed_amount_by_product(operation_correlative)
+
+  mismatches = []
+  all_codes = sorted(set(counted_map.keys()) | set(packed_map.keys()))
+  for code in all_codes:
+    counted = float(counted_map.get(code, 0.0))
+    packed = float(packed_map.get(code, 0.0))
+    if abs(counted - packed) > 1e-9:
+      mismatches.append(
+        {
+          "product_code": code,
+          "counted_amount": counted,
+          "packed_amount": packed,
+          "difference": counted - packed,
+        }
+      )
+
+  return {
+    "has_open_package": bool(open_package),
+    "open_package_number": open_package.package_number if open_package else None,
+    "mismatches": mismatches,
+    "is_valid": not open_package and len(mismatches) == 0,
+  }
+
+
+def lock_packages_for_operation(operation_correlative):
+  packages = InventoryOperationPackage.query.filter_by(
+    operation_correlative=operation_correlative
+  ).all()
+  now = datetime.now()
+  for package in packages:
+    if not package.locked_at:
+      package.locked_at = now
+  db.session.flush()
 
 
 def rollback_session():

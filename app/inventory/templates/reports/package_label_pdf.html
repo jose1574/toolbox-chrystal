@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Etiqueta Bulto {{ package.package_number }}</title>
+    <style>
+        :root {
+            --text: #111;
+            --muted: #444;
+            --border: #000;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: var(--text);
+        }
+
+        .label {
+            border: 2px solid var(--border);
+            padding: 10px;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+
+        .meta {
+            margin: 2px 0;
+        }
+
+        .meta span {
+            font-weight: 700;
+        }
+
+        .barcode {
+            margin: 8px 0;
+            text-align: center;
+            border: 1px dashed #999;
+            padding: 6px;
+        }
+
+        .barcode img {
+            max-width: 100%;
+            height: 45px;
+            object-fit: contain;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+
+        th,
+        td {
+            border: 1px solid #222;
+            padding: 4px;
+        }
+
+        th {
+            text-transform: uppercase;
+            font-size: 10px;
+            background: #efefef;
+            text-align: left;
+        }
+
+        .qty {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .footer {
+            margin-top: 8px;
+            font-size: 9px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="label">
+        <div class="title">Bulto {{ package.package_number }}</div>
+
+        <div class="meta"><span>Traslado:</span> {{ order.correlative }}</div>
+        <div class="meta"><span>Documento:</span> {{ order.document_no or '-' }}</div>
+        <div class="meta"><span>Origen:</span> {{ order.store2.description if order.store2 else order.store }}</div>
+        <div class="meta"><span>Destino:</span> {{ order.store1.description if order.store1 else order.destination_store }}</div>
+
+        <div class="barcode">
+            {% if barcode_base64 %}
+            <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode Bulto {{ package.package_number }}">
+            {% endif %}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Descripcion</th>
+                    <th class="qty">Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in package.package_details %}
+                <tr>
+                    <td>{{ item.product_code }}</td>
+                    <td>{{ item.product.description if item.product else '-' }}</td>
+                    <td class="qty">{{ '%.2f'|format(item.packed_amount or 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            Cerrado por: {{ package.closed_by.description if package.closed_by else (user.description if user else 'Sistema') }}
+            - {{ package.closed_at.strftime('%d/%m/%Y %H:%M:%S') if package.closed_at else now.strftime('%d/%m/%Y %H:%M:%S') }}
+        </div>
+    </div>
+</body>
+
+</html>

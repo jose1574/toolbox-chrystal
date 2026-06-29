@@ -889,15 +889,26 @@ def check_order():
         order_header = results[0]
         order_details = results
 
+        persisted_counts = inventory_service.get_user_checking_progress_map(
+            order_id,
+            current_user.code,
+        )
+        counted_by_code = {}
+        for row in order_details:
+            normalized_code = inventory_service.normalize_code(row.code_product)
+            if normalized_code in persisted_counts:
+                counted_by_code[normalized_code] = float(persisted_counts[normalized_code])
+
         return render_template(
             "check_order_collection.html",
             order=order_header,
             details=order_details,
+            counted_by_code=counted_by_code,
             error=error,
         )
 
     return render_template(
-        "check_order_collection.html", order=None, details=[], error=None
+        "check_order_collection.html", order=None, details=[], counted_by_code={}, error=None
     )
 
 
@@ -1138,6 +1149,20 @@ def update_counted_amount():
             "", status=404, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
+    open_package = inventory_service.get_open_package(order_id)
+    if not open_package:
+        error_payload = {
+            "counted-error": {
+                "message": "Debe abrir un bulto antes de contar productos.",
+                "focus_id": "code-product",
+                "can_open_package": True,
+                "order_id": order_id,
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     # Validar stock en depósito de origen
     stock = inventory_service.get_stock_for_product_store(detail.code_product, detail.store)
     stock_amount = stock.stock if stock else 0.0
@@ -1155,6 +1180,32 @@ def update_counted_amount():
     expected = float(detail.amount or 0)
     diff = float(counted_amount) - expected
     has_difference = abs(diff) > 1e-9
+
+    try:
+        inventory_service.upsert_user_checking_progress(
+            order_id,
+            current_user.code,
+            code_product,
+            float(counted_amount),
+        )
+        inventory_service.upsert_open_package_product(
+            order_id,
+            code_product,
+            float(counted_amount),
+            current_user.code,
+        )
+        inventory_service.commit_session()
+    except Exception as exc:
+        inventory_service.rollback_session()
+        error_payload = {
+            "counted-error": {
+                "message": f"No se pudo actualizar el bulto abierto: {exc}",
+                "focus_id": "counted-amount",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     if has_difference:
         status_html = (
@@ -1191,9 +1242,130 @@ def delete_product_from_order():
         return "Error: Datos incompletos.", 400
 
     inventory_service.delete_detail_from_order(order_id, code_product)
+    inventory_service.delete_user_checking_progress_item(order_id, current_user.code, code_product)
+    inventory_service.commit_session()
 
     # Responder vacío para hx-swap=delete
     return ""
+
+
+@inventory_bp.route("/package/open", methods=["POST"])
+@login_required
+def open_package():
+    order_id = request.form.get("order_id", type=int)
+    if not order_id:
+        return "Error: Datos incompletos.", 400
+
+    try:
+        package = inventory_service.open_package_for_operation(order_id, current_user.code)
+        inventory_service.commit_session()
+        return (
+            f'<div class="alert alert-warning small mb-0">Bulto abierto: Bulto {package.package_number}</div>'
+        )
+    except ValueError as exc:
+        inventory_service.rollback_session()
+        return (
+            f'<div class="alert alert-danger small mb-0">{exc}</div>',
+            200,
+        )
+    except Exception as exc:
+        inventory_service.rollback_session()
+        return (
+            f'<div class="alert alert-danger small mb-0">Error al abrir bulto: {exc}</div>',
+            500,
+        )
+
+
+@inventory_bp.route("/package/close", methods=["POST"])
+@login_required
+def close_package():
+    order_id = request.form.get("order_id", type=int)
+    if not order_id:
+        return "Error: Datos incompletos.", 400
+
+    try:
+        package = inventory_service.close_open_package_for_operation(order_id, current_user.code)
+        inventory_service.commit_session()
+    except ValueError as exc:
+        inventory_service.rollback_session()
+        return (
+            f'<div class="alert alert-danger small mb-0">{exc}</div>',
+            200,
+        )
+    except Exception as exc:
+        inventory_service.rollback_session()
+        return (
+            f'<div class="alert alert-danger small mb-0">Error al cerrar bulto: {exc}</div>',
+            500,
+        )
+
+    trigger_payload = {
+        "open-pdf": {
+            "url": url_for("inventory.package_label_report", package_id=package.correlative)
+        },
+        "package-closed": {
+            "order_id": order_id,
+            "package_id": package.correlative,
+            "package_number": package.package_number,
+        },
+    }
+    return Response(
+        f'<div class="alert alert-success small mb-0">Bulto cerrado: Bulto {package.package_number}. Etiqueta generada.</div>',
+        status=200,
+        headers={"HX-Trigger": json.dumps(trigger_payload)},
+    )
+
+
+@inventory_bp.route("/package/report/<int:package_id>")
+@login_required
+def package_label_report(package_id):
+    package = inventory_service.get_package_by_id(package_id)
+    if not package:
+        return "Bulto no encontrado.", 404
+
+    barcode_base64 = generate_barcode(f"PKG-{package.correlative}")
+    return Response(
+        render_pdf(
+            "reports/package_label_pdf.html",
+            {
+                "package": package,
+                "order": package.inventory_operation,
+                "now": datetime.now(),
+                "user": current_user,
+                "barcode_base64": barcode_base64,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=bulto_{package.package_number}_orden_{package.operation_correlative}.pdf"
+        },
+    )
+
+
+@inventory_bp.route("/package/progress", methods=["GET"])
+@login_required
+def package_progress():
+    order_id = request.args.get("order_id", type=int)
+    if not order_id:
+        return '<div class="small text-danger">No se pudo cargar el estado del bulto.</div>', 400
+
+    progress = inventory_service.get_open_package_progress(order_id)
+    if not progress:
+        return (
+            '<div class="small px-3 py-2 rounded border bg-light text-muted" data-open-package="0">'
+            "No hay bulto abierto."
+            "</div>"
+        )
+
+    return (
+        '<div class="small px-3 py-2 rounded border bg-warning-subtle border-warning-subtle text-warning-emphasis" data-open-package="1">'
+        f"Bulto {progress['package_number']} abierto: "
+        f"{progress['product_lines']} producto(s), "
+        f"{progress['total_units']:.2f} unidad(es) embaladas."
+        "</div>"
+    )
 
 
 @inventory_bp.route("/save_order_check", methods=["POST"])
@@ -1210,30 +1382,60 @@ def save_order_check():
         flash("Orden no encontrada.", "error")
         return redirect(url_for("inventory.check_order"))
 
+    progress_map = inventory_service.get_user_checking_progress_map(order_id, current_user.code)
     uncounted_products = []
+    details = inventory_service.get_order_details(order_id)
 
-    for key, value in request.form.items():
-        if key.startswith("counted_"):
-            code_product = inventory_service.normalize_code(key[8:])  # Remove "counted_"
-            detail = inventory_service.find_detail_by_codes(order_id, [code_product])
+    for detail in details:
+        code_product = inventory_service.normalize_code(detail.code_product)
+        if code_product not in progress_map:
+            uncounted_products.append(code_product)
+            continue
 
-            if value is None or str(value).strip() == "":
-                if detail:
-                    uncounted_products.append(code_product)
-                continue
-
-            counted_amount = float(value)
-            if detail:
-                detail.amount = counted_amount
+        detail.amount = float(progress_map[code_product])
 
     if uncounted_products:
         inventory_service.delete_details_from_order(order_id, uncounted_products)
+
+    try:
+        inventory_service.close_all_open_packages_for_operation(order_id, current_user.code)
+    except ValueError as exc:
+        inventory_service.rollback_session()
+        flash(str(exc), "error")
+        return redirect(url_for("inventory.check_order"))
+    except Exception as exc:
+        inventory_service.rollback_session()
+        flash(f"No se pudieron cerrar los bultos abiertos: {exc}", "error")
+        return redirect(url_for("inventory.check_order"))
+
+    packing_validation = inventory_service.validate_packing_matches_counted(order_id)
+
+    if packing_validation["mismatches"]:
+        preview = ", ".join(
+            [
+                (
+                    f"{item['product_code']} (contado {item['counted_amount']:.2f} / "
+                    f"embalado {item['packed_amount']:.2f})"
+                )
+                for item in packing_validation["mismatches"][:5]
+            ]
+        )
+        extra = "" if len(packing_validation["mismatches"]) <= 5 else " ..."
+        flash(
+            "No se puede confirmar el chequeo porque hay diferencias entre contado y embalado por producto: "
+            + preview
+            + extra,
+            "error",
+        )
+        return redirect(url_for("inventory.check_order"))
 
     # Actualizar descripción de cabecera para reflejar el chequeo
     order.description = "orden de recoleccion chequeada"
 
     try:
         inventory_service.register_flow_step2(order_id, current_user.code)
+        inventory_service.lock_packages_for_operation(order_id)
+        inventory_service.clear_user_checking_progress(order_id, current_user.code)
     except Exception as exc:
         inventory_service.rollback_session()
         flash(f"No se pudo registrar el chequeo de recolección: {exc}", "error")
@@ -1266,6 +1468,44 @@ def save_order_check():
 
     # Fallback no HTMX
     return order_collection_report(order_id)
+
+
+@inventory_bp.route("/checked_order_packages", methods=["GET"])
+@login_required
+def checked_order_packages():
+    operation = None
+    flow = None
+    packages = []
+    error_message = None
+    correlative = request.args.get("correlative", type=int)
+
+    if correlative:
+        operation = inventory_service.get_transfer_operation_by_correlative(correlative)
+        if not operation:
+            error_message = "No se encontró una operación de traslado con ese correlativo."
+        else:
+            flow = inventory_service.get_inventory_operation_flow(operation.correlative)
+            if not flow:
+                error_message = "La operación no tiene bitácora de flujo registrada."
+            elif flow["current_status"] not in [
+                FLOW_RECOLLECTION_ISSUED,
+                FLOW_RECOLLECTION_CHECKED,
+            ]:
+                error_message = (
+                    "La operación no está en estado de chequeo de recolección. "
+                    f"Estado actual: {flow['current_status']}."
+                )
+            else:
+                packages = inventory_service.get_operation_packages(operation.correlative)
+
+    return render_template(
+        "checked_order_packages.html",
+        operation=operation,
+        flow=flow,
+        packages=packages,
+        error_message=error_message,
+        correlative=correlative,
+    )
 
 
 @inventory_bp.route("/check_transfer_operation", methods=["GET", "POST"])
@@ -1311,12 +1551,17 @@ def check_transfer_operation():
         # Obtener detalles con productos
         details = inventory_service.get_transfer_operation_details(operation.correlative)
         reception_differences = inventory_service.get_reception_difference_map(operation.correlative)
+        reception_progress_map = inventory_service.get_user_transfer_reception_progress_map(
+            operation.correlative,
+            current_user.code,
+        )
 
         return render_template(
             "check_transfer_operation.html",
             operation=operation,
             details=details,
             reception_differences=reception_differences,
+            reception_progress_map=reception_progress_map,
             flow=flow,
             flow_status=flow["current_status"],
             show_products=True,
@@ -1335,6 +1580,7 @@ def check_transfer_operation():
 def start_transfer_operation():
     operation = None
     details = []
+    packages_count = 0
     flow = None
     error_message = None
     correlative = request.values.get("correlative", type=int)
@@ -1389,11 +1635,13 @@ def start_transfer_operation():
 
     if operation:
         details = inventory_service.get_transfer_operation_details(operation.correlative)
+        packages_count = len(inventory_service.get_operation_packages(operation.correlative))
 
     return render_template(
         "start_transfer_operation.html",
         operation=operation,
         details=details,
+        packages_count=packages_count,
         flow=flow,
         error_message=error_message,
         correlative=correlative,
@@ -1412,9 +1660,29 @@ def receive_transfer_operation(operation_id):
         flash("La operación de traslado ya fue procesada.", "warning")
         return redirect(url_for("inventory.check_transfer_operation"))
 
+    counted_codes_raw = (request.form.get("counted_codes") or "").strip()
+    counted_codes = {
+        inventory_service.normalize_code(code)
+        for code in counted_codes_raw.split(",")
+        if code and code.strip()
+    }
+    persisted_counted = set(
+        inventory_service.get_user_transfer_reception_progress_map(
+            operation_id,
+            current_user.code,
+        ).keys()
+    )
+    counted_codes.update(persisted_counted)
+
     try:
+        inventory_service.register_missing_reception_differences(
+            operation_id,
+            counted_codes,
+            current_user.code,
+        )
         inventory_service.register_flow_step4(operation_id, current_user.code)
         inventory_service.process_inventory_operation(operation_id)
+        inventory_service.clear_transfer_reception_progress(operation_id)
         operation.wait = False
         inventory_service.commit_session()
         has_reception_differences = inventory_service.count_reception_differences(operation_id) > 0
@@ -1626,16 +1894,18 @@ def update_count(operation_id, product_code=None, destination_store=None):
     difference_amount = payload["difference_amount"]
     counted_amount = payload["counted_amount"]
 
-    if float(difference_amount) == 0:
-        return ""
-
-    # Keep rows with differences visible for follow-up recounts
-    return render_template(
-        "partials/table_row.html",
-        detail=detail,
-        counted_amount=counted_amount,
-        expected_amount=original_amount,
-        difference_amount=difference_amount,
+    trigger_payload = {
+        "transfer-counted-updated": {
+            "code_product": detail.code_product,
+            "counted_amount": float(counted_amount),
+            "expected_amount": float(original_amount),
+            "difference_amount": float(difference_amount),
+        }
+    }
+    return Response(
+        "",
+        status=204,
+        headers={"HX-Trigger": json.dumps(trigger_payload)},
     )
 
 
