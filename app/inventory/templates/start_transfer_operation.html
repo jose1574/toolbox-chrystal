@@ -2,9 +2,42 @@
 {% block title %}Inicio de traslado{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 px-4 ms-5">
-    <div class="bg-body shadow-sm border border-secondary-subtle rounded p-4">
-        <h1 class="h3 fw-bold text-body mb-4">Inicio de traslado</h1>
+<style>
+    .transfer-hero {
+        background:
+            radial-gradient(circle at top right, rgba(13, 110, 253, 0.14), transparent 36%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.96));
+    }
+
+    .transfer-panel {
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .transfer-panel:hover {
+        border-color: var(--bs-primary-border-subtle) !important;
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="container-fluid py-4 px-3 px-lg-4">
+    <div class="bg-body shadow-sm border border-secondary-subtle rounded-4 p-4 p-lg-5 transfer-hero">
+        <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3 mb-4" data-tour="transfer-operation-header">
+            <div class="flex-grow-1">
+                <span class="badge text-bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">Inventario</span>
+                <h1 class="h3 fw-bold text-body mb-2" data-tour="transfer-operation-title">Inicio de traslado</h1>
+                <p class="text-body-secondary mb-0" style="max-width: 58rem;">
+                    Busca una orden de traslado chequeada y, cuando corresponda, registra al responsable que inicia la carga.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-dark d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-operation">
+                    Ver recorrido
+                </button>
+                <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+                    Volver al panel
+                </a>
+            </div>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -19,105 +52,126 @@
         {% endwith %}
 
         {% if error_message %}
-        <div class="mb-4 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle">
+        <div class="mb-4 p-3 small text-danger-emphasis rounded-3 bg-danger-subtle border border-danger-subtle">
             {{ error_message }}
         </div>
         {% endif %}
 
-        <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="w-100 d-grid gap-3" style="max-width: 32rem;">
-            <input type="hidden" name="action" value="search">
-            <label for="correlative" class="form-label small fw-semibold text-body-secondary mb-0">Correlativo del traslado chequeado</label>
-            <input type="number" id="correlative" name="correlative" value="{{ correlative or '' }}" required
-                class="form-control">
-            <button type="submit"
-                class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center">
-                Buscar traslado
-            </button>
-        </form>
+        <div class="row g-4 align-items-start">
+            <div class="col-12 col-lg-5">
+                <div class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel h-100" data-tour="transfer-operation-search-card">
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                        <div>
+                            <p class="text-uppercase small fw-semibold text-body-secondary mb-1">Paso 1</p>
+                            <h2 class="h5 fw-semibold text-body mb-0">Buscar traslado</h2>
+                        </div>
+                        <span class="badge text-bg-info-subtle text-info-emphasis border border-info-subtle">Chequeado</span>
+                    </div>
 
-        {% if operation and flow and flow.current_status == 'RECOLLECTION_CHECKED' %}
-        <div class="mt-4 border-top border-secondary-subtle pt-4 d-grid gap-4">
-            <div>
-                <h2 class="h4 fw-semibold text-body mb-1">Traslado #{{ operation.correlative }}</h2>
-                <p class="text-body-secondary small mb-1">{{ operation.description }}</p>
-                <p class="text-body-secondary small mb-0">
-                    Estado: <span class="fw-semibold text-success">{{ flow.current_status }}</span>
-                </p>
-                <div class="mt-2">
-                    <span class="badge text-bg-warning">
-                        Cantidad de bultos: {{ packages_count }}
-                    </span>
-                </div>
-                <div class="mt-3">
-                    <a href="{{ url_for('inventory.checked_order_packages', correlative=operation.correlative) }}" class="btn btn-outline-primary btn-sm">
-                        Ver listado de bultos
-                    </a>
+                    <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="d-grid gap-3">
+                        <input type="hidden" name="action" value="search">
+                        <div>
+                            <label for="correlative" class="form-label small fw-semibold text-body-secondary mb-1">Correlativo del traslado chequeado</label>
+                            <input type="number" id="correlative" name="correlative" value="{{ correlative or '' }}" required
+                                class="form-control form-control-lg" data-tour="transfer-operation-input" placeholder="Ej. 1254">
+                        </div>
+                        <button type="submit"
+                            class="btn btn-primary btn-lg w-100 d-inline-flex align-items-center justify-content-center gap-2"
+                            data-tour="transfer-operation-search-button">
+                            Buscar traslado
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <div class="table-responsive rounded border border-secondary-subtle">
-                <table class="table table-sm align-middle mb-0">
-                    <thead class="bg-body-tertiary small text-uppercase">
-                        <tr>
-                            <th class="px-4 py-3">Código</th>
-                            <th class="px-4 py-3">Descripción</th>
-                            <th class="px-4 py-3 text-center">Cantidad</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for detail in details %}
-                        <tr>
-                            <td class="px-4 py-3 fw-semibold text-body">{{ detail.code_product }}</td>
-                            <td class="px-4 py-3 text-body-secondary">{{ detail.description_product }}</td>
-                            <td class="px-4 py-3 text-center text-body-secondary">{{ detail.amount }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="3" class="px-4 py-3 text-center text-body-secondary fst-italic">La operación no contiene productos.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="col-12 col-lg-7">
+                {% if operation and flow and flow.current_status == 'RECOLLECTION_CHECKED' %}
+                <div class="d-grid gap-4" data-tour="transfer-operation-summary">
+                    <div class="p-4 rounded-4 border border-primary-subtle bg-primary-subtle transfer-panel">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                            <div>
+                                <p class="text-uppercase small fw-semibold text-primary-emphasis mb-1">Traslado seleccionado</p>
+                                <h2 class="h4 fw-semibold text-body mb-1">Traslado #{{ operation.correlative }}</h2>
+                                <p class="text-body-secondary small mb-2">{{ operation.description }}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge text-bg-success">Estado: {{ flow.current_status }}</span>
+                                    <span class="badge text-bg-warning text-dark">Cantidad de bultos: {{ packages_count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive rounded-4 border border-secondary-subtle bg-body" data-tour="transfer-operation-details-table">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="bg-body-tertiary small text-uppercase">
+                                <tr>
+                                    <th class="px-4 py-3">Código</th>
+                                    <th class="px-4 py-3">Descripción</th>
+                                    <th class="px-4 py-3 text-center">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in details %}
+                                <tr>
+                                    <td class="px-4 py-3 fw-semibold text-body">{{ detail.code_product }}</td>
+                                    <td class="px-4 py-3 text-body-secondary">{{ detail.description_product }}</td>
+                                    <td class="px-4 py-3 text-center text-body-secondary">{{ detail.amount }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="px-4 py-3 text-center text-body-secondary fst-italic">La operación no contiene productos.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel d-grid gap-3"
+                        data-tour="transfer-operation-start-card"
+                        onsubmit="return confirm('¿Iniciar traslado de esta operación?');">
+                        <input type="hidden" name="action" value="start">
+                        <input type="hidden" name="correlative" value="{{ operation.correlative }}">
+
+                        <div class="p-3 rounded-3 border border-primary-subtle bg-primary-subtle small text-primary-emphasis">
+                            El responsable puede firmar ingresando usuario y clave. Si se dejan vacíos, el traslado quedará asociado al usuario conectado.
+                        </div>
+
+                        <div class="p-3 rounded-3 border border-warning-subtle bg-warning-subtle small text-warning-emphasis">
+                            Cantidad de bultos verificada para esta orden: <span class="fw-bold">{{ packages_count }}</span>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6" data-tour="transfer-operation-user">
+                                <label for="responsible_user" class="form-label small fw-semibold text-body-secondary input-skip">Usuario responsable</label>
+                                <input type="text" id="responsible_user" name="responsible_user" autocomplete="username"
+                                    class="form-control text-uppercase"
+                                    oninput="this.value = this.value.toUpperCase();">
+                            </div>
+                            <div class="col-12 col-md-6" data-tour="transfer-operation-password">
+                                <label for="responsible_password" class="form-label small fw-semibold text-body-secondary input-skip">Clave</label>
+                                <input type="password" id="responsible_password" name="responsible_password" autocomplete="current-password"
+                                    class="form-control">
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                            class="btn btn-success d-inline-flex align-items-center justify-content-center gap-2"
+                            data-tour="transfer-operation-start-button">
+                            Iniciar traslado
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="p-4 rounded-4 border border-secondary-subtle bg-body-tertiary h-100 d-flex align-items-center justify-content-center text-body-secondary text-center">
+                    Busca un traslado chequeado para ver el detalle y habilitar el inicio de la carga.
+                </div>
+                {% endif %}
             </div>
-
-            <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="w-100 d-grid gap-3" style="max-width: 48rem;"
-                onsubmit="return confirm('¿Iniciar traslado de esta operación?');">
-                <input type="hidden" name="action" value="start">
-                <input type="hidden" name="correlative" value="{{ operation.correlative }}">
-
-                <div class="p-3 rounded border border-primary-subtle bg-primary-subtle small text-primary-emphasis">
-                    El responsable puede firmar ingresando usuario y clave. Si se dejan vacíos, el traslado quedará asociado al usuario conectado.
-                </div>
-
-                <div class="p-3 rounded border border-warning-subtle bg-warning-subtle small text-warning-emphasis">
-                    Cantidad de bultos verificada para esta orden: <span class="fw-bold">{{ packages_count }}</span>
-                </div>
-
-                <div class="row g-3">
-                    <div>
-                        <label for="responsible_user" class="form-label small fw-semibold text-body-secondary input-skip">Usuario responsable</label>
-                        <input type="text" id="responsible_user" name="responsible_user" autocomplete="username"
-                            class="form-control text-uppercase"
-                            oninput="this.value = this.value.toUpperCase();">
-                    </div>
-                    <div>
-                        <label for="responsible_password" class="form-label small fw-semibold text-body-secondary input-skip">Clave</label>
-                        <input type="password" id="responsible_password" name="responsible_password" autocomplete="current-password"
-                            class="form-control">
-                    </div>
-                </div>
-
-                <button type="submit"
-                    class="btn btn-success d-inline-flex align-items-center justify-content-center">
-                    Iniciar traslado
-                </button>
-            </form>
         </div>
-        {% endif %}
     </div>
 </div>
 <script>
-    const responsibleInput = document.getElementById('responsible') || document.getElementById('responsible_user');
+    const responsibleInput = document.getElementById('responsible_user');
     const responsiblePasswordInput = document.getElementById('responsible_password');
 
     if (responsibleInput && responsiblePasswordInput) {
@@ -139,4 +193,5 @@
         });
     }
 </script>
+<script src="{{ url_for('inventory.static', filename='js/start_transfer_operation_tour.js') }}"></script>
 {% endblock %}
