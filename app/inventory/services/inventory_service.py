@@ -34,6 +34,7 @@ from app.models import (
   InventoryOperation,
   InventoryOperationDetail,
   InventoryOperationCheckingProgress,
+  InventoryOperationFlow,
   InventoryOperationReceptionProgress,
   InventoryOperationPackage,
   InventoryOperationPackageDetail,
@@ -1531,6 +1532,29 @@ def get_auto_order_collection_data(store_origin, store_dst):
     .subquery()
   )
 
+  checked_embarked_products = (
+    select(InventoryOperationPackageDetail.product_code)
+    .distinct()
+    .join(
+      InventoryOperationPackage,
+      InventoryOperationPackage.correlative == InventoryOperationPackageDetail.package_correlative,
+    )
+    .join(
+      InventoryOperation,
+      InventoryOperation.correlative == InventoryOperationPackage.operation_correlative,
+    )
+    .join(
+      InventoryOperationFlow,
+      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
+    )
+    .where(
+      InventoryOperation.store == store_origin,
+      InventoryOperation.destination_store == store_dst,
+      InventoryOperationFlow.current_status == FLOW_RECOLLECTION_CHECKED,
+    )
+    .subquery()
+  )
+
   pf = aliased(ProductsFailure)
   m = aliased(Mark)
   d = aliased(Department)
@@ -1568,6 +1592,7 @@ def get_auto_order_collection_data(store_origin, store_dst):
       (func.coalesce(stock_orig_totals.c.stock_total, 0) > 0)
       & (func.coalesce(stock_dst_totals.c.stock_total, 0) < pf.minimal_stock)
       & (needed > 0)
+      & (~Product.code.in_(select(checked_embarked_products.c.product_code)))
     )
   )
 
