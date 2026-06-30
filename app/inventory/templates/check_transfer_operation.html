@@ -8,9 +8,42 @@
 {% set reception_progress_map = reception_progress_map|default({}) %}
 
 {% block content %}
-<div class="container-fluid py-4">
-	<div class="bg-body shadow-sm border border-secondary-subtle rounded p-4">
-		<h1 class="h3 fw-bold text-body mb-4">Recepción de traslado</h1>
+<style>
+	.transfer-reception-hero {
+		background:
+			radial-gradient(circle at top right, rgba(25, 135, 84, 0.12), transparent 34%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 249, 250, 0.98));
+	}
+
+	.transfer-reception-panel {
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.transfer-reception-panel:hover {
+		border-color: var(--bs-success-border-subtle) !important;
+		box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+	}
+</style>
+
+<div class="container-fluid py-4 px-3 px-lg-4">
+	<div class="bg-body shadow-sm border border-secondary-subtle rounded-4 p-4 p-lg-5 transfer-reception-hero">
+		<div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3 mb-4" data-tour="transfer-reception-header">
+			<div class="flex-grow-1">
+				<span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle mb-3">Inventario</span>
+				<h1 class="h3 fw-bold text-body mb-2" data-tour="transfer-reception-title">Recepción de traslado</h1>
+				<p class="text-body-secondary mb-0" style="max-width: 58rem;">
+					Busca un traslado en tránsito, registra los productos recibidos y confirma el cierre cuando todo coincida.
+				</p>
+			</div>
+			<div class="d-flex flex-wrap gap-2">
+				<button type="button" class="btn btn-dark d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-reception">
+					Ver recorrido
+				</button>
+				<a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+					Volver al panel
+				</a>
+			</div>
+		</div>
 
 		{% with messages = get_flashed_messages(with_categories=true) %}
 		{% if messages %}
@@ -31,7 +64,7 @@
 		{% endif %}
 
 		{% if not show_products %}
-		<div class="w-100" style="max-width: 32rem;">
+		<div class="w-100" style="max-width: 32rem;" data-tour="transfer-reception-search-card">
 			{% if error_message %}
 			<div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle">
 				{{ error_message }}
@@ -43,15 +76,17 @@
 			      class="d-grid gap-3">
 				<label for="correlative" class="form-label small fw-semibold text-body-secondary mb-0">Correlativo del traslado</label>
 				<input type="number" id="correlative" name="correlative" required
+				       data-tour="transfer-reception-input"
 				       class="form-control">
 				<button type="submit"
+				        data-tour="transfer-reception-search-button"
 				        class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center">
 					Buscar traslado
 				</button>
 			</form>
 		</div>
 		{% else %}
-		<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 border-bottom border-secondary-subtle">
+		<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-4 border-bottom border-secondary-subtle" data-tour="transfer-reception-summary">
 			<div>
 				<h2 class="h4 fw-semibold text-body mb-1">Traslado #{{ operation.correlative }}</h2>
 				<p class="text-body-secondary small mb-1">Fecha: {{ operation.emission_date }} | {{ operation.description }}</p>
@@ -69,7 +104,8 @@
 				   hx-select="#main-content"
 				   hx-swap="innerHTML"
 				   hx-push-url="true"
-				   class="btn btn-outline-secondary d-inline-flex align-items-center">
+				   class="btn btn-outline-secondary d-inline-flex align-items-center"
+				   data-tour="transfer-reception-new-search">
 					<svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
 					</svg>
@@ -92,7 +128,8 @@
 				<input type="text" id="product_code" name="product_code" required
 				       class="form-control flex-grow-1">
 				<button type="submit"
-				        class="btn btn-success d-inline-flex align-items-center justify-content-center">
+				        class="btn btn-success d-inline-flex align-items-center justify-content-center"
+				        data-tour="transfer-reception-product-search-button">
 					Buscar
 				</button>
 			</form>
@@ -101,9 +138,9 @@
 		<div id="modal-container"></div>
 		{% endif %}
 
-		<div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body mt-4">
+			<div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body mt-4" data-tour="transfer-reception-table">
 			{% if flow_status == 'IN_TRANSIT' %}
-			<div class="d-flex align-items-center justify-content-end px-3 pt-3 pb-2">
+				<div class="d-flex align-items-center justify-content-end px-3 pt-3 pb-2" data-tour="transfer-reception-close-card">
 				<form id="receive-form" method="post" action="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
 					hx-post="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
 					hx-target="#main-content"
@@ -112,8 +149,9 @@
 					onsubmit="return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');">
 					<input type="hidden" id="total-products-count" value="{{ details|length }}">
 					<input type="hidden" id="counted-codes" name="counted_codes" value="">
-					<button type="submit" id="receive-button" disabled
-						class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 text-body-secondary" style="cursor: not-allowed;">
+						<button type="submit" id="receive-button" disabled
+							class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 text-body-secondary"
+							data-tour="transfer-reception-close-button" style="cursor: not-allowed;">
 						<span>Cerrar, Recepcionar y Procesar</span>
 					</button>
 				</form>
@@ -130,7 +168,7 @@
 						<th class="px-3 py-3 fw-bold text-center">Diferencia</th>
 					</tr>
 				</thead>
-				<tbody id="products-table">
+				<tbody id="products-table" data-tour="transfer-reception-products-table">
 					{% for detail in details %}
 					{% set reception_difference = reception_differences.get(detail.line) %}
 					{% set progress_counted = reception_progress_map.get(detail.code_product|string|trim|upper) %}
@@ -349,4 +387,5 @@ if (!window.__transferCheckPdfHandlerAdded) {
 	});
 }
 </script>
+<script src="{{ url_for('inventory.static', filename='js/check_transfer_operation_tour.js') }}"></script>
 {% endblock %}
