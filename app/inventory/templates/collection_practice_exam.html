@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Examen practico de recoleccion{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-lg-4">
+  <div class="border border-secondary-subtle rounded-4 shadow-sm p-4 p-lg-5">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3 mb-4">
+      <div class="flex-grow-1">
+        <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle mb-3">Evaluacion practica</span>
+        <h1 class="h3 fw-bold mb-2">Examen de orden de recoleccion</h1>
+        <p class="text-body-secondary mb-0" style="max-width: 60rem;">
+          Completa la evaluacion teorica y reporta el resultado de tu practica operativa. Al enviar, el sistema entrega una nota automatica y estado de aprobacion.
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-self-start">
+        <a href="{{ url_for('inventory.transfer_guide') }}" class="btn btn-outline-secondary">Volver a la guia</a>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-lg-6">
+        <div class="border rounded-4 p-3 bg-body h-100">
+          <p class="small text-uppercase fw-semibold text-body-secondary mb-2">Progreso de respuestas</p>
+          <div class="progress" role="progressbar" aria-label="Progreso del examen">
+            <div id="exam-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;">0%</div>
+          </div>
+          <p id="exam-progress-text" class="small text-body-secondary mb-0 mt-2">0 de {{ questions|length }} preguntas respondidas.</p>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="border rounded-4 p-3 bg-body h-100">
+          <p class="small text-uppercase fw-semibold text-body-secondary mb-2">Criterio de aprobacion</p>
+          <p class="small text-body-secondary mb-0">Se aprueba con 75% o mas. La nota final combina preguntas teoricas y validaciones de la practica.</p>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('inventory.collection_practice_exam') }}" class="d-grid gap-4" id="collection-practice-exam-form">
+      <section class="border rounded-4 p-3 p-lg-4 bg-body">
+        <h2 class="h5 fw-semibold mb-3">1) Datos de la practica</h2>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label small fw-semibold" for="trainee_name">Nombre del evaluado</label>
+            <input type="text" class="form-control" id="trainee_name" name="trainee_name" required value="{{ current_user.description if current_user else '' }}">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small fw-semibold" for="order_mode">Tipo de orden practicada</label>
+            <select class="form-select" id="order_mode" name="order_mode" required>
+              <option value="">Seleccionar</option>
+              <option value="auto">Automatica</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="collected_lines">Lineas recolectadas</label>
+            <input type="number" class="form-control" id="collected_lines" name="collected_lines" min="1" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="checked_lines">Lineas chequeadas</label>
+            <input type="number" class="form-control" id="checked_lines" name="checked_lines" min="1" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="differences_detected">Hubo diferencias</label>
+            <select class="form-select" id="differences_detected" name="differences_detected" required>
+              <option value="">Seleccionar</option>
+              <option value="no">No</option>
+              <option value="yes">Si</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small fw-semibold" for="final_status">Estado final alcanzado</label>
+            <select class="form-select" id="final_status" name="final_status" required>
+              <option value="">Seleccionar</option>
+              <option value="RECOLLECTION_ISSUED">RECOLLECTION_ISSUED</option>
+              <option value="RECOLLECTION_CHECKED">RECOLLECTION_CHECKED</option>
+              <option value="IN_TRANSIT">IN_TRANSIT</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6 d-flex align-items-end">
+            <div class="form-check border rounded-3 px-3 py-2 w-100">
+              <input class="form-check-input" type="checkbox" value="1" id="procedure_confirmed" name="procedure_confirmed">
+              <label class="form-check-label small fw-semibold" for="procedure_confirmed">
+                Confirmo que seguí el procedimiento completo sin omitir controles.
+              </label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold" for="notes">Observaciones de la practica</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Ejemplo: diferencias encontradas, tiempo de ejecucion, incidencias."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="border rounded-4 p-3 p-lg-4 bg-body">
+        <h2 class="h5 fw-semibold mb-3">2) Preguntas teoricas</h2>
+        <div class="d-grid gap-3">
+          {% for question in questions %}
+          <article class="border rounded-3 p-3">
+            <p class="mb-2 fw-semibold">{{ loop.index }}. {{ question.prompt }}</p>
+            <div class="d-grid gap-2">
+              {% for option in question.options %}
+              <label class="form-check border rounded-3 px-3 py-2">
+                <input class="form-check-input me-2" type="radio" name="{{ question.id }}" value="{{ option.value }}" required data-exam-question="{{ question.id }}">
+                {{ option.label }}
+              </label>
+              {% endfor %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <div class="d-flex flex-wrap gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary">Entregar resultado de practica</button>
+      </div>
+    </form>
+
+    {% if result %}
+    <section class="mt-5 border rounded-4 p-3 p-lg-4 {% if result.approved %}border-success-subtle bg-success-subtle{% else %}border-danger-subtle bg-danger-subtle{% endif %}">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div>
+          <h2 class="h4 fw-bold mb-1">Resultado entregado</h2>
+          <p class="small mb-0">Evaluado: <strong>{{ result.trainee_name }}</strong> | Fecha: {{ result.submitted_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
+        <span class="badge {% if result.approved %}text-bg-success{% else %}text-bg-danger{% endif %} fs-6">
+          {{ result.score_pct }}% - {% if result.approved %}APROBADO{% else %}REPROBADO{% endif %}
+        </span>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-3">
+          <div class="border rounded-3 p-3 bg-body">
+            <p class="small text-body-secondary mb-1">Puntaje teorico</p>
+            <p class="h5 mb-0">{{ result.quiz_points }}</p>
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="border rounded-3 p-3 bg-body">
+            <p class="small text-body-secondary mb-1">Puntaje practico</p>
+            <p class="h5 mb-0">{{ result.practice_points }}</p>
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="border rounded-3 p-3 bg-body">
+            <p class="small text-body-secondary mb-1">Puntaje total</p>
+            <p class="h5 mb-0">{{ result.total_points }} / {{ result.max_points }}</p>
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="border rounded-3 p-3 bg-body">
+            <p class="small text-body-secondary mb-1">Estado final reportado</p>
+            <p class="h6 mb-0">{{ result.final_status or 'N/A' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="h6 fw-semibold">Validaciones de practica</h3>
+      <ul class="small mb-0 ps-3">
+        {% for check in result.practice_checks %}
+        <li class="mb-1 {% if check.ok %}text-success{% else %}text-danger{% endif %}">
+          {{ check.label }}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<script src="{{ url_for('inventory.static', filename='js/collection_practice_exam.js') }}"></script>
+{% endblock %}

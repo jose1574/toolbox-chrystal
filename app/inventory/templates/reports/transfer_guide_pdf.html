@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Guia de traslados de inventario</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: Arial, sans-serif;
+            color: #111;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .sheet {
+            border: 1.5px solid #111;
+            padding: 12px;
+        }
+
+        .title {
+            margin: 0 0 4px;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            margin: 0 0 10px;
+            color: #333;
+            font-size: 11px;
+        }
+
+        .flow-row {
+            margin: 0 0 14px;
+            padding: 8px;
+            border: 1px solid #333;
+            background: #f4f4f4;
+        }
+
+        .summary-row {
+            margin: 0 0 12px;
+            padding: 7px 8px;
+            border: 1px solid #333;
+            background: #fff;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .flow-item {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            padding: 3px 7px;
+            border: 1px solid #111;
+            font-size: 10px;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .step {
+            border: 1px solid #111;
+            margin-bottom: 10px;
+        }
+
+        .step-header {
+            background: #ececec;
+            padding: 7px 8px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .step-body {
+            padding: 8px;
+        }
+
+        .block {
+            margin-bottom: 6px;
+        }
+
+        .block-label {
+            font-weight: 700;
+        }
+
+        .checklist {
+            margin: 4px 0 0 16px;
+            padding: 0;
+        }
+
+        .checklist li {
+            margin-bottom: 2px;
+        }
+
+        .signature-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .signature-grid td {
+            border: 1px solid #111;
+            padding: 10px;
+            height: 56px;
+            vertical-align: bottom;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .footer {
+            margin-top: 10px;
+            text-align: right;
+            font-size: 9px;
+            color: #444;
+        }
+
+        .empty-state {
+            border: 1px dashed #333;
+            padding: 12px;
+            text-align: center;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <h1 class="title">Guia Operativa de Traslados Completados</h1>
+        <p class="subtitle">
+            Reporte de pasos marcados por el usuario en su guia de practica.
+        </p>
+
+        <div class="summary-row">
+            Pasos completados: {{ completed_count }} de {{ total_count }}
+        </div>
+
+        <div class="flow-row">
+            {% for flow in flow_steps %}
+            <span class="flow-item">{{ loop.index }}. {{ flow.label }}</span>
+            {% endfor %}
+        </div>
+
+        {% if guide_steps %}
+        {% for step in guide_steps %}
+        <section class="step">
+            <div class="step-header">
+                Paso {{ loop.index }} - {{ step.title }}
+            </div>
+            <div class="step-body">
+                <div class="block"><span class="block-label">Fase:</span> {{ step.phase|capitalize }} | <span class="block-label">Modo:</span> {{ step.mode|upper }}</div>
+                <div class="block"><span class="block-label">Resumen:</span> {{ step.summary }}</div>
+                <div class="block"><span class="block-label">Objetivo:</span> {{ step.objective }}</div>
+                <div class="block">
+                    <span class="block-label">Checklist:</span>
+                    <ul class="checklist">
+                        {% for action in step.actions %}
+                        <li>{{ action }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="block"><span class="block-label">Punto de control:</span> {{ step.checkpoint }}</div>
+            </div>
+        </section>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            No hay pasos completados para exportar en este momento.
+        </div>
+        {% endif %}
+
+        <table class="signature-grid">
+            <tr>
+                <td>Responsable Origen<br><br>__________________________</td>
+                <td>Responsable Transporte<br><br>__________________________</td>
+                <td>Responsable Destino<br><br>__________________________</td>
+            </tr>
+        </table>
+
+        <p class="footer">
+            Generado por {{ generated_by.description if generated_by else 'Sistema' }} - {{ generated_at.strftime('%d/%m/%Y %H:%M:%S') }}
+        </p>
+    </div>
+</body>
+</html>

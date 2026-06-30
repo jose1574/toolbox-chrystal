@@ -29,6 +29,311 @@ def index():
     return render_template("index.html")
 
 
+def _build_transfer_guide_steps():
+    return [
+        {
+            "id": "select_order_type",
+            "phase": "origin",
+            "mode": "both",
+            "title": "Definir el tipo de orden",
+            "summary": "Selecciona si el traslado inicia con orden automática o manual.",
+            "objective": "Elegir el flujo correcto según urgencia y disponibilidad del catálogo.",
+            "actions": [
+                "Usa orden automática cuando el sistema ya recomienda cantidades.",
+                "Usa orden manual cuando necesites agregar productos específicos uno por uno.",
+                "Verifica depósito origen y depósito destino antes de continuar.",
+            ],
+            "checkpoint": "Depósitos y motivo del traslado confirmados.",
+            "screen_url": "inventory.index",
+            "screen_label": "Panel de inventario",
+        },
+        {
+            "id": "create_collection_order",
+            "phase": "origin",
+            "mode": "both",
+            "title": "Emitir orden de recolección",
+            "summary": "Genera la orden con los productos y cantidades a trasladar.",
+            "objective": "Crear un documento de trabajo para el equipo de despacho.",
+            "actions": [
+                "En automática, revisa sugerencias de stock y confirma líneas.",
+                "En manual, agrega códigos y ajusta cantidades antes de emitir.",
+                "Guarda la orden y registra el correlativo para seguimiento.",
+            ],
+            "checkpoint": "Orden emitida en estado RECOLLECTION_ISSUED.",
+            "screen_url": "inventory.auto_order_collection",
+            "screen_label": "Orden automática",
+        },
+        {
+            "id": "check_collection_order",
+            "phase": "origin",
+            "mode": "both",
+            "title": "Chequear la recolección",
+            "summary": "Confirma físicamente lo recolectado y corrige diferencias.",
+            "objective": "Asegurar que la carga coincida con la orden emitida.",
+            "actions": [
+                "Escanea o busca cada producto de la orden.",
+                "Ajusta cantidades contadas y documenta cualquier variación.",
+                "Cierra el chequeo para dejar la operación lista para transporte.",
+            ],
+            "checkpoint": "Orden en estado RECOLLECTION_CHECKED.",
+            "screen_url": "inventory.check_order",
+            "screen_label": "Chequeo de orden",
+        },
+        {
+            "id": "start_transfer",
+            "phase": "transit",
+            "mode": "both",
+            "title": "Iniciar traslado",
+            "summary": "Registra responsable de carga y salida de mercancía.",
+            "objective": "Dejar trazabilidad del despacho y pasar a estado en tránsito.",
+            "actions": [
+                "Valida datos de la orden chequeada.",
+                "Captura firma digital o responsable autorizado.",
+                "Confirma inicio para mover la operación a IN_TRANSIT.",
+            ],
+            "checkpoint": "Traslado en estado IN_TRANSIT.",
+            "screen_url": "inventory.start_transfer_operation",
+            "screen_label": "Inicio de traslado",
+        },
+        {
+            "id": "receive_transfer",
+            "phase": "destination",
+            "mode": "both",
+            "title": "Recepcionar en depósito destino",
+            "summary": "Cuenta lo recibido y procesa diferencias de recepción.",
+            "objective": "Cerrar el ciclo del traslado con inventario actualizado.",
+            "actions": [
+                "Busca el correlativo en Recepción de traslado.",
+                "Cuenta productos recibidos y registra diferencias cuando existan.",
+                "Cierra la recepción para procesar inventario en destino.",
+            ],
+            "checkpoint": "Traslado en estado RECEIVED y reporte disponible.",
+            "screen_url": "inventory.check_transfer_operation",
+            "screen_label": "Recepción de traslado",
+        },
+    ]
+
+
+@inventory_bp.route("/transfer-guide", methods=["GET"])
+@login_required
+def transfer_guide():
+    guide_steps = _build_transfer_guide_steps()
+    return render_template(
+        "transfer_guide.html",
+        guide_steps=guide_steps,
+        flow_steps=TRANSFER_FLOW_STEPS,
+        generated_at=datetime.now(),
+    )
+
+
+@inventory_bp.route("/transfer-guide/pdf", methods=["GET"])
+@login_required
+def transfer_guide_pdf():
+    all_steps = _build_transfer_guide_steps()
+    completed_steps_raw = (request.args.get("completed_steps") or "").strip()
+    requested_completed_ids = [
+        step_id.strip() for step_id in completed_steps_raw.split(",") if step_id.strip()
+    ]
+
+    seen_ids = set()
+    requested_completed_ids = [
+        step_id
+        for step_id in requested_completed_ids
+        if not (step_id in seen_ids or seen_ids.add(step_id))
+    ]
+
+    valid_ids = {step["id"] for step in all_steps}
+    requested_completed_ids = [
+        step_id for step_id in requested_completed_ids if step_id in valid_ids
+    ]
+
+    guide_steps = [
+        step for step in all_steps if step["id"] in set(requested_completed_ids)
+    ]
+
+    return Response(
+        render_pdf(
+            "reports/transfer_guide_pdf.html",
+            {
+                "guide_steps": guide_steps,
+                "completed_count": len(guide_steps),
+                "total_count": len(all_steps),
+                "flow_steps": TRANSFER_FLOW_STEPS,
+                "generated_at": datetime.now(),
+                "generated_by": current_user,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "inline; filename=guia_traslados_inventario.pdf"},
+    )
+
+
+def _build_collection_exam_questions():
+    return [
+        {
+            "id": "q1",
+            "prompt": "Antes de emitir una orden de recolección, ¿qué validación es obligatoria?",
+            "options": [
+                {"value": "a", "label": "Solo confirmar el documento de transporte"},
+                {"value": "b", "label": "Verificar depósito origen, depósito destino y tipo de orden"},
+                {"value": "c", "label": "Imprimir etiquetas de bultos"},
+            ],
+            "correct_answer": "b",
+            "weight": 10,
+        },
+        {
+            "id": "q2",
+            "prompt": "¿Qué estado refleja una orden emitida y pendiente de chequeo?",
+            "options": [
+                {"value": "a", "label": "IN_TRANSIT"},
+                {"value": "b", "label": "RECEIVED"},
+                {"value": "c", "label": "RECOLLECTION_ISSUED"},
+            ],
+            "correct_answer": "c",
+            "weight": 10,
+        },
+        {
+            "id": "q3",
+            "prompt": "Durante el chequeo de recolección, ¿cuál es la acción correcta?",
+            "options": [
+                {"value": "a", "label": "Ignorar diferencias y cerrar"},
+                {"value": "b", "label": "Contar productos y registrar diferencias"},
+                {"value": "c", "label": "Cambiar depósitos para cuadrar stock"},
+            ],
+            "correct_answer": "b",
+            "weight": 10,
+        },
+        {
+            "id": "q4",
+            "prompt": "¿Cuál es el estado esperado al finalizar correctamente la práctica de orden de recolección?",
+            "options": [
+                {"value": "a", "label": "RECOLLECTION_CHECKED"},
+                {"value": "b", "label": "IN_TRANSIT"},
+                {"value": "c", "label": "RECEIVED"},
+            ],
+            "correct_answer": "a",
+            "weight": 10,
+        },
+    ]
+
+
+def _to_positive_int(value):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return parsed if parsed > 0 else 0
+
+
+def _evaluate_collection_practice_exam(form_data):
+    questions = _build_collection_exam_questions()
+
+    quiz_points = 0
+    quiz_total_points = 0
+    quiz_results = []
+
+    for question in questions:
+        given_answer = (form_data.get(question["id"]) or "").strip().lower()
+        is_correct = given_answer == question["correct_answer"]
+        weight = int(question.get("weight", 0))
+        quiz_total_points += weight
+        if is_correct:
+            quiz_points += weight
+
+        quiz_results.append(
+            {
+                "id": question["id"],
+                "prompt": question["prompt"],
+                "given_answer": given_answer,
+                "correct_answer": question["correct_answer"],
+                "is_correct": is_correct,
+                "weight": weight,
+            }
+        )
+
+    order_mode = (form_data.get("order_mode") or "").strip().lower()
+    collected_lines = _to_positive_int(form_data.get("collected_lines"))
+    checked_lines = _to_positive_int(form_data.get("checked_lines"))
+    final_status = (form_data.get("final_status") or "").strip().upper()
+    procedure_confirmed = bool(form_data.get("procedure_confirmed"))
+
+    practice_checks = [
+        {
+            "label": "Seleccionó tipo de orden válido (manual o automática)",
+            "ok": order_mode in {"manual", "auto"},
+            "weight": 10,
+        },
+        {
+            "label": "Registró líneas recolectadas y chequeadas", 
+            "ok": collected_lines > 0 and checked_lines > 0,
+            "weight": 10,
+        },
+        {
+            "label": "La cantidad chequeada no supera la recolectada",
+            "ok": collected_lines >= checked_lines > 0,
+            "weight": 10,
+        },
+        {
+            "label": "Estado final reportado como RECOLLECTION_CHECKED",
+            "ok": final_status == FLOW_RECOLLECTION_CHECKED,
+            "weight": 10,
+        },
+        {
+            "label": "Confirmó cumplimiento del procedimiento",
+            "ok": procedure_confirmed,
+            "weight": 10,
+        },
+    ]
+
+    practice_total_points = sum(item["weight"] for item in practice_checks)
+    practice_points = sum(item["weight"] for item in practice_checks if item["ok"])
+
+    total_points = quiz_points + practice_points
+    max_points = quiz_total_points + practice_total_points
+    score_pct = round((total_points / max_points) * 100, 2) if max_points else 0.0
+    is_approved = score_pct >= 75
+
+    return {
+        "submitted_at": datetime.now(),
+        "trainee_name": (form_data.get("trainee_name") or "").strip(),
+        "order_mode": order_mode,
+        "collected_lines": collected_lines,
+        "checked_lines": checked_lines,
+        "differences_detected": (form_data.get("differences_detected") or "").strip().lower(),
+        "final_status": final_status,
+        "notes": (form_data.get("notes") or "").strip(),
+        "quiz_results": quiz_results,
+        "practice_checks": practice_checks,
+        "quiz_points": quiz_points,
+        "practice_points": practice_points,
+        "total_points": total_points,
+        "max_points": max_points,
+        "score_pct": score_pct,
+        "approved": is_approved,
+    }
+
+
+@inventory_bp.route("/collection-practice-exam", methods=["GET", "POST"])
+@login_required
+def collection_practice_exam():
+    questions = _build_collection_exam_questions()
+    result = None
+
+    if request.method == "POST":
+        result = _evaluate_collection_practice_exam(request.form)
+        if not result["trainee_name"]:
+            result["trainee_name"] = current_user.description or current_user.code
+
+    return render_template(
+        "collection_practice_exam.html",
+        questions=questions,
+        result=result,
+        generated_at=datetime.now(),
+    )
+
+
 
 FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
 FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"

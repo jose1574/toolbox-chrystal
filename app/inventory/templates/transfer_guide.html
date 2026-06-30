@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Guia de traslados{% endblock %}
+
+{% block content %}
+<style>
+  .transfer-guide-shell {
+    --guide-surface: var(--bs-body-bg);
+    --guide-surface-muted: var(--bs-tertiary-bg);
+    --guide-border: var(--bs-border-color-translucent);
+    --guide-shadow: 0 0.65rem 1.4rem rgba(0, 0, 0, 0.08);
+    --guide-current-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.18);
+    --guide-completed-bg: linear-gradient(180deg, rgba(25, 135, 84, 0.07), rgba(25, 135, 84, 0.03));
+    --guide-shell-bg:
+      radial-gradient(circle at 15% 18%, rgba(13, 110, 253, 0.12), transparent 42%),
+      radial-gradient(circle at 85% 8%, rgba(25, 135, 84, 0.1), transparent 36%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.98));
+  }
+
+  [data-bs-theme="dark"] .transfer-guide-shell {
+    --guide-surface: var(--bs-dark-bg-subtle);
+    --guide-surface-muted: rgba(255, 255, 255, 0.04);
+    --guide-border: rgba(255, 255, 255, 0.2);
+    --guide-shadow: 0 0.65rem 1.4rem rgba(0, 0, 0, 0.35);
+    --guide-current-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.28);
+    --guide-completed-bg: linear-gradient(180deg, rgba(25, 135, 84, 0.2), rgba(25, 135, 84, 0.1));
+    --guide-shell-bg:
+      radial-gradient(circle at 15% 18%, rgba(13, 110, 253, 0.28), transparent 46%),
+      radial-gradient(circle at 85% 8%, rgba(25, 135, 84, 0.2), transparent 38%),
+      linear-gradient(180deg, rgba(33, 37, 41, 0.95), rgba(26, 30, 33, 0.98));
+  }
+
+  .transfer-guide-shell {
+    background: var(--guide-shell-bg);
+  }
+
+  .guide-step-card {
+    border: 1px solid var(--guide-border);
+    border-left-width: 0.4rem;
+    border-radius: 1rem;
+    background: var(--guide-surface);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .guide-step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--guide-shadow);
+  }
+
+  .guide-step-card[data-phase="origin"] {
+    border-left-color: #0d6efd;
+  }
+
+  .guide-step-card[data-phase="transit"] {
+    border-left-color: #fd7e14;
+  }
+
+  .guide-step-card[data-phase="destination"] {
+    border-left-color: #198754;
+  }
+
+  .guide-step-card.is-current {
+    border-color: rgba(13, 110, 253, 0.55);
+    box-shadow: var(--guide-current-shadow);
+  }
+
+  .guide-step-card.is-completed {
+    background: var(--guide-completed-bg);
+  }
+
+  .guide-chip {
+    border-radius: 999px;
+    border: 1px solid var(--bs-border-color);
+    padding: 0.25rem 0.6rem;
+    font-size: 0.73rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .guide-timeline-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    background-color: var(--bs-secondary-color);
+    display: inline-block;
+    margin-right: 0.45rem;
+  }
+
+  .guide-timeline-dot.is-active {
+    background-color: var(--bs-primary);
+  }
+
+  .guide-timeline-dot.is-completed {
+    background-color: var(--bs-success);
+  }
+
+  .guide-neutral-chip {
+    background-color: var(--guide-surface-muted);
+    color: var(--bs-body-color);
+  }
+
+  .guide-panel {
+    border: 1px solid var(--guide-border);
+    background: var(--guide-surface);
+  }
+
+  .guide-checkpoint {
+    background: var(--guide-surface-muted);
+    border-color: var(--guide-border) !important;
+  }
+</style>
+
+<div class="container-fluid py-4 px-3 px-lg-4">
+  <div class="border border-secondary-subtle rounded-4 shadow-sm p-4 p-lg-5 transfer-guide-shell">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3 mb-4">
+      <div class="flex-grow-1">
+        <span class="badge text-bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">Guia interactiva</span>
+        <h1 class="h3 fw-bold mb-2">Procedimiento de traslados entre depositos</h1>
+        <p class="text-body-secondary mb-0" style="max-width: 60rem;">
+          Aprende el flujo completo desde la orden de recoleccion (manual o automatica) hasta la recepcion final en el deposito destino.
+          Marca pasos completados, filtra por tipo de orden y exporta la version imprimible en PDF.
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-self-start">
+        <a href="{{ url_for('inventory.collection_practice_exam') }}" class="btn btn-warning">Presentar examen</a>
+        <a id="guide-export-pdf"
+           href="{{ url_for('inventory.transfer_guide_pdf') }}"
+           target="_blank"
+           rel="noopener"
+           class="btn btn-primary">Exportar PDF</a>
+        <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary">Volver al panel</a>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-lg-4">
+        <div class="guide-panel rounded-4 p-3 h-100">
+          <p class="small text-uppercase fw-semibold text-body-secondary mb-2">Tipo de orden</p>
+          <div class="btn-group w-100" role="group" aria-label="Filtro de orden">
+            <button type="button" class="btn btn-outline-primary active" data-guide-filter="both">Ambas</button>
+            <button type="button" class="btn btn-outline-primary" data-guide-filter="auto">Automatica</button>
+            <button type="button" class="btn btn-outline-primary" data-guide-filter="manual">Manual</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="guide-panel rounded-4 p-3 h-100">
+          <p class="small text-uppercase fw-semibold text-body-secondary mb-2">Avance de aprendizaje</p>
+          <div class="progress" role="progressbar" aria-label="Progreso de guia">
+            <div id="guide-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;">0%</div>
+          </div>
+          <p id="guide-progress-text" class="small text-body-secondary mb-0 mt-2">0 de {{ guide_steps|length }} pasos completados.</p>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="guide-panel rounded-4 p-3 h-100">
+          <p class="small text-uppercase fw-semibold text-body-secondary mb-2">Controles rapidos</p>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" id="guide-prev" class="btn btn-outline-secondary btn-sm">Paso anterior</button>
+            <button type="button" id="guide-next" class="btn btn-outline-secondary btn-sm">Paso siguiente</button>
+            <button type="button" id="guide-reset" class="btn btn-outline-danger btn-sm">Reiniciar avance</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="guide-panel rounded-4 p-3 p-lg-4 mb-4">
+      <h2 class="h6 fw-semibold mb-3">Flujo operacional de estados</h2>
+      <div class="d-flex flex-wrap gap-3 small text-body-secondary">
+        {% for item in flow_steps %}
+        <div class="d-inline-flex align-items-center">
+          <span class="guide-timeline-dot" data-flow-dot="{{ loop.index0 }}"></span>
+          <span>{{ item.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="row g-3" id="guide-steps-container">
+      {% for step in guide_steps %}
+      <div class="col-12 col-xl-6 guide-step-wrapper" data-step-wrapper data-mode="{{ step.mode }}" data-step-index="{{ loop.index0 }}">
+        <article class="guide-step-card h-100 p-4" data-guide-step data-step-id="{{ step.id }}" data-phase="{{ step.phase }}" data-step-index="{{ loop.index0 }}">
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="guide-chip guide-neutral-chip">Paso {{ loop.index }}</span>
+            <span class="guide-chip {% if step.phase == 'origin' %}text-bg-primary-subtle text-primary-emphasis border-primary-subtle{% elif step.phase == 'transit' %}text-bg-warning-subtle text-warning-emphasis border-warning-subtle{% else %}text-bg-success-subtle text-success-emphasis border-success-subtle{% endif %}">
+              {% if step.phase == 'origin' %}Origen{% elif step.phase == 'transit' %}Transito{% else %}Destino{% endif %}
+            </span>
+            <span class="guide-chip text-bg-body-secondary text-white">{{ step.mode|upper }}</span>
+          </div>
+
+          <h3 class="h5 fw-semibold mb-2">{{ step.title }}</h3>
+          <p class="text-body-secondary mb-3">{{ step.summary }}</p>
+
+          <p class="small fw-semibold mb-1">Objetivo:</p>
+          <p class="small text-body-secondary mb-3">{{ step.objective }}</p>
+
+          <p class="small fw-semibold mb-2">Checklist operativo:</p>
+          <ul class="small text-body-secondary ps-3 mb-3">
+            {% for action in step.actions %}
+            <li class="mb-1">{{ action }}</li>
+            {% endfor %}
+          </ul>
+
+          <div class="guide-checkpoint rounded-3 p-3 border mb-3">
+            <p class="small fw-semibold mb-1">Punto de control</p>
+            <p class="small text-body-secondary mb-0">{{ step.checkpoint }}</p>
+          </div>
+
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <a href="{{ url_for(step.screen_url) }}" class="btn btn-sm btn-outline-primary">Abrir {{ step.screen_label }}</a>
+            <button type="button" class="btn btn-sm btn-success" data-complete-step data-step-id="{{ step.id }}">
+              Marcar completado
+            </button>
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+
+    <p class="small text-body-secondary mt-4 mb-0">
+      Ultima actualizacion visual: {{ generated_at.strftime('%d/%m/%Y %H:%M') }}.
+      Tu progreso se guarda localmente en este navegador y el PDF exporta solo los pasos completados.
+    </p>
+  </div>
+</div>
+
+<script src="{{ url_for('inventory.static', filename='js/transfer_guide.js') }}"></script>
+{% endblock %}
