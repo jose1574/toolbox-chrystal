@@ -97,6 +97,11 @@ def render_pdf(
 
     if extra_options:
         options.update(extra_options)
+
+    # If custom dimensions are provided, remove page-size to avoid conflicts
+    # where wkhtmltopdf falls back to A4/Letter.
+    if 'page-width' in options or 'page-height' in options:
+        options.pop('page-size', None)
     
     config = None
     
@@ -180,6 +185,10 @@ def render_pdf_from_html_file(
     options.update(size_options)
     if extra_options:
         options.update(extra_options)
+
+    # Keep custom paper dimensions deterministic when width/height are set.
+    if 'page-width' in options or 'page-height' in options:
+        options.pop('page-size', None)
 
     config = None
     if platform.system() == 'Windows':

@@ -11,6 +11,7 @@ from flask import (
     jsonify,
 )
 import json
+import math
 from io import BytesIO
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -813,15 +814,22 @@ def save_manual_order_collection():
 @inventory_bp.route("/order_collection/report/<int:order_id>")
 @login_required
 def order_collection_report(order_id):
+    flow = inventory_service.get_inventory_operation_flow(order_id)
+    is_checked = bool(flow and flow.get("current_status") == FLOW_RECOLLECTION_CHECKED)
+
     user = current_user
     order = inventory_service.get_order_for_report(order_id)
     sorted_details = inventory_service.sort_details_by_location(order.inventory_operation_details)
+    package_count = len(inventory_service.get_operation_packages(order.correlative))
 
     barcode_base64 = generate_barcode(order.correlative)
 
+    template_path = "reports/checked_order_collection_pdf.html" if is_checked else "reports/order_collection_pdf.html"
+    filename = f"orden_chequeada_{order.correlative}.pdf" if is_checked else f"orden_{order.correlative}.pdf"
+
     return Response(
         render_pdf(
-            "reports/order_collection_pdf.html",
+            template_path,
             {
                 "order": order,
                 "title": f"Orden de Recolección Automatica {order.correlative}",
@@ -829,13 +837,46 @@ def order_collection_report(order_id):
                 "barcode_base64": barcode_base64,
                 "user": user,
                 "sorted_details": sorted_details,
+                "package_count": package_count,
             },
             paper_format="Letter",
             orientation="Portrait",
         ),
         mimetype="application/pdf",
         headers={
-            "Content-Disposition": f"inline; filename=orden_{order.correlative}.pdf"
+            "Content-Disposition": f"inline; filename={filename}"
+        },
+    )
+
+
+@inventory_bp.route("/order_collection/checked_report/<int:order_id>")
+@login_required
+def checked_order_collection_report(order_id):
+    user = current_user
+    order = inventory_service.get_order_for_report(order_id)
+    sorted_details = inventory_service.sort_details_by_location(order.inventory_operation_details)
+    package_count = len(inventory_service.get_operation_packages(order.correlative))
+
+    barcode_base64 = generate_barcode(order.correlative)
+
+    return Response(
+        render_pdf(
+            "reports/checked_order_collection_pdf.html",
+            {
+                "order": order,
+                "title": f"Orden de Recoleccion Chequeada {order.correlative}",
+                "now": datetime.now(),
+                "barcode_base64": barcode_base64,
+                "user": user,
+                "sorted_details": sorted_details,
+                "package_count": package_count,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=orden_chequeada_{order.correlative}.pdf"
         },
     )
 
@@ -898,6 +939,17 @@ def check_order():
             normalized_code = inventory_service.normalize_code(row.code_product)
             if normalized_code in persisted_counts:
                 counted_by_code[normalized_code] = float(persisted_counts[normalized_code])
+
+        # Abrir automaticamente un bulto inicial para evitar friccion al comenzar el chequeo.
+        open_package = inventory_service.get_open_package(order_id)
+        if not open_package:
+            try:
+                inventory_service.open_package_for_operation(order_id, current_user.code)
+                inventory_service.commit_session()
+                flash("Se abrió automáticamente un bulto para iniciar el chequeo.", "info")
+            except Exception as exc:
+                inventory_service.rollback_session()
+                flash(f"No se pudo abrir el bulto inicial automáticamente: {exc}", "warning")
 
         return render_template(
             "check_order_collection.html",
@@ -1324,6 +1376,18 @@ def package_label_report(package_id):
         return "Bulto no encontrado.", 404
 
     barcode_base64 = generate_barcode(f"PKG-{package.correlative}")
+    details = package.package_details or []
+
+    # Estimate real row height considering wrapped description text in 80mm paper.
+    estimated_line_units = 0
+    for item in details:
+        description = (item.product.description if item.product else "") or ""
+        estimated_line_units += max(1, math.ceil(len(description) / 22))
+
+    # Thermal continuous roll: fixed width (80mm) and dynamic height.
+    # Tuned to avoid blank trailing paper while keeping enough room for wrapping.
+    page_height_mm = max(95, 66 + (estimated_line_units * 6))
+
     return Response(
         render_pdf(
             "reports/package_label_pdf.html",
@@ -1336,6 +1400,16 @@ def package_label_report(package_id):
             },
             paper_format="Letter",
             orientation="Portrait",
+            extra_options={
+                "page-width": "80mm",
+                "page-height": f"{page_height_mm}mm",
+                "margin-top": "0mm",
+                "margin-right": "0mm",
+                "margin-bottom": "0mm",
+                "margin-left": "0mm",
+                "disable-smart-shrinking": None,
+                "print-media-type": None,
+            },
         ),
         mimetype="application/pdf",
         headers={
@@ -1349,18 +1423,23 @@ def package_label_report(package_id):
 def package_progress():
     order_id = request.args.get("order_id", type=int)
     if not order_id:
-        return '<div class="small text-danger">No se pudo cargar el estado del bulto.</div>', 400
+        return (
+            '<div class="alert alert-danger small mb-0 py-2" role="alert">'
+            "No se pudo cargar el estado del bulto."
+            "</div>",
+            400,
+        )
 
     progress = inventory_service.get_open_package_progress(order_id)
     if not progress:
         return (
-            '<div class="small px-3 py-2 rounded border bg-light text-muted" data-open-package="0">'
+            '<div class="alert alert-secondary small mb-0 py-2" role="status" data-open-package="0">'
             "No hay bulto abierto."
             "</div>"
         )
 
     return (
-        '<div class="small px-3 py-2 rounded border bg-warning-subtle border-warning-subtle text-warning-emphasis" data-open-package="1">'
+        '<div class="alert alert-warning small mb-0 py-2" role="status" data-open-package="1">'
         f"Bulto {progress['package_number']} abierto: "
         f"{progress['product_lines']} producto(s), "
         f"{progress['total_units']:.2f} unidad(es) embaladas."
@@ -1429,8 +1508,15 @@ def save_order_check():
         )
         return redirect(url_for("inventory.check_order"))
 
-    # Actualizar descripción de cabecera para reflejar el chequeo
-    order.description = "orden de recoleccion chequeada"
+    # Update operation description to include route context after checking.
+    origin_name = order.store2.description if getattr(order, "store2", None) else order.store
+    destination_name = (
+        order.store1.description if getattr(order, "store1", None) else order.destination_store
+    )
+    order.description = (
+        "Orden de recoleccion chequeada del deposito de origen "
+        f"{origin_name} a destino {destination_name}"
+    )
 
     try:
         inventory_service.register_flow_step2(order_id, current_user.code)

@@ -4,12 +4,46 @@
 {% block title %}Administrador de documentos{% endblock %}       
 
 {% block content %} 
-<div id="document-manager-page" class="container-fluid py-4 px-4 ms-5">
+<div id="document-manager-page" class="container-fluid py-4 px-3 px-lg-4">
     <div class="mb-4">
         <h2 class="h3 fw-bold text-body mb-1">Administrador de Documentos</h2>
-        <p class="small text-secondary mb-0">Gestiona las operaciones de traslado del sistema.</p>
+        <p class="small text-secondary mb-0">Selecciona el tipo de documento y abre el reporte correspondiente.</p>
     </div>
 
+    <div class="mb-3 p-3 bg-body-tertiary rounded border border-secondary-subtle">
+        <form method="get" action="{{ url_for('document_manager.index') }}" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4 col-lg-3">
+                <label for="document_type" class="form-label fw-semibold small mb-1">Tipo de documento</label>
+                <select id="document_type" name="document_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="order_report" {% if document_type == 'order_report' %}selected{% endif %}>Reporte de orden de recoleccion</option>
+                    <option value="package_label" {% if document_type == 'package_label' %}selected{% endif %}>Etiqueta de bulto</option>
+                </select>
+            </div>
+            {% if document_type == 'package_label' %}
+            <div class="col-12 col-md-4 col-lg-3">
+                <label for="package_order_id" class="form-label fw-semibold small mb-1">Orden de recoleccion</label>
+                <input
+                    id="package_order_id"
+                    name="package_order_id"
+                    type="number"
+                    min="1"
+                    class="form-control form-control-sm"
+                    value="{{ package_order_id if package_order_id else '' }}"
+                    placeholder="Ej: 14677">
+            </div>
+            <div class="col-12 col-md-auto">
+                <button type="submit" class="btn btn-primary btn-sm">Buscar bultos</button>
+            </div>
+            {% if package_order_id %}
+            <div class="col-12 col-md-auto">
+                <a href="{{ url_for('document_manager.index', document_type='package_label') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+            </div>
+            {% endif %}
+            {% endif %}
+        </form>
+    </div>
+
+    {% if document_type == 'order_report' %}
     <div class="mb-3 p-3 bg-body-secondary rounded d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-sm-center sticky-top" style="z-index: 20;">
         <div class="small fw-semibold text-secondary">
             Operaciones seleccionadas: <span id="selected-count" class="fw-bold">0</span>
@@ -23,26 +57,35 @@
             </button>
         </div>
     </div>
-
+    {% endif %}
+ 
     <div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body">
         <table class="table table-sm table-hover align-middle mb-0">
             <thead class="table-light text-uppercase small">
                 <tr>
+                    {% if document_type == 'order_report' %}
                     <th scope="col" class="p-3">
                         <div class="form-check m-0 d-flex align-items-center">
                             <input id="select-all-operations" type="checkbox" class="form-check-input m-0">
                             <label for="select-all-operations" class="visually-hidden">Seleccionar todo</label>
                         </div>
                     </th>
+                    {% endif %}
                     <th scope="col" class="px-6 py-3">ID</th>
+                    {% if document_type == 'order_report' %}
                     <th scope="col" class="px-6 py-3">Documento</th>
+                    {% else %}
+                    <th scope="col" class="px-6 py-3">Bulto</th>
+                    {% endif %}
+                    <th scope="col" class="px-6 py-3">Estado</th>
                     <th scope="col" class="px-6 py-3">Descripción</th>
-                    <th scope="col" class="px-6 py-3">Fecha Creación</th>
+                    <th scope="col" class="px-6 py-3">Fecha</th>
                     <th scope="col" class="px-6 py-3">Origen</th>
                     <th scope="col" class="px-6 py-3">Destino</th>
                 </tr>
             </thead>
             <tbody>
+            {% if document_type == 'order_report' %}
             {% for operation in transfer_operations %}
                 <tr class="document-row"
                     style="cursor: pointer;"
@@ -54,7 +97,7 @@
                         <div class="form-check m-0 d-flex align-items-center">
                             <input type="checkbox"
                                    class="operation-checkbox form-check-input m-0"
-                                value="{{ operation.correlative }}"
+                                   value="{{ operation.correlative }}"
                                    id="operation-{{ loop.index0 }}"
                                    aria-label="Seleccionar operación {{ operation.correlative }}">
                             <label for="operation-{{ loop.index0 }}" class="visually-hidden">checkbox</label>
@@ -62,12 +105,43 @@
                     </td>
                     <td class="px-6 py-4 fw-semibold text-body text-nowrap">{{ operation.correlative }}</td>
                     <td class="px-6 py-4 fw-semibold text-body text-nowrap">{{ operation.document_no }}</td>
+                    <td class="px-6 py-4">
+                        {{ operation.operation_flow.current_status if operation.operation_flow else 'SIN_FLUJO' }}
+                    </td>
                     <td class="px-6 py-4">{{ operation.description }}</td>
-                    <td class="px-6 py-4">{{ operation.emission_date }}</td>
-                    <td class="px-6 py-4">{{ operation.store }}</td>
-                    <td class="px-6 py-4">{{ operation.destination_store }}</td>
+                    <td class="px-6 py-4 text-nowrap">{{ operation.emission_date.strftime('%d/%m/%Y') if operation.emission_date else '-' }}</td>
+                    <td class="px-6 py-4">{{ operation.store2.description if operation.store2 else operation.store }}</td>
+                    <td class="px-6 py-4">{{ operation.store1.description if operation.store1 else operation.destination_store }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-secondary">No hay operaciones disponibles.</td>
                 </tr>
             {% endfor %}
+            {% else %}
+            {% for package in packages %}
+                <tr class="document-row"
+                    style="cursor: pointer;"
+                    data-report-url="{{ url_for('inventory.package_label_report', package_id=package.correlative) }}"
+                    tabindex="0"
+                    role="link"
+                    aria-label="Abrir etiqueta del bulto {{ package.package_number }}">
+                    <td class="p-3" style="width: 2.5rem;">
+                        {{ package.operation_correlative }}
+                    </td>
+                    <td class="px-6 py-4 fw-semibold text-body text-nowrap">Bulto {{ package.package_number }}</td>
+                    <td class="px-6 py-4">{{ package.status }}</td>
+                    <td class="px-6 py-4">{{ package.inventory_operation.description if package.inventory_operation else '-' }}</td>
+                    <td class="px-6 py-4 text-nowrap">{{ package.closed_at.strftime('%d/%m/%Y %H:%M') if package.closed_at else (package.opened_at.strftime('%d/%m/%Y %H:%M') if package.opened_at else '-') }}</td>
+                    <td class="px-6 py-4">{{ package.inventory_operation.store2.description if package.inventory_operation and package.inventory_operation.store2 else (package.inventory_operation.store if package.inventory_operation else '-') }}</td>
+                    <td class="px-6 py-4">{{ package.inventory_operation.store1.description if package.inventory_operation and package.inventory_operation.store1 else (package.inventory_operation.destination_store if package.inventory_operation else '-') }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="px-6 py-4 text-center text-secondary">No hay bultos disponibles.</td>
+                </tr>
+            {% endfor %}
+            {% endif %}
             </tbody>
         </table>
     </div>
@@ -82,8 +156,6 @@
         const selectedCount = page.querySelector('#selected-count');
         const deleteBtn = page.querySelector('#delete-btn');
 
-        if (!selectAll || !selectedCount || !deleteBtn) return;
-
         function getRowCheckboxes() {
             return Array.from(page.querySelectorAll('.operation-checkbox'));
         }
@@ -93,6 +165,8 @@
         }
 
         function syncSelectionUI() {
+            if (!selectAll || !selectedCount || !deleteBtn) return;
+
             const rowCheckboxes = getRowCheckboxes();
             const checked = getCheckedCheckboxes();
 
@@ -107,13 +181,15 @@
             selectAll.checked = checked.length === rowCheckboxes.length;
         }
 
-        selectAll.addEventListener('change', function () {
-            const rowCheckboxes = getRowCheckboxes();
-            rowCheckboxes.forEach((checkbox) => {
-                checkbox.checked = selectAll.checked;
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                const rowCheckboxes = getRowCheckboxes();
+                rowCheckboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAll.checked;
+                });
+                syncSelectionUI();
             });
-            syncSelectionUI();
-        });
+        }
 
         page.addEventListener('change', function (event) {
             if (event.target.classList.contains('operation-checkbox')) {
@@ -148,7 +224,8 @@
             }
         });
 
-        deleteBtn.addEventListener('click', async function () {
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async function () {
             const checked = getCheckedCheckboxes();
             if (!checked.length) return;
 
@@ -184,7 +261,8 @@
                 window.alert(error.message || 'Error al eliminar operaciones.');
                 syncSelectionUI();
             }
-        });
+            });
+        }
 
         syncSelectionUI();
     })();

@@ -30,8 +30,13 @@
 
     {% if not order or not details %}
     <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto mt-4 w-100"
-        style="max-width: 32rem;">
-        <h2 class="h4 fw-semibold text-body mb-3">Chequeo de Orden de Recolección</h2>
+        style="max-width: 32rem;" data-tour="check-order-load-card">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <h2 class="h4 fw-semibold text-body mb-0" data-tour="check-order-title">Chequeo de Orden de Recolección</h2>
+            <button type="button" class="btn btn-dark btn-sm" data-tour-start="check-order" data-tour="check-order-start-button">
+                Ver recorrido
+            </button>
+        </div>
         <hr>
         {% if error %}
         <div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle"
@@ -45,10 +50,10 @@
                     orden</label>
                 <input type="number" id="order_id" name="order_id" value=""
                     class="form-control bg-body-tertiary border border-secondary-subtle text-body small"
-                    placeholder="Ingresa el correlativo">
+                    placeholder="Ingresa el correlativo" data-tour="check-order-input">
             </div>
             <div class="mt-2 d-flex flex-column flex-sm-row gap-2">
-                <button type="submit" class="btn btn-primary d-inline-flex align-items-center justify-content-center">
+                <button type="submit" class="btn btn-primary d-inline-flex align-items-center justify-content-center" data-tour="check-order-load-button">
                     Cargar Orden
                 </button>
                 <a href="{{ url_for('inventory.index') }}"
@@ -65,10 +70,10 @@
         class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 border-bottom border-secondary-subtle mb-3">
 
         <div>
-            <h1 class="h3 fw-bold text-body mb-1">
+            <h1 class="h3 fw-bold text-body mb-1" data-tour="check-order-title">
                 Chequeo de Orden de Recolección #{{ order.correlative if order else '---' }}
             </h1>
-            <p class="text-body-secondary small mb-0">
+            <p class="text-body-secondary small mb-0" data-tour="check-order-route-info">
                 Depósito: <span class="fw-semibold text-body-secondary">{{ order.store_origin_description }}</span>
                 <span class="mx-2 text-primary">→</span>
                 Destino: <span class="fw-semibold text-body-secondary">{{ order.store_dst_description }}</span>
@@ -98,29 +103,27 @@
                 hx-target="#product-modal-container" hx-include="[name='order_id']" hx-trigger="keydown[key=='Enter']"
                 hx-on:htmx:afterRequest="if (event.detail && event.detail.elt === this) { this.value=''; this.focus(); }"
                 oninput="this.value = this.value.toUpperCase();"
-                onkeydown="if(event.key==='Enter') event.preventDefault();">
+                onkeydown="if(event.key==='Enter') event.preventDefault();" data-tour="check-order-product-search">
                 <input type="hidden" name="order_id" value="{{ order.correlative }}">
             </form>
         </div>
         <div class="col-auto d-flex align-items-center gap-2 py-3 pe-3">
-            <a href="{{ url_for('inventory.checked_order_packages', correlative=order.correlative) }}" class="btn btn-outline-primary">
+            <a href="{{ url_for('inventory.checked_order_packages', correlative=order.correlative) }}" class="btn btn-outline-primary" data-tour="check-order-view-packages">
                 Ver Bultos de la Orden
             </a>
-            <form hx-post="{{ url_for('inventory.open_package') }}" hx-target="#package-feedback" hx-swap="innerHTML" class="m-0">
-                <input type="hidden" name="order_id" value="{{ order.correlative }}">
-                <button type="submit" class="btn btn-warning">Abrir Bulto Nuevo</button>
-            </form>
-            <form hx-post="{{ url_for('inventory.close_package') }}" hx-target="#package-feedback" hx-swap="innerHTML" class="m-0">
-                <input type="hidden" name="order_id" value="{{ order.correlative }}">
-                <button type="submit" class="btn btn-outline-warning">Cerrar Bulto Abierto</button>
-            </form>
+            <button type="button" id="package-toggle-button" class="btn btn-warning" onclick="togglePackageState()" data-tour="check-order-package-toggle">
+                Abrir Bulto Nuevo
+            </button>
+            <button type="button" class="btn btn-dark" data-tour-start="check-order" data-tour="check-order-start-button">
+                Ver recorrido
+            </button>
         </div>
     </div>
-    <div id="open-package-progress" class="mx-4 mb-2"></div>
+    <div id="open-package-progress" class="mx-4 mb-2" data-tour="check-order-package-progress"></div>
     <div id="package-feedback" class="mx-4 mb-3"></div>
     </div>
 
-    <div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body">
+    <div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body" data-tour="check-order-products-table">
         <table class="table table-sm align-middle mb-0">
             <thead class="bg-body-tertiary small text-uppercase">
                 <tr>
@@ -191,7 +194,7 @@
             <input type="hidden" name="counted_{{ item.code_product }}" id="hidden-counted-{{ item.code_product }}"
                 value="{% if counted_by_code and counted_by_code.get(item.code_product|string|trim|upper) is not none %}{{ '%.2f'|format(counted_by_code.get(item.code_product|string|trim|upper)) }}{% endif %}">
             {% endfor %}
-            <button id="save-button" type="button" onclick="generateOrder()" class="btn btn-success w-100 fw-bold py-2">
+            <button id="save-button" type="button" onclick="generateOrder()" class="btn btn-success w-100 fw-bold py-2" data-tour="check-order-confirm-button">
                 Confirmar Chequeo
             </button>
         </form>
@@ -367,6 +370,38 @@
             });
         }
 
+        function syncPackageToggleButton() {
+            const toggleButton = document.getElementById('package-toggle-button');
+            if (!toggleButton) {
+                return;
+            }
+
+            const hasOpenPackage = hasOpenPackageInProgressPanel();
+            if (hasOpenPackage) {
+                toggleButton.textContent = 'Cerrar Bulto Abierto';
+                toggleButton.classList.remove('btn-warning');
+                toggleButton.classList.add('btn-outline-warning');
+            } else {
+                toggleButton.textContent = 'Abrir Bulto Nuevo';
+                toggleButton.classList.remove('btn-outline-warning');
+                toggleButton.classList.add('btn-warning');
+            }
+        }
+
+        function togglePackageState() {
+            const orderId = getCurrentOrderId();
+            if (!orderId) {
+                return;
+            }
+
+            if (hasOpenPackageInProgressPanel()) {
+                closeOpenPackageInline(orderId);
+                return;
+            }
+
+            openPackageInline(orderId);
+        }
+
         function getCurrentOrderId() {
             const input = document.querySelector("input[name='order_id']");
             if (!input) {
@@ -493,6 +528,11 @@
             }
         });
 
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            if (!event.target || event.target.id !== 'open-package-progress') return;
+            syncPackageToggleButton();
+        });
+
         if (!window.__checkOrderPdfHandlerAdded) {
             window.__checkOrderPdfHandlerAdded = true;
             document.addEventListener('open-pdf', (event) => {
@@ -512,7 +552,9 @@
         }
 
         refreshOpenPackageProgress();
+        syncPackageToggleButton();
         checkAllCounted();
     </script>
+    <script src="{{ url_for('inventory.static', filename='js/check_order_collection_tour.js') }}"></script>
 </div>
 {% endblock %}

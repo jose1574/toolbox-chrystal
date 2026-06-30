@@ -1,15 +1,60 @@
 from flask import jsonify, render_template, request
 from flask_login import login_required, current_user
 from app.document_manager import document_manager_bp 
-from app.models import InventoryOperation
+from sqlalchemy.orm import joinedload
+from app.models import InventoryOperation, InventoryOperationPackage
 from app import db
 
 @document_manager_bp.route("/")
 @login_required
 def index():
-    transfer_operations = InventoryOperation.query.filter_by(operation_type="TRANSFER", wait=True).all()
+    document_type = (request.args.get("document_type") or "order_report").strip()
+    if document_type not in {"order_report", "package_label"}:
+        document_type = "order_report"
+    package_order_id = request.args.get("package_order_id", type=int)
 
-    return render_template("document_manager/index.html", user=current_user, transfer_operations=transfer_operations)
+    transfer_operations = []
+    packages = []
+
+    if document_type == "order_report":
+        transfer_operations = (
+            InventoryOperation.query.filter_by(operation_type="TRANSFER", wait=True)
+            .options(joinedload(InventoryOperation.operation_flow))
+            .order_by(InventoryOperation.correlative.desc())
+            .all()
+        )
+    else:
+        packages_query = (
+            InventoryOperationPackage.query.options(
+                joinedload(InventoryOperationPackage.inventory_operation).joinedload(
+                    InventoryOperation.store2
+                ),
+                joinedload(InventoryOperationPackage.inventory_operation).joinedload(
+                    InventoryOperation.store1
+                ),
+            )
+            .join(InventoryOperation)
+            .filter(InventoryOperation.operation_type == "TRANSFER")
+        )
+
+        if package_order_id:
+            packages_query = packages_query.filter(
+                InventoryOperationPackage.operation_correlative == package_order_id
+            )
+
+        packages = packages_query.order_by(
+            InventoryOperationPackage.operation_correlative.desc(),
+            InventoryOperationPackage.package_number.asc(),
+        ).all()
+
+    return render_template(
+        "document_manager/index.html",
+        user=current_user,
+        document_type=document_type,
+        package_order_id=package_order_id,
+        transfer_operations=transfer_operations,
+        packages=packages,
+    )
 
 
 

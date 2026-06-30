@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <title>Etiqueta Bulto {{ package.package_number }}</title>
     <style>
+        @page {
+            size: 77mm auto;
+            margin-right: 4mm;
+        }
+
         :root {
             --text: #111;
             --muted: #444;
@@ -15,26 +20,40 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 77mm;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             margin: 0;
-            padding: 10px;
+            padding: 0;
+            width: 77mm;
+            min-width: 77mm;
+            max-width: 77mm;
             font-family: Arial, sans-serif;
             font-size: 11px;
             color: var(--text);
         }
 
         .label {
-            border: 2px solid var(--border);
-            padding: 10px;
+            border: 1px solid var(--border);
+            padding: 0.8mm;
+            width: 77mm;
+            min-width: 77mm;
+            max-width: 77mm;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             text-transform: uppercase;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 6px;
-            margin-bottom: 8px;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .meta {
@@ -46,35 +65,51 @@
         }
 
         .barcode {
-            margin: 8px 0;
+            margin: 6px 0;
             text-align: center;
             border: 1px dashed #999;
-            padding: 6px;
+            padding: 4px;
         }
 
         .barcode img {
             max-width: 100%;
-            height: 45px;
+            height: 18mm;
             object-fit: contain;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            margin-top: 4px;
+            table-layout: fixed;
+            page-break-inside: auto;
+            break-inside: auto;
         }
 
         th,
         td {
             border: 1px solid #222;
-            padding: 4px;
+            padding: 2px 3px;
         }
 
         th {
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 9px;
             background: #efefef;
             text-align: left;
+        }
+
+        td {
+            font-size: 10px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        tr,
+        td,
+        th {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .qty {
@@ -82,8 +117,20 @@
             white-space: nowrap;
         }
 
+        .col-code {
+            width: 30%;
+        }
+
+        .col-desc {
+            width: 52%;
+        }
+
+        .col-qty {
+            width: 18%;
+        }
+
         .footer {
-            margin-top: 8px;
+            margin-top: 6px;
             font-size: 9px;
             color: var(--muted);
         }
@@ -106,6 +153,11 @@
         </div>
 
         <table>
+            <colgroup>
+                <col class="col-code">
+                <col class="col-desc">
+                <col class="col-qty">
+            </colgroup>
             <thead>
                 <tr>
                     <th>Codigo</th>

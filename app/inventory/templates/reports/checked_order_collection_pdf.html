@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Orden de Recolección #{{ order.correlative }}</title>
+    <title>Orden de Recoleccion Chequeada #{{ order.correlative }}</title>
     <style>
         :root {
             --text: #000;
@@ -56,7 +56,6 @@
             text-align: left;
         }
 
-        /* Tabla de Cabecera Estilo Diagrama */
         .header-table {
             width: 100%;
             border-collapse: collapse;
@@ -77,10 +76,11 @@
             background-color: #eee;
         }
 
-        .checked-title {
+        .header-subtitle {
             margin-top: 4px;
             font-size: 12px;
             font-weight: 700;
+            text-transform: uppercase;
         }
 
         .header-details {
@@ -120,11 +120,11 @@
 
 <body>
     <div class="main-container">
-        <!-- Cabecera según diagrama -->
         <table class="header-table">
             <tr>
                 <td colspan="3" class="header-title">
-                    Orden de Recolección #{{ order.correlative }}
+                    Orden de Recoleccion Chequeada #{{ order.correlative }}
+                    <div class="header-subtitle">Traslado en Transito</div>
                 </td>
             </tr>
             <tr>
@@ -132,27 +132,27 @@
                     <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Detalles Orden:
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">- Fecha:</span> {{ order.emission_date.strftime('%d/%m/%Y') }}
+                        <span class="detail-label">- Fecha:</span> {{ now.strftime('%d/%m/%Y') }}
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">- Depósito Origen:</span> {{ order.store2.description }} ({{
+                        <span class="detail-label">- Hora:</span> {{ now.strftime('%H:%M:%S') }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Deposito Origen:</span> {{ order.store2.description }} ({{
                         order.store }})
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">- Deposito Destino:</span> {{ order.store1.description }} ({{
+                        order.destination_store }})
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">- Documento:</span> {{ order.document_no or '-' }}
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">- Descripción:</span> {{ order.description or '-' }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Depósito Destino:</span> {{ order.store1.description }} ({{
-                        order.destination_store }})
+                        <span class="detail-label">- Descripcion:</span> {{ order.description or '-' }}
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">- Cantidad de Bultos:</span> {{ package_count }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Chequeado por:</span> {{ user.description if user else 'Sistema' }}
                     </div>
                 </td>
                 <td class="header-barcode">
@@ -160,11 +160,11 @@
                     <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode"
                         style="height: 70px; max-width: 100%;">
                     {% else %}
-                    <span style="color: #ccc;">[Código de Barras]</span>
+                    <span style="color: #ccc;">[Codigo de Barras]</span>
                     {% endif %}
                 </td>
                 <td class="header-responsible">
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Responsable Recolección:</div>
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Responsable del Traslado:</div>
                     <div style="margin-top: 50px; text-align: center;">
                         <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto; "></div>
                         <span style="font-size: 9px; text-transform: uppercase; ">Firma</span>
@@ -173,14 +173,12 @@
             </tr>
         </table>
 
-        <!-- Tabla de productos -->
         <table class="table">
             <thead>
                 <tr>
-                    <th>Código</th>
-                    <th>Descripción</th>
+                    <th>Codigo</th>
+                    <th>Descripcion</th>
                     <th>Unidad</th>
-                    <th>Ubicación</th>
                     <th class="text-end">Cant.</th>
                 </tr>
             </thead>
@@ -188,11 +186,10 @@
                 {% for detail in sorted_details %}
                 <tr>
                     <td>{{ detail.code_product }}</td>
-                    <td style="width: 40%;">{{ detail.product.description if detail.product else
+                    <td style="width: 52%;">{{ detail.product.description if detail.product else
                         detail.description_product }}</td>
                     <td>{{ detail.products_unit.unit1.description if detail.products_unit and detail.products_unit.unit1
                         else '-' }}</td>
-                    <td>{{ detail.failure_info.location if detail.failure_info else '-' }}</td>
                     <td class="text-end">{{ detail.amount }}</td>
                 </tr>
                 {% endfor %}
@@ -200,7 +197,7 @@
         </table>
 
         <div class="footer">
-            <p>Generado por: {{ user.description if user else 'Sistema' }} — {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+            <p>Chequeado por: {{ user.description if user else 'Sistema' }} - {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
         </div>
     </div>
 </body>

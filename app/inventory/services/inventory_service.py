@@ -1386,13 +1386,18 @@ def create_order_collection_operation(
   if not normalized_items:
     raise ValueError("No se han seleccionado productos.")
 
+  operation_description = (
+    f"Orden de recoleccion emitida del deposito de origen {store_origin_obj.description} "
+    f"a destino {store_dst_obj.description}"
+  )
+
   header_params = {
     "p_correlative": None,
     "p_operation_type": "TRANSFER",
     "p_document_no": None,
     "p_emission_date": datetime.now().date(),
     "p_wait": True,
-    "p_description": f"Traslado {source_label} {store_origin_obj.description} -> {store_dst_obj.description}",
+    "p_description": operation_description,
     "p_user_code": user_code,
     "p_station": "00",
     "p_store": store_origin,
