@@ -1637,6 +1637,12 @@ def open_package():
 @login_required
 def close_package():
     order_id = request.form.get("order_id", type=int)
+    suppress_label_pdf = (request.form.get("suppress_label_pdf") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     if not order_id:
         return "Error: Datos incompletos.", 400
 
@@ -1656,16 +1662,17 @@ def close_package():
             500,
         )
 
-    trigger_payload = {
-        "open-pdf": {
+    trigger_payload = {}
+    if not suppress_label_pdf:
+        trigger_payload["open-pdf"] = {
             "url": url_for("inventory.package_label_report", package_id=package.correlative)
-        },
-        "package-closed": {
-            "order_id": order_id,
-            "package_id": package.correlative,
-            "package_number": package.package_number,
-        },
+        }
+    trigger_payload["package-closed"] = {
+        "order_id": order_id,
+        "package_id": package.correlative,
+        "package_number": package.package_number,
     }
+
     return Response(
         f'<div class="alert alert-success small mb-0">Bulto cerrado: Bulto {package.package_number}. Etiqueta generada.</div>',
         status=200,

@@ -3,10 +3,34 @@
 
 {% block content %}
 <style>
+    :root {
+        --transfer-hero-radial: rgba(13, 110, 253, 0.14);
+        --transfer-hero-start: rgba(255, 255, 255, 0.9);
+        --transfer-hero-end: rgba(248, 249, 250, 0.96);
+        --transfer-panel-hover-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+        --transfer-tour-btn-bg: var(--bs-emphasis-color);
+        --transfer-tour-btn-border: var(--bs-emphasis-color);
+        --transfer-tour-btn-color: var(--bs-body-bg);
+        --transfer-tour-btn-hover-bg: #000;
+        --transfer-tour-btn-hover-border: #000;
+    }
+
+    [data-bs-theme="dark"] {
+        --transfer-hero-radial: rgba(13, 110, 253, 0.28);
+        --transfer-hero-start: rgba(19, 28, 40, 0.94);
+        --transfer-hero-end: rgba(15, 22, 32, 0.98);
+        --transfer-panel-hover-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.38);
+        --transfer-tour-btn-bg: var(--bs-primary);
+        --transfer-tour-btn-border: var(--bs-primary);
+        --transfer-tour-btn-color: #f8f9fa;
+        --transfer-tour-btn-hover-bg: #0b5ed7;
+        --transfer-tour-btn-hover-border: #0a58ca;
+    }
+
     .transfer-hero {
         background:
-            radial-gradient(circle at top right, rgba(13, 110, 253, 0.14), transparent 36%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.96));
+            radial-gradient(circle at top right, var(--transfer-hero-radial), transparent 36%),
+            linear-gradient(180deg, var(--transfer-hero-start), var(--transfer-hero-end));
     }
 
     .transfer-panel {
@@ -15,7 +39,29 @@
 
     .transfer-panel:hover {
         border-color: var(--bs-primary-border-subtle) !important;
-        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+        box-shadow: var(--transfer-panel-hover-shadow);
+    }
+
+    .transfer-tour-btn {
+        background-color: var(--transfer-tour-btn-bg);
+        border-color: var(--transfer-tour-btn-border);
+        color: var(--transfer-tour-btn-color);
+    }
+
+    .transfer-tour-btn:hover,
+    .transfer-tour-btn:focus-visible,
+    .transfer-tour-btn:active {
+        background-color: var(--transfer-tour-btn-hover-bg) !important;
+        border-color: var(--transfer-tour-btn-hover-border) !important;
+        color: var(--transfer-tour-btn-color) !important;
+    }
+
+    .transfer-table thead {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .transfer-empty {
+        background-color: var(--bs-tertiary-bg);
     }
 </style>
 
@@ -30,7 +76,7 @@
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-dark d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-operation">
+                <button type="button" class="btn transfer-tour-btn d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-operation">
                     Ver recorrido
                 </button>
                 <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
@@ -95,14 +141,14 @@
                                 <p class="text-body-secondary small mb-2">{{ operation.description }}</p>
                                 <div class="d-flex flex-wrap gap-2">
                                     <span class="badge text-bg-success">Estado: {{ flow.current_status }}</span>
-                                    <span class="badge text-bg-warning text-dark">Cantidad de bultos: {{ packages_count }}</span>
+                                    <span class="badge text-bg-warning">Cantidad de bultos: {{ packages_count }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="table-responsive rounded-4 border border-secondary-subtle bg-body" data-tour="transfer-operation-details-table">
-                        <table class="table table-sm align-middle mb-0">
+                        <table class="table table-sm align-middle mb-0 transfer-table">
                             <thead class="bg-body-tertiary small text-uppercase">
                                 <tr>
                                     <th class="px-4 py-3">Código</th>
@@ -162,7 +208,7 @@
                     </form>
                 </div>
                 {% else %}
-                <div class="p-4 rounded-4 border border-secondary-subtle bg-body-tertiary h-100 d-flex align-items-center justify-content-center text-body-secondary text-center">
+                <div class="p-4 rounded-4 border border-secondary-subtle transfer-empty h-100 d-flex align-items-center justify-content-center text-body-secondary text-center">
                     Busca un traslado chequeado para ver el detalle y habilitar el inicio de la carga.
                 </div>
                 {% endif %}

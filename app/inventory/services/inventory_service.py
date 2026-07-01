@@ -2631,9 +2631,10 @@ def close_all_open_packages_for_operation(operation_correlative, user_code):
       break
 
     if not open_package.package_details:
-      raise ValueError(
-        f"No se puede cerrar el bulto abierto {open_package.package_number} porque esta vacio."
-      )
+      # Discard empty open packages during final confirmation to avoid blocking report emission.
+      db.session.delete(open_package)
+      db.session.flush()
+      continue
 
     open_package.status = "CLOSED"
     open_package.closed_user = user_code

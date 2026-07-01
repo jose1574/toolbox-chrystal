@@ -208,20 +208,31 @@
 
     <script>
         let autoSubmitted = false;
-        let pendingSubmitAfterPackageClose = false;
+        let waitingForLabelThenReport = false;
+        let waitingForReport = false;
+        let shouldRedirectAfterReport = false;
+
+        function resetFinalizeState() {
+            waitingForLabelThenReport = false;
+            waitingForReport = false;
+            shouldRedirectAfterReport = false;
+        }
 
         function submitCheckOrder() {
             const saveForm = document.getElementById('save-form');
             if (!saveForm) return;
 
-            // Enviar formulario standard para abrir PDF en nueva pestaña
-            saveForm.target = '_blank';
+            const actionUrl = saveForm.getAttribute('action');
+            if (window.htmx && actionUrl) {
+                const values = Object.fromEntries(new FormData(saveForm).entries());
+                htmx.ajax('POST', actionUrl, {
+                    target: '#main-content',
+                    swap: 'innerHTML',
+                    values: values
+                });
+                return;
+            }
             saveForm.submit();
-
-            // Regresar al menú en la pestaña actual
-            setTimeout(() => {
-                window.location.href = "{{ url_for('inventory.check_order') }}";
-            }, 500);
         }
 
         function hasOpenPackageInProgressPanel() {
@@ -232,16 +243,19 @@
             return panel.getAttribute('data-open-package') === '1';
         }
 
-        function closeOpenPackageInline(orderId) {
+        function closeOpenPackageInline(orderId, options = {}) {
             if (!orderId || !window.htmx) {
                 return;
             }
+
+            const emitLabel = options.emitLabel !== false;
 
             htmx.ajax('POST', "{{ url_for('inventory.close_package') }}", {
                 target: '#package-feedback',
                 swap: 'innerHTML',
                 values: {
-                    order_id: orderId
+                    order_id: orderId,
+                    suppress_label_pdf: emitLabel ? '0' : '1'
                 }
             });
         }
@@ -252,25 +266,36 @@
                 return;
             }
 
+            shouldRedirectAfterReport = true;
+
             if (hasOpenPackageInProgressPanel()) {
-                pendingSubmitAfterPackageClose = true;
+                waitingForLabelThenReport = true;
+                waitingForReport = false;
                 closeOpenPackageInline(orderId);
                 return;
             }
 
+            waitingForLabelThenReport = false;
+            waitingForReport = true;
             submitCheckOrder();
         }
 
+        function getProductRows() {
+            return Array.from(document.querySelectorAll('#products-tbody tr'));
+        }
+
+        function hasPendingRows(rows) {
+            return rows.some((row) => {
+                const status = row.querySelector('[id^="status-"]');
+                return status && !status.textContent.trim().includes('Contado');
+            });
+        }
+
         function checkAllCounted() {
-            const rows = document.querySelectorAll('tbody tr');
+            const rows = getProductRows();
             if (!rows.length) return;
 
-            const allCounted = Array.from(rows).every((row) => {
-                const status = row.querySelector('[id^="status-"]');
-                return status && status.textContent.trim().includes('Contado');
-            });
-
-            if (allCounted && !autoSubmitted) {
+            if (!hasPendingRows(rows) && !autoSubmitted) {
                 const confirmed = confirm('Se contaron todos los productos. ¿Desea confirmar el chequeo de recolección?');
                 if (!confirmed) return;
                 autoSubmitted = true;
@@ -279,15 +304,12 @@
         }
 
         function generateOrder() {
-            const rows = document.querySelectorAll('tbody tr');
-            const pendingRows = [];
-            rows.forEach((row) => {
-                const status = row.querySelector('[id^="status-"]');
-                if (status && !status.textContent.trim().includes('Contado')) {
-                    pendingRows.push(row);
-                }
-            });
-            if (pendingRows.length) {
+            const rows = getProductRows();
+            if (!rows.length) {
+                return;
+            }
+
+            if (hasPendingRows(rows)) {
                 const confirmed = confirm('aun hay productos que no se han terminado de contar, ¿deseas confirmar el chequeo y eliminar estos productos de la orden?');
                 if (confirmed) {
                     submitCheckOrderEnsuringLastLabel();
@@ -295,11 +317,9 @@
                 return;
             }
 
-            if (rows.length) {
-                const confirmed = confirm('¿Confirmar chequeo de recolección?');
-                if (confirmed) {
-                    submitCheckOrderEnsuringLastLabel();
-                }
+            const confirmed = confirm('¿Confirmar chequeo de recolección?');
+            if (confirmed) {
+                submitCheckOrderEnsuringLastLabel();
             }
         }
 
@@ -517,14 +537,9 @@
             if (!event.target || event.target.id !== 'package-feedback') return;
             refreshOpenPackageProgress();
 
-            if (!pendingSubmitAfterPackageClose) {
-                return;
-            }
-
-            const feedbackText = (event.target.textContent || '').toLowerCase();
-            const closeFailed = feedbackText.includes('error') || feedbackText.includes('no se puede') || feedbackText.includes('no hay un bulto abierto');
-            if (closeFailed) {
-                pendingSubmitAfterPackageClose = false;
+            const hasError = !!event.target.querySelector('.alert-danger');
+            if (hasError) {
+                resetFinalizeState();
             }
         });
 
@@ -540,14 +555,21 @@
                 if (detail.url) {
                     window.open(detail.url, '_blank');
                 }
-            });
 
-            document.addEventListener('package-closed', () => {
-                if (!pendingSubmitAfterPackageClose) {
+                if (waitingForLabelThenReport) {
+                    waitingForLabelThenReport = false;
+                    waitingForReport = true;
+                    submitCheckOrder();
                     return;
                 }
-                pendingSubmitAfterPackageClose = false;
-                submitCheckOrder();
+
+                if (waitingForReport) {
+                    waitingForReport = false;
+                    if (shouldRedirectAfterReport) {
+                        shouldRedirectAfterReport = false;
+                        window.location.href = "{{ url_for('inventory.check_order') }}";
+                    }
+                }
             });
         }
 
