@@ -2,12 +2,10 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, redirect, url_for
 from flask_login import LoginManager, current_user
-from dotenv import load_dotenv
 
 
 db = SQLAlchemy()
 def create_app():
-    load_dotenv()
     app = Flask(__name__)
 
     # 2. Configuración de parámetros recomendados
@@ -51,16 +49,13 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        # Importar modelos para que SQLAlchemy registre las tablas en el metadata.
-        # Evitamos create_all en el arranque para no bloquear ni tocar la base de producción.
-        from app import models
-
-        if os.getenv("AUTO_CREATE_TABLES") == "1":
-            try:
-                db.create_all()
-                print("Tablas satélites creadas en el esquema toolbox.")
-            except Exception as e:
-                print(f"Error creando tablas: {e}")
+        # Importar modelos para que SQLAlchemy los reconozca al crear tablas
+        try:
+            from app import models
+            db.create_all()
+            print("Tablas satélites creadas en el esquema toolbox.")
+        except Exception as e:
+            print(f"Error creando tablas: {e}")
 
 
     from app.main import main_bp
