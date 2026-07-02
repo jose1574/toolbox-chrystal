@@ -52,6 +52,7 @@ urllib3==2.6.3
 wcwidth==0.3.0
 Werkzeug==3.1.5
 yarg==0.1.10
+waitress==3.0.2
 pdfkit
 python-barcode[images]
 pandas==3.0.1

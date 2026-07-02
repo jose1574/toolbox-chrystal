@@ -2,14 +2,68 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, redirect, url_for
 from flask_login import LoginManager, current_user
+from dotenv import load_dotenv
+from sqlalchemy import inspect, text
+from sqlalchemy.schema import CreateIndex, CreateTable
 
 
 db = SQLAlchemy()
+
+
+def create_toolbox_schema_tables():
+    toolbox_tables = [
+        table for table in db.metadata.sorted_tables if table.schema == "toolbox"
+    ]
+
+    if not toolbox_tables:
+        print("No tables registered for the toolbox schema.")
+        return
+
+    inspector = inspect(db.engine)
+    if not inspector.has_schema("toolbox"):
+        db.session.execute(text("CREATE SCHEMA toolbox"))
+        db.session.commit()
+
+    existing_table_names = set(inspector.get_table_names(schema="toolbox"))
+    missing_tables = [
+        table for table in toolbox_tables if table.name not in existing_table_names
+    ]
+
+    if not missing_tables:
+        print(f"Toolbox schema tables verified: {len(toolbox_tables)}.")
+        return
+
+    with db.engine.begin() as connection:
+        connection.execute(text("SET statement_timeout = 15000"))
+        for table in missing_tables:
+            toolbox_foreign_keys = [
+                constraint
+                for constraint in table.foreign_key_constraints
+                if constraint.referred_table.schema == "toolbox"
+            ]
+            connection.execute(
+                CreateTable(
+                    table,
+                    include_foreign_key_constraints=toolbox_foreign_keys,
+                )
+            )
+            for index in table.indexes:
+                connection.execute(CreateIndex(index))
+
+    print(f"Toolbox schema tables created: {len(missing_tables)}.")
+
+
 def create_app():
+    load_dotenv()
+
     app = Flask(__name__)
 
     # 2. Configuración de parámetros recomendados
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not configured in the environment.")
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'una_clave_secreta_muy_segura_dev_123')
 
     login_manager = LoginManager(app)
@@ -49,13 +103,9 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        # Importar modelos para que SQLAlchemy los reconozca al crear tablas
-        try:
-            from app import models
-            db.create_all()
-            print("Tablas satélites creadas en el esquema toolbox.")
-        except Exception as e:
-            print(f"Error creando tablas: {e}")
+        # Import models to register metadata before creating local application tables.
+        from app import models
+        create_toolbox_schema_tables()
 
 
     from app.main import main_bp
