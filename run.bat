@@ -3,4 +3,4 @@
 cd /d "%~dp0"
 
 :: 2. Ejecutar usando la ruta relativa a esta carpeta
-".\venv\Scripts\python.exe" app.py
+".\.venv\Scripts\python.exe" app.py
