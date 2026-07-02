@@ -1,13 +1,50 @@
 import os
+import logging
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, redirect, url_for
 from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
 from sqlalchemy.schema import CreateIndex, CreateTable
+from logging.handlers import RotatingFileHandler
 
 
 db = SQLAlchemy()
+
+
+def configure_production_logging(app):
+    if os.getenv("FLASK_ENV") != "production":
+        return
+
+    log_folder = os.path.abspath(os.path.join(app.root_path, "..", "log"))
+    os.makedirs(log_folder, exist_ok=True)
+
+    log_file = os.path.join(log_folder, "production.log")
+    has_file_handler = any(
+        isinstance(handler, RotatingFileHandler)
+        and getattr(handler, "baseFilename", None) == log_file
+        for handler in app.logger.handlers
+    )
+
+    if has_file_handler:
+        return
+
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s %(levelname)s [%(name)s] %(message)s "
+            "[in %(pathname)s:%(lineno)d]"
+        )
+    )
+
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
 
 
 def create_toolbox_schema_tables():
@@ -57,6 +94,7 @@ def create_app():
     load_dotenv()
 
     app = Flask(__name__)
+    configure_production_logging(app)
 
     # 2. Configuración de parámetros recomendados
     database_url = os.getenv('DATABASE_URL')
