@@ -1,4 +1,4 @@
-<tr id="row-{{ item.code_product }}" data-code="{{ item.code_product }}" data-expected="{{ item.amount }}">
+<tr id="row-{{ item.code_product }}" data-code="{{ item.code_product }}" data-expected="{{ item.amount }}" class="{% if counted_amount is defined %}row-counted-match{% endif %}">
     <td class="px-4 py-3 fw-semibold text-body">{{ item.code_product }}</td>
     <td class="px-4 py-3 small fw-semibold leading-relaxed">
         {{ product_description }}
@@ -10,13 +10,20 @@
         {{ item.amount }}
     </td>
     <td class="px-4 py-3 text-center" id="counted-{{ item.code_product }}">
-        --
+        {% if counted_amount is defined %}{{ "%.2f"|format(counted_amount) }}{% else %}--{% endif %}
     </td>
     <td class="px-4 py-3 text-center" id="status-{{ item.code_product }}">
+        {% if counted_amount is defined %}
+        <span
+            class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-success-subtle text-success-emphasis border border-success-subtle">
+            Contado
+        </span>
+        {% else %}
         <span
             class="d-inline-flex align-items-center px-2 py-0 rounded-pill small fw-semibold bg-body-tertiary text-body border border-secondary-subtle">
             Pendiente
         </span>
+        {% endif %}
     </td>
     <td class="px-4 py-3 text-center">
         <button type="button" 

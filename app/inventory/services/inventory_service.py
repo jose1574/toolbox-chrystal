@@ -1784,7 +1784,7 @@ def get_stock_for_product_store(product_code, store_code):
   ).first()
 
 
-def add_product_to_order(order_id, main_code):
+def add_product_to_order(order_id, main_code, amount):
   product = get_product_by_code(main_code)
   order = get_order_by_id(order_id)
   pu = get_main_unit_for_product(main_code)
@@ -1801,38 +1801,63 @@ def add_product_to_order(order_id, main_code):
   stock_amount = stock.stock if stock else 0.0
   if stock_amount <= 0:
     return product, order, pu, None, "NO_STOCK"
+  if amount is None or float(amount) <= 0:
+    return product, order, pu, None, "INVALID_AMOUNT"
+  if float(amount) > float(stock_amount):
+    return product, order, pu, {"stock_amount": float(stock_amount)}, "INSUFFICIENT_STOCK"
 
-  max_line_global = db.session.query(func.max(InventoryOperationDetail.line)).scalar()
-  next_line = (max_line_global or 0) + 1
-
-  new_detail = InventoryOperationDetail(
-    main_correlative=order_id,
-    line=next_line,
-    code_product=main_code,
-    description_product=product.description,
-    referenc=product.referenc,
-    mark=product.mark,
-    model=product.model,
-    amount=0.0,
-    store=order.store,
-    locations="00",
-    destination_store=order.destination_store,
-    destination_location="00",
-    unit=pu.correlative,
-    conversion_factor=0.0,
-    unit_type=0,
-    unitary_cost=0.0,
-    buy_tax=product.buy_tax,
-    aliquot=tax.aliquot if tax else 0.0,
-    total_cost=0.0,
-    total_tax=0.0,
-    total=0.0,
-    coin_code="02",
-    change_price=False,
+  db.session.execute(
+    text(
+      """
+      SELECT setval(sequence_name::regclass, max_line, true)
+      FROM (
+        SELECT pg_get_serial_sequence('public.inventory_operation_details', 'line') AS sequence_name,
+               COALESCE(MAX(line), 1) AS max_line
+          FROM public.inventory_operation_details
+      ) sequence_state
+      WHERE sequence_name IS NOT NULL
+      """
+    )
   )
 
-  db.session.add(new_detail)
-  db.session.commit()
+  db.session.execute(
+    text(
+      """
+      SELECT set_inventory_operation_details(:p_main_correlative, :p_line, :p_code_product,
+      :p_description_product, :p_referenc, :p_mark, :p_model, :p_amount, :p_store, :p_locations,
+      :p_destination_store, :p_destination_location, :p_unit, :p_conversion_factor, :p_unit_type,
+      :p_unitary_cost, :p_buy_tax, :p_aliquot, :p_total_cost, :p_total_tax, :p_total, :p_coin_code,
+      :p_change_price)
+      """
+    ),
+    {
+      "p_main_correlative": order_id,
+      "p_line": 0,
+      "p_code_product": main_code,
+      "p_description_product": product.description,
+      "p_referenc": product.referenc,
+      "p_mark": product.mark,
+      "p_model": product.model,
+      "p_amount": float(amount),
+      "p_store": order.store,
+      "p_locations": "00",
+      "p_destination_store": order.destination_store,
+      "p_destination_location": "00",
+      "p_unit": int(pu.correlative),
+      "p_conversion_factor": 0.0,
+      "p_unit_type": 0,
+      "p_unitary_cost": 0.0,
+      "p_buy_tax": product.buy_tax,
+      "p_aliquot": tax.aliquot if tax else 0.0,
+      "p_total_cost": 0.0,
+      "p_total_tax": 0.0,
+      "p_total": 0.0,
+      "p_coin_code": "02",
+      "p_change_price": False,
+    },
+  )
+
+  new_detail = find_detail_by_codes(order_id, [main_code])
   unit = get_unit_by_code(pu.unit)
   return product, order, pu, {"detail": new_detail, "unit": unit}, None
 

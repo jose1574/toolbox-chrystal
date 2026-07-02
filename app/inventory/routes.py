@@ -1370,6 +1370,7 @@ def search_product():
 def add_product_to_order():
     order_id = request.form.get("order_id", type=int)
     code_product = inventory_service.normalize_code(request.form.get("code_product"))
+    amount = request.form.get("amount", type=float)
 
 
     if not order_id or not code_product:
@@ -1384,9 +1385,32 @@ def add_product_to_order():
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
+    if amount is None or amount <= 0:
+        error_payload = {
+            "product-error": {
+                "message": "La cantidad a agregar debe ser mayor a cero.",
+                "focus_id": "add-product-amount",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     main_code = inventory_service.resolve_main_code(code_product)
 
     
+
+    open_package = inventory_service.get_open_package(order_id)
+    if not open_package:
+        error_payload = {
+            "product-error": {
+                "message": "Debe abrir un bulto antes de agregar productos a la orden.",
+                "focus_id": "code-product",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     # Verificar si ya existe
     detail = inventory_service.find_detail_by_codes(order_id, [main_code, code_product])
@@ -1403,9 +1427,21 @@ def add_product_to_order():
             "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    product, order, pu, created_payload, error_code = inventory_service.add_product_to_order(
-        order_id, main_code
-    )
+    try:
+        product, order, pu, created_payload, error_code = inventory_service.add_product_to_order(
+            order_id, main_code, amount
+        )
+    except Exception:
+        inventory_service.rollback_session()
+        error_payload = {
+            "product-error": {
+                "message": "Error al agregar producto. Intente nuevamente.",
+                "focus_id": "code-product",
+            }
+        }
+        return Response(
+            "", status=500, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
 
     if error_code == "PRODUCT_NOT_FOUND":
         error_payload = {
@@ -1443,7 +1479,18 @@ def add_product_to_order():
         error_payload = {
             "product-error": {
                 "message": "No hay stock disponible en el depósito de origen para este producto.",
-                "focus_id": "code-product",
+                "focus_id": "add-product-amount",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+    if error_code == "INSUFFICIENT_STOCK":
+        stock_amount = created_payload.get("stock_amount", 0.0) if created_payload else 0.0
+        error_payload = {
+            "product-error": {
+                "message": f"La cantidad no puede superar el stock disponible en origen ({stock_amount:.2f}).",
+                "focus_id": "add-product-amount",
             }
         }
         return Response(
@@ -1454,8 +1501,26 @@ def add_product_to_order():
             raise RuntimeError(error_code)
         unit = created_payload["unit"] if created_payload else None
         new_detail = created_payload["detail"] if created_payload else None
+        inventory_service.upsert_user_checking_progress(
+            order_id,
+            current_user.code,
+            main_code,
+            float(amount),
+        )
+        inventory_service.upsert_open_package_product(
+            order_id,
+            main_code,
+            float(amount),
+            current_user.code,
+        )
+        inventory_service.commit_session()
 
-        trigger_payload = {"product-added": {"code_product": main_code}}
+        trigger_payload = {
+            "product-added": {
+                "code_product": main_code,
+                "counted_amount": f"{float(amount):.2f}",
+            }
+        }
         return Response(
             render_template(
                 "partials/product_row.html",
@@ -1463,6 +1528,7 @@ def add_product_to_order():
                 product_description=product.description,
                 unit_description=unit.description if unit else "Desconocida",
                 order=order,
+                counted_amount=float(amount),
             ),
             headers={"HX-Trigger": json.dumps(trigger_payload)},
         )

@@ -471,12 +471,14 @@
         });
 
         document.body.addEventListener('product-added', (event) => {
-            const code = event.detail && event.detail.code_product;
+            const detail = event.detail || {};
+            const code = detail.code_product;
             if (code) {
-                ensureHiddenCountedInput(code, '');
+                ensureHiddenCountedInput(code, detail.counted_amount || '');
             }
             closeModal();
             focusSearchInput();
+            refreshOpenPackageProgress();
         });
 
         document.body.addEventListener('product-error', (event) => {
@@ -498,6 +500,12 @@
 
         document.body.addEventListener('htmx:afterSwap', (event) => {
             if (!event.target || (event.target.id !== 'product-modal-container' && event.target.id !== 'product-modal')) return;
+            const addProductAmountInput = document.getElementById('add-product-amount');
+            if (addProductAmountInput) {
+                addProductAmountInput.focus();
+                addProductAmountInput.select();
+                return;
+            }
             const countedInput = document.getElementById('counted-amount');
             if (countedInput) {
                 countedInput.focus();
