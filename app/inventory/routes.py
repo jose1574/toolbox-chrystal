@@ -1245,7 +1245,6 @@ def check_order():
             if normalized_code in persisted_counts:
                 counted_by_code[normalized_code] = float(persisted_counts[normalized_code])
 
-        # Abrir automaticamente un bulto inicial para evitar friccion al comenzar el chequeo.
         open_package = inventory_service.get_open_package(order_id)
         if not open_package:
             try:
@@ -1520,25 +1519,14 @@ def update_counted_amount():
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
-    # Validar stock en depósito de origen
-    stock = inventory_service.get_stock_for_product_store(detail.code_product, detail.store)
-    stock_amount = stock.stock if stock else 0.0
-    if counted_amount > stock_amount:
-        error_payload = {
-            "counted-error": {
-                "message": f"La cantidad contada no puede ser mayor que el stock en el depósito de origen ({stock_amount:.2f}).",
-                "focus_id": "counted-amount",
-            }
-        }
-        return Response(
-            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
-        )
-
     expected = float(detail.amount or 0)
     diff = float(counted_amount) - expected
     has_difference = abs(diff) > 1e-9
 
     try:
+        if float(counted_amount) > expected:
+            detail.amount = float(counted_amount)
+
         inventory_service.upsert_user_checking_progress(
             order_id,
             current_user.code,
@@ -1580,6 +1568,7 @@ def update_counted_amount():
         "counted-updated": {
             "code_product": code_product,
             "counted_amount": f"{counted_amount:.2f}",
+            "order_amount": f"{float(detail.amount or 0):.2f}",
             "status_html": status_html,
             "has_difference": has_difference,
         }
@@ -1643,11 +1632,27 @@ def close_package():
         "yes",
         "on",
     }
+    finalize_after_close = (request.form.get("finalize_after_close") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     if not order_id:
         return "Error: Datos incompletos.", 400
 
     try:
-        package = inventory_service.close_open_package_for_operation(order_id, current_user.code)
+        package = inventory_service.close_open_package_for_operation(
+            order_id,
+            current_user.code,
+            allow_empty=finalize_after_close,
+        )
+        next_package = None
+        if package and not finalize_after_close:
+            next_package = inventory_service.open_package_for_operation(
+                order_id,
+                current_user.code,
+            )
         inventory_service.commit_session()
     except ValueError as exc:
         inventory_service.rollback_session()
@@ -1663,18 +1668,34 @@ def close_package():
         )
 
     trigger_payload = {}
-    if not suppress_label_pdf:
+    if package and not suppress_label_pdf:
         trigger_payload["open-pdf"] = {
             "url": url_for("inventory.package_label_report", package_id=package.correlative)
         }
-    trigger_payload["package-closed"] = {
-        "order_id": order_id,
-        "package_id": package.correlative,
-        "package_number": package.package_number,
-    }
+    if package:
+        trigger_payload["package-closed"] = {
+            "order_id": order_id,
+            "package_id": package.correlative,
+            "package_number": package.package_number,
+        }
+    if next_package:
+        trigger_payload["package-opened"] = {
+            "order_id": order_id,
+            "package_id": next_package.correlative,
+            "package_number": next_package.package_number,
+        }
+    if finalize_after_close:
+        trigger_payload["package-finalize-ready"] = {"order_id": order_id}
+
+    if package:
+        message = f"Bulto cerrado: Bulto {package.package_number}. Etiqueta generada."
+        if next_package:
+            message += f" Bulto {next_package.package_number} abierto automáticamente."
+    else:
+        message = "Bulto abierto vacío descartado."
 
     return Response(
-        f'<div class="alert alert-success small mb-0">Bulto cerrado: Bulto {package.package_number}. Etiqueta generada.</div>',
+        f'<div class="alert alert-success small mb-0">{message}</div>',
         status=200,
         headers={"HX-Trigger": json.dumps(trigger_payload)},
     )
@@ -1751,7 +1772,8 @@ def package_progress():
         )
 
     return (
-        '<div class="alert alert-warning small mb-0 py-2" role="status" data-open-package="1">'
+        '<div class="alert alert-warning small mb-0 py-2" role="status" data-open-package="1" '
+        f'data-package-lines="{progress["product_lines"]}">'
         f"Bulto {progress['package_number']} abierto: "
         f"{progress['product_lines']} producto(s), "
         f"{progress['total_units']:.2f} unidad(es) embaladas."
@@ -1802,6 +1824,7 @@ def save_order_check():
     packing_validation = inventory_service.validate_packing_matches_counted(order_id)
 
     if packing_validation["mismatches"]:
+        inventory_service.rollback_session()
         preview = ", ".join(
             [
                 (

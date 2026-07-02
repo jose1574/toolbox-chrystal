@@ -2602,7 +2602,7 @@ def open_package_for_operation(operation_correlative, user_code):
   return package
 
 
-def close_open_package_for_operation(operation_correlative, user_code):
+def close_open_package_for_operation(operation_correlative, user_code, allow_empty=False):
   flow = get_inventory_operation_flow(operation_correlative)
   if not flow:
     raise ValueError("La orden no tiene flujo de traslado registrado.")
@@ -2613,6 +2613,10 @@ def close_open_package_for_operation(operation_correlative, user_code):
   if not package:
     raise ValueError("No hay un bulto abierto para cerrar.")
   if not package.package_details:
+    if allow_empty:
+      db.session.delete(package)
+      db.session.flush()
+      return None
     raise ValueError("No se puede cerrar un bulto vacio.")
 
   package.status = "CLOSED"

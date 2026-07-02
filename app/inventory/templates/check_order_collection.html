@@ -151,7 +151,7 @@
                     <td class="px-4 py-3 text-center text-body-secondary d-none d-sm-table-cell">
                         {{ item.unit_description }}
                     </td>
-                    <td class="px-4 py-3 text-center fw-bold text-primary bg-primary-subtle">
+                    <td class="px-4 py-3 text-center fw-bold text-primary bg-primary-subtle" id="order-amount-{{ item.code_product }}">
                         {{ item.amount }}
                     </td>
                     <td class="px-4 py-3 text-center" id="counted-{{ item.code_product }}">
@@ -172,7 +172,7 @@
                         <button type="button" hx-post="{{ url_for('inventory.delete_product_from_order') }}"
                             hx-target="[id='row-{{ item.code_product }}']" hx-swap="delete" hx-include="closest tr"
                             hx-confirm="¿Estás seguro de que quieres eliminar este producto de la orden?"
-                            hx-on:htmx:afterRequest="const hidden=document.getElementById('hidden-counted-{{ item.code_product }}'); if(hidden){hidden.remove();} checkAllCounted()"
+                            hx-on:htmx:afterRequest="const hidden=document.getElementById('hidden-counted-{{ item.code_product }}'); if(hidden){hidden.remove();}"
                             class="btn btn-sm btn-outline-danger fw-bold py-1 px-2">
                             Quitar
                         </button>
@@ -207,7 +207,6 @@
     {% endif %}
 
     <script>
-        let autoSubmitted = false;
         let waitingForLabelThenReport = false;
         let waitingForReport = false;
         let shouldRedirectAfterReport = false;
@@ -249,13 +248,15 @@
             }
 
             const emitLabel = options.emitLabel !== false;
+            const finalizeAfterClose = options.finalizeAfterClose === true;
 
             htmx.ajax('POST', "{{ url_for('inventory.close_package') }}", {
                 target: '#package-feedback',
                 swap: 'innerHTML',
                 values: {
                     order_id: orderId,
-                    suppress_label_pdf: emitLabel ? '0' : '1'
+                    suppress_label_pdf: emitLabel ? '0' : '1',
+                    finalize_after_close: finalizeAfterClose ? '1' : '0'
                 }
             });
         }
@@ -271,7 +272,7 @@
             if (hasOpenPackageInProgressPanel()) {
                 waitingForLabelThenReport = true;
                 waitingForReport = false;
-                closeOpenPackageInline(orderId);
+                closeOpenPackageInline(orderId, { finalizeAfterClose: true });
                 return;
             }
 
@@ -289,18 +290,6 @@
                 const status = row.querySelector('[id^="status-"]');
                 return status && !status.textContent.trim().includes('Contado');
             });
-        }
-
-        function checkAllCounted() {
-            const rows = getProductRows();
-            if (!rows.length) return;
-
-            if (!hasPendingRows(rows) && !autoSubmitted) {
-                const confirmed = confirm('Se contaron todos los productos. ¿Desea confirmar el chequeo de recolección?');
-                if (!confirmed) return;
-                autoSubmitted = true;
-                submitCheckOrderEnsuringLastLabel();
-            }
         }
 
         function generateOrder() {
@@ -337,27 +326,6 @@
                 searchInput.focus();
                 searchInput.select();
             }
-        }
-
-        function validateCountedAmount() {
-            const countedInput = document.getElementById('counted-amount');
-            const stockInput = document.getElementById('stock-amount');
-            if (!countedInput || !stockInput) {
-                return true;
-            }
-            const counted = parseFloat(countedInput.value || '0');
-            const stock = parseFloat(stockInput.value || '0');
-            if (counted > stock) {
-                alert(
-                    'La cantidad contada no puede ser mayor que el stock en el depósito de origen (' +
-                    stock.toFixed(2) +
-                    ').'
-                );
-                countedInput.focus();
-                countedInput.select();
-                return false;
-            }
-            return true;
         }
 
         function ensureHiddenCountedInput(codeProduct, value) {
@@ -463,12 +431,18 @@
                 const hasDiff = !Number.isNaN(expected) && !Number.isNaN(countedNum) && countedNum !== expected;
                 row.classList.remove('row-counted-match', 'row-counted-diff');
                 row.classList.add(hasDiff ? 'row-counted-diff' : 'row-counted-match');
+                if (detail.order_amount) {
+                    row.dataset.expected = detail.order_amount;
+                }
+            }
+            const orderAmountCell = document.getElementById('order-amount-' + code);
+            if (orderAmountCell && detail.order_amount) {
+                orderAmountCell.textContent = detail.order_amount;
             }
             ensureHiddenCountedInput(code, detail.counted_amount);
             closeModal();
             focusSearchInput();
             refreshOpenPackageProgress();
-            checkAllCounted();
         });
 
         document.body.addEventListener('counted-error', (event) => {
@@ -557,9 +531,6 @@
                 }
 
                 if (waitingForLabelThenReport) {
-                    waitingForLabelThenReport = false;
-                    waitingForReport = true;
-                    submitCheckOrder();
                     return;
                 }
 
@@ -571,11 +542,19 @@
                     }
                 }
             });
+
+            document.addEventListener('package-finalize-ready', () => {
+                if (!waitingForLabelThenReport) {
+                    return;
+                }
+                waitingForLabelThenReport = false;
+                waitingForReport = true;
+                submitCheckOrder();
+            });
         }
 
         refreshOpenPackageProgress();
         syncPackageToggleButton();
-        checkAllCounted();
     </script>
     <script src="{{ url_for('inventory.static', filename='js/check_order_collection_tour.js') }}"></script>
 </div>
