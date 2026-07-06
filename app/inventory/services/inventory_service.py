@@ -1386,6 +1386,16 @@ def create_order_collection_operation(
   if not normalized_items:
     raise ValueError("No se han seleccionado productos.")
 
+  open_product_codes = get_open_collection_product_codes(
+    store_origin, store_dst, normalized_items.keys()
+  )
+  if open_product_codes:
+    codes_text = ", ".join(sorted(open_product_codes))
+    raise ValueError(
+      "Los siguientes productos ya estan en una orden de recoleccion emitida "
+      f"o chequeada: {codes_text}."
+    )
+
   operation_description = (
     f"Orden de recoleccion emitida del deposito de origen {store_origin_obj.description} "
     f"a destino {store_dst_obj.description}"
@@ -1502,6 +1512,47 @@ def get_stores_ordered_by_description():
   return Store.query.order_by(Store.description.asc()).all()
 
 
+def build_open_collection_products_query(store_origin, store_dst, status_codes=None):
+  statuses = status_codes or [FLOW_RECOLLECTION_ISSUED, FLOW_RECOLLECTION_CHECKED]
+
+  return (
+    select(
+      func.upper(func.trim(InventoryOperationDetail.code_product)).label("code_product")
+    )
+    .distinct()
+    .join(
+      InventoryOperation,
+      InventoryOperation.correlative == InventoryOperationDetail.main_correlative,
+    )
+    .join(
+      InventoryOperationFlow,
+      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
+    )
+    .where(
+      InventoryOperation.operation_type == "TRANSFER",
+      func.upper(func.trim(InventoryOperation.store)) == normalize_code(store_origin),
+      func.upper(func.trim(InventoryOperation.destination_store)) == normalize_code(store_dst),
+      InventoryOperationDetail.code_product.isnot(None),
+      InventoryOperationFlow.current_status.in_(statuses),
+    )
+  )
+
+
+def get_open_collection_product_codes(store_origin, store_dst, product_codes=None):
+  stmt = build_open_collection_products_query(store_origin, store_dst)
+
+  if product_codes is not None:
+    normalized_codes = {normalize_code(code) for code in product_codes if code}
+    if not normalized_codes:
+      return set()
+
+    stmt = stmt.where(
+      func.upper(func.trim(InventoryOperationDetail.code_product)).in_(normalized_codes)
+    )
+
+  return {row.code_product for row in db.session.execute(stmt).all()}
+
+
 def get_auto_order_collection_data(store_origin, store_dst):
   stores = get_all_stores()
   store_origin_obj = get_store_by_code(store_origin) if store_origin else None
@@ -1537,28 +1588,12 @@ def get_auto_order_collection_data(store_origin, store_dst):
     .subquery()
   )
 
-  checked_embarked_products = (
-    select(InventoryOperationPackageDetail.product_code)
-    .distinct()
-    .join(
-      InventoryOperationPackage,
-      InventoryOperationPackage.correlative == InventoryOperationPackageDetail.package_correlative,
-    )
-    .join(
-      InventoryOperation,
-      InventoryOperation.correlative == InventoryOperationPackage.operation_correlative,
-    )
-    .join(
-      InventoryOperationFlow,
-      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
-    )
-    .where(
-      InventoryOperation.store == store_origin,
-      InventoryOperation.destination_store == store_dst,
-      InventoryOperationFlow.current_status == FLOW_RECOLLECTION_CHECKED,
-    )
-    .subquery()
-  )
+  issued_collection_products = build_open_collection_products_query(
+    store_origin, store_dst, [FLOW_RECOLLECTION_ISSUED]
+  ).subquery()
+  checked_collection_products = build_open_collection_products_query(
+    store_origin, store_dst, [FLOW_RECOLLECTION_CHECKED]
+  ).subquery()
 
   pf = aliased(ProductsFailure)
   m = aliased(Mark)
@@ -1570,6 +1605,7 @@ def get_auto_order_collection_data(store_origin, store_dst):
   to_transfer = func.least(
     func.coalesce(stock_orig_totals.c.stock_total, 0), func.greatest(needed, 0)
   ).label("to_transfer")
+  normalized_product_code = func.upper(func.trim(Product.code))
 
   stmt = (
     select(
@@ -1585,6 +1621,12 @@ def get_auto_order_collection_data(store_origin, store_dst):
       func.coalesce(stock_dst_totals.c.stock_total, 0).label("stock_destination"),
       u.description.label("unit_description"),
       to_transfer,
+      normalized_product_code.in_(
+        select(issued_collection_products.c.code_product)
+      ).label("in_issued_order"),
+      normalized_product_code.in_(
+        select(checked_collection_products.c.code_product)
+      ).label("in_checked_order"),
     )
     .join(stock_orig_totals, Product.code == stock_orig_totals.c.product_code)
     .outerjoin(stock_dst_totals, Product.code == stock_dst_totals.c.product_code)
@@ -1597,7 +1639,6 @@ def get_auto_order_collection_data(store_origin, store_dst):
       (func.coalesce(stock_orig_totals.c.stock_total, 0) > 0)
       & (func.coalesce(stock_dst_totals.c.stock_total, 0) < pf.minimal_stock)
       & (needed > 0)
-      & (~Product.code.in_(select(checked_embarked_products.c.product_code)))
     )
   )
 
