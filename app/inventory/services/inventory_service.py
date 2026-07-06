@@ -2155,6 +2155,71 @@ def build_product_params_payload(store_code, code_product):
   return payload, main_code
 
 
+def search_products_for_product_params(store_code, query, page=1, per_page=10):
+  query = (query or "").strip()
+
+  if not store_code:
+    return [], 0, 1, 1
+
+  page = max(page or 1, 1)
+  per_page = max(min(per_page or 10, 50), 1)
+
+  stock_totals = (
+    select(
+      ProductsStock.product_code.label("product_code"),
+      func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+    )
+    .where(ProductsStock.store == store_code)
+    .group_by(ProductsStock.product_code)
+    .subquery()
+  )
+
+  filters = []
+  if query:
+    if "*" in query:
+      wildcard_pattern = query.replace("\\", "\\\\")
+      wildcard_pattern = wildcard_pattern.replace("%", "\\%")
+      wildcard_pattern = wildcard_pattern.replace("_", "\\_")
+      wildcard_pattern = f"%{wildcard_pattern.replace('*', '%')}%"
+      while "%%" in wildcard_pattern:
+        wildcard_pattern = wildcard_pattern.replace("%%", "%")
+      filters.append(Product.description.ilike(wildcard_pattern, escape="\\"))
+    else:
+      search_value = f"%{query}%"
+      filters.append(
+        (Product.code.ilike(search_value))
+        | (Product.description.ilike(search_value))
+        | (Product.referenc.ilike(search_value))
+        | (Product.mark.ilike(search_value))
+        | (Product.model.ilike(search_value))
+      )
+
+  base_stmt = (
+    select(
+      Product.code,
+      Product.description,
+      Product.referenc,
+      Product.mark.label("mark_code"),
+      Product.model,
+      Mark.description.label("mark_description"),
+      func.coalesce(stock_totals.c.stock_total, 0).label("stock"),
+    )
+    .outerjoin(Mark, Mark.code == Product.mark)
+    .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .where(*filters)
+    .order_by(Product.code.asc())
+  )
+
+  count_stmt = select(func.count()).select_from(base_stmt.alias("product_params_catalog"))
+  total = db.session.execute(count_stmt).scalar() or 0
+  total_pages = max((total + per_page - 1) // per_page, 1)
+  page = min(page, total_pages)
+  products = db.session.execute(
+    base_stmt.limit(per_page).offset((page - 1) * per_page)
+  ).all()
+  return products, total, total_pages, page
+
+
 def upsert_product_params(store_code, code_product, minimal_stock, maximum_stock, location):
   main_code = resolve_main_code_by_other_code(code_product)
   pf = ProductsFailure.query.filter_by(

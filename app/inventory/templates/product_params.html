@@ -98,6 +98,7 @@
     <div class="mb-4">
       <h2 class="h5 fw-semibold text-body mb-3">Buscar Producto</h2>
       <form
+        id="product-params-search-form"
         action="{{ url_for('inventory.product_params') }}"
         method="post"
         class="row g-2 align-items-end"
@@ -125,10 +126,139 @@
         </div>
 
         <div class="col-12 col-md-auto">
-          <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#product-params-catalog-modal"
+            hx-get="{{ url_for('inventory.product_params_catalog') }}"
+            hx-target="#product-params-catalog-content"
+            hx-swap="innerHTML"
+            hx-vals='{{ {"store_code": selected_store.code}|tojson }}'
+          >Catálogo</button>
         </div>
       </form>
     </div>
+
+    <div
+      class="modal fade"
+      id="product-params-catalog-modal"
+      tabindex="-1"
+      aria-labelledby="product-params-catalog-title"
+      aria-hidden="true"
+      data-bs-keyboard="true"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="product-params-catalog-title">
+              Catálogo de Productos
+            </h2>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+          <div class="modal-body" id="product-params-catalog-content">
+            <div class="text-center small text-body-secondary py-4">
+              Cargando productos...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function focusProductParamsCatalogInput() {
+        const catalogInput = document.getElementById("product-params-catalog-query");
+        if (catalogInput) {
+          catalogInput.focus();
+          catalogInput.select();
+        }
+      }
+
+      function getProductParamButtons() {
+        return Array.from(document.querySelectorAll("[data-product-param-select]"));
+      }
+
+      function setActiveProductParamButton(button) {
+        getProductParamButtons().forEach(function (productButton) {
+          productButton.classList.toggle("active", productButton === button);
+          productButton.setAttribute("aria-selected", productButton === button ? "true" : "false");
+        });
+      }
+
+      document.addEventListener("shown.bs.modal", function (event) {
+        if (event.target.id === "product-params-catalog-modal") {
+          focusProductParamsCatalogInput();
+        }
+      });
+
+      document.addEventListener("htmx:afterSwap", function (event) {
+        if (event.detail.target.id === "product-params-catalog-content") {
+          focusProductParamsCatalogInput();
+        }
+      });
+
+      document.addEventListener("click", function (event) {
+        const selectButton = event.target.closest("[data-product-param-select]");
+        if (!selectButton) {
+          return;
+        }
+
+        const productInput = document.getElementById("code-product");
+        const searchForm = document.getElementById("product-params-search-form");
+        const catalogModal = document.getElementById("product-params-catalog-modal");
+
+        productInput.value = selectButton.dataset.productCode;
+        bootstrap.Modal.getOrCreateInstance(catalogModal).hide();
+        searchForm.requestSubmit();
+      });
+
+      document.addEventListener("focusin", function (event) {
+        const selectButton = event.target.closest("[data-product-param-select]");
+        if (selectButton) {
+          setActiveProductParamButton(selectButton);
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        const catalogModal = document.getElementById("product-params-catalog-modal");
+        if (!catalogModal || !catalogModal.classList.contains("show")) {
+          return;
+        }
+
+        const catalogInput = document.getElementById("product-params-catalog-query");
+        const productButtons = getProductParamButtons();
+        const isProductButton = event.target.closest("[data-product-param-select]");
+        const isCatalogInput = event.target === catalogInput;
+
+        if (!isCatalogInput && !isProductButton) {
+          return;
+        }
+
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          if (!productButtons.length) {
+            return;
+          }
+
+          event.preventDefault();
+          const focusedIndex = productButtons.indexOf(document.activeElement);
+          let nextIndex = event.key === "ArrowDown" ? 0 : productButtons.length - 1;
+
+          if (focusedIndex >= 0) {
+            nextIndex = event.key === "ArrowDown"
+              ? Math.min(focusedIndex + 1, productButtons.length - 1)
+              : Math.max(focusedIndex - 1, 0);
+          }
+
+          productButtons[nextIndex].focus();
+          setActiveProductParamButton(productButtons[nextIndex]);
+        }
+      });
+    </script>
 
     {% if product_params %}
     <div class="border-top border-secondary-subtle pt-4 mt-4">

@@ -2435,6 +2435,35 @@ def product_params():
     return render_template("product_params.html", stores=stores, selected_store=store_code)
 
 
+@inventory_bp.route("/product_params/catalog", methods=["GET"])
+@login_required
+def product_params_catalog():
+    store_code = request.args.get("store_code")
+    query = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
+
+    products, total_products, total_pages, current_page = inventory_service.search_products_for_product_params(
+        store_code=store_code,
+        query=query,
+        page=page,
+        per_page=10,
+    )
+
+    template_name = "partials/product_params_catalog.html"
+    if request.headers.get("HX-Target") == "product-params-catalog-results":
+        template_name = "partials/product_params_catalog_results.html"
+
+    return render_template(
+        template_name,
+        products=products,
+        total_products=total_products,
+        total_pages=total_pages,
+        page=current_page,
+        query=query,
+        store_code=store_code,
+    )
+
+
 @inventory_bp.route("/product_params/save", methods=["POST"])
 @login_required
 def save_product_params():
