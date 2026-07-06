@@ -2355,6 +2355,28 @@ def update_count(operation_id, product_code=None, destination_store=None):
             "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
         )
 
+    if minimal_stock < 0 or maximum_stock < 0:
+        error_payload = {
+            "counted-error": {
+                "message": "Los parámetros de mínimo y máximo no pueden ser negativos.",
+                "focus_id": "minimal_stock",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    if minimal_stock > maximum_stock:
+        error_payload = {
+            "counted-error": {
+                "message": "El parámetro mínimo no puede ser mayor que el parámetro máximo.",
+                "focus_id": "minimal_stock",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
     payload, error_code = inventory_service.apply_transfer_reception_count(
         operation_id=operation_id,
         product_code=product_code,

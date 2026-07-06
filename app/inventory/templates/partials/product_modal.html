@@ -20,7 +20,7 @@
             <p><span class="fw-semibold">Unidad:</span> {{ detail.products_unit.unit1.description if
                 detail.products_unit and detail.products_unit.unit1 else "" }}</p>
         </div>
-        <form class="mt-4"
+        <form class="mt-4" id="transfer-product-count-form"
             hx-post="{{ url_for('inventory.update_count', operation_id=operation_id) }}"
             hx-target="#products-table" hx-swap="none"
             hx-on:htmx:after-request="if(event.detail.successful){const search=document.getElementById('product_code'); if(search){search.value=''; search.focus();} document.getElementById('productModal').remove();}">
@@ -29,16 +29,19 @@
             <input type="hidden" name="destination_store" value="{{ destination_store }}">
 
             <label for="minimal_stock" class="form-label small fw-semibold text-body-secondary">Existencia Minima</label>
-            <input type="number" id="minimal_stock" name="minimal_stock" step="0.01" value="{{ product_failure.minimal_stock if product_failure else 0 }}"
+            <input type="number" id="minimal_stock" name="minimal_stock" step="0.01" min="0" value="{{ product_failure.minimal_stock if product_failure else 0 }}"
                 class="form-control form-control-sm mt-1"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('maximum_stock').focus();}"
                 required>
 
             <label for="maximum_stock" class="form-label small fw-semibold text-body-secondary mt-2">Existencia Máxima</label>
-            <input type="number" id="maximum_stock" name="maximum_stock" step="0.01" value="{{ product_failure.maximum_stock if product_failure else 0 }}"
+            <input type="number" id="maximum_stock" name="maximum_stock" step="0.01" min="0" value="{{ product_failure.maximum_stock if product_failure else 0 }}"
                 class="form-control form-control-sm mt-1"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('countedAmount').focus();}"
                 required>
+            <div id="stock-range-error" class="invalid-feedback">
+                La existencia mínima no puede ser mayor que la existencia máxima.
+            </div>
 
 
 
@@ -76,4 +79,41 @@
             minStockInput.select();
         }
     }, 100);
+
+    (function() {
+        const form = document.getElementById('transfer-product-count-form');
+        const minStockInput = document.getElementById('minimal_stock');
+        const maxStockInput = document.getElementById('maximum_stock');
+
+        function validateStockRange() {
+            if (!minStockInput || !maxStockInput) return true;
+
+            const minStock = parseFloat(minStockInput.value || '0');
+            const maxStock = parseFloat(maxStockInput.value || '0');
+            const isInvalid = minStock > maxStock;
+
+            minStockInput.setCustomValidity(isInvalid ? 'La existencia mínima no puede ser mayor que la existencia máxima.' : '');
+            maxStockInput.setCustomValidity(isInvalid ? 'La existencia máxima debe ser mayor o igual que la existencia mínima.' : '');
+            minStockInput.classList.toggle('is-invalid', isInvalid);
+            maxStockInput.classList.toggle('is-invalid', isInvalid);
+
+            return !isInvalid;
+        }
+
+        if (minStockInput && maxStockInput) {
+            minStockInput.addEventListener('input', validateStockRange);
+            maxStockInput.addEventListener('input', validateStockRange);
+            validateStockRange();
+        }
+
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!validateStockRange()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    minStockInput.reportValidity();
+                }
+            });
+        }
+    })();
 </script>
