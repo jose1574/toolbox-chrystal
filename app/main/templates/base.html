@@ -21,7 +21,8 @@
         }
 
         @media (max-width: 575.98px) {
-            .inventory-trigger {
+            .inventory-trigger,
+            .shopping-trigger {
                 min-height: 2.75rem;
                 padding-top: 0.55rem !important;
                 padding-bottom: 0.55rem !important;
@@ -32,20 +33,41 @@
                 border-radius: 0.65rem !important;
             }
 
-            .inventory-trigger .sidebar-text {
+            .inventory-trigger .sidebar-text,
+            .shopping-trigger .sidebar-text {
                 white-space: normal !important;
                 line-height: 1.2;
                 font-size: 0.95rem;
             }
 
-            .inventory-trigger .sidebar-arrow-icon {
+            .inventory-trigger .sidebar-arrow-icon,
+            .shopping-trigger .sidebar-arrow-icon {
                 margin-left: auto;
             }
 
-            #dropdown-inventory {
+            #dropdown-inventory,
+            #dropdown-shopping {
                 margin-left: 0 !important;
                 padding-left: 0.6rem !important;
             }
+        }
+
+        .sidebar-item,
+        .sidebar-subitem {
+            transition: background-color .18s ease, color .18s ease;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item:focus-visible,
+        .sidebar-dropdown-trigger[aria-expanded="true"],
+        .sidebar-subitem:hover,
+        .sidebar-subitem:focus-visible {
+            background-color: rgba(var(--bs-warning-rgb), 0.14) !important;
+            color: var(--bs-warning-text-emphasis) !important;
+        }
+
+        #dropdown-shopping {
+            border-color: rgba(var(--bs-warning-rgb), 0.45) !important;
         }
 
         #app-content {
@@ -202,6 +224,31 @@
                                     <path fill-rule="evenodd" d="M2 4a2 2 0 012-2h5.586a2 2 0 011.414.586l5.414 5.414a2 2 0 010 2.828l-4.414 4.414a2 2 0 01-2.828 0L3.172 8.828A2 2 0 012.586 7.414V4zm4 1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Etiquetas de Productos</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li>
+                    <button type="button" class="sidebar-item sidebar-dropdown-trigger shopping-trigger" data-dropdown="dropdown-shopping" aria-expanded="false" aria-controls="dropdown-shopping">
+                        <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm1 4a1 1 0 012 0 1 1 0 102 0 1 1 0 112 0 3 3 0 11-6 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Compras</span>
+                        <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <ul id="dropdown-shopping" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
+                        <li>
+                            <a href="#" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-warning" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm2 5a1 1 0 011 1v1h2V8a1 1 0 112 0v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H6a1 1 0 110-2h1V8a1 1 0 011-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="d-flex flex-column lh-sm">
+                                    <span>Orden de compra</span>
+                                    <span class="small text-body-secondary">Captura manual</span>
+                                </span>
                             </a>
                         </li>
                     </ul>
