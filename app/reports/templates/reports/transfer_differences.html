@@ -18,15 +18,15 @@
                 </div>
             </div>
 
-            <form method="get" action="{{ url_for('reports.transfer_differences') }}" class="mt-4">
+            <form method="get" action="{{ url_for('reports.transfer_differences') }}" class="mt-4" id="transfer-differences-filters-form">
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-lg-3">
                         <label for="q" class="form-label small fw-semibold mb-1">Buscar</label>
-                        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Correlativo, documento, depósito..." class="form-control form-control-sm">
+                        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Correlativo, documento, depósito..." class="form-control form-control-sm" data-auto-submit-on-change>
                     </div>
                     <div class="col-12 col-lg-2">
                         <label for="resolution_status" class="form-label small fw-semibold mb-1">Resolución</label>
-                        <select id="resolution_status" name="resolution_status" class="form-select form-select-sm">
+                        <select id="resolution_status" name="resolution_status" class="form-select form-select-sm" data-auto-submit-filter>
                             <option value="" {% if not filters.resolution_status %}selected{% endif %}>Todas</option>
                             <option value="PENDING" {% if filters.resolution_status == 'PENDING' %}selected{% endif %}>Pendientes</option>
                             <option value="RESOLVED" {% if filters.resolution_status == 'RESOLVED' %}selected{% endif %}>Resueltas</option>
@@ -34,15 +34,14 @@
                     </div>
                     <div class="col-12 col-lg-3">
                         <label for="date_from" class="form-label small fw-semibold mb-1">Desde</label>
-                        <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
+                        <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm" data-auto-submit-filter>
                     </div>
                     <div class="col-12 col-lg-4 d-flex gap-2 justify-content-lg-end">
                         <div class="flex-grow-1 flex-lg-grow-0" style="min-width: 140px;">
                             <label for="date_to" class="form-label small fw-semibold mb-1">Hasta</label>
-                            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm">
+                            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm" data-auto-submit-filter>
                         </div>
                         <div class="d-flex align-items-end gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm px-3">Filtrar</button>
                             <a href="{{ url_for('reports.transfer_differences') }}" class="btn btn-outline-secondary btn-sm px-3">Limpiar</a>
                         </div>
                     </div>
@@ -204,4 +203,25 @@
 </div>
 {% endif %}
 {% endfor %}
+<script>
+    (function () {
+        const filtersForm = document.getElementById('transfer-differences-filters-form');
+        if (!filtersForm) return;
+
+        filtersForm.querySelectorAll('[data-auto-submit-filter]').forEach(function (field) {
+            field.addEventListener('change', function () {
+                filtersForm.submit();
+            });
+        });
+
+        filtersForm.querySelectorAll('[data-auto-submit-on-change]').forEach(function (field) {
+            const initialValue = field.value;
+            field.addEventListener('change', function () {
+                if (field.value !== initialValue) {
+                    filtersForm.submit();
+                }
+            });
+        });
+    })();
+</script>
 {% endblock %}
