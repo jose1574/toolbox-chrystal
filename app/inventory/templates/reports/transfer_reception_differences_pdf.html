@@ -140,7 +140,18 @@
                     <div><span class="label">Generado por:</span> {{ user.description if user else 'Sistema' }}</div>
                     <div><span class="label">Generado:</span> {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</div>
                     <div><span class="label">Total diferencias:</span> {{ differences|length }}</div>
+                    <div><span class="label">Pendientes:</span> {{ differences|selectattr('resolution_status', 'ne', 'RESOLVED')|list|length }}</div>
                 </td>
+            </tr>
+        </table>
+
+        <div class="section-title">Usuarios participantes</div>
+        <table class="summary-table">
+            <tr>
+                <td style="width: 25%;"><span class="label">Generó la orden:</span><br>{{ participants.generated_user_name or '-' }}</td>
+                <td style="width: 25%;"><span class="label">Chequeó la orden:</span><br>{{ participants.checking_user_name or '-' }}</td>
+                <td style="width: 25%;"><span class="label">Trasladó:</span><br>{{ participants.in_transit_user_name or '-' }}</td>
+                <td style="width: 25%;"><span class="label">Recibió:</span><br>{{ participants.receiving_user_name or '-' }}</td>
             </tr>
         </table>
 
@@ -155,6 +166,7 @@
                     <th class="text-end" style="width: 14%;">Contada</th>
                     <th class="text-end" style="width: 14%;">Diferencia</th>
                     <th style="width: 18%;">Usuario</th>
+                    <th style="width: 14%;">Resolucion</th>
                 </tr>
             </thead>
             <tbody>
@@ -167,10 +179,43 @@
                     <td class="text-end">{{ '%.2f'|format(diff.counted_amount or 0) }}</td>
                     <td class="text-end {% if diff.difference < 0 %}negative{% else %}positive{% endif %}">{{ '%.2f'|format(diff.difference or 0) }}</td>
                     <td>{{ diff.user.description if diff.user else diff.user_code }}</td>
+                    <td>
+                        <div>{{ 'Resuelto' if diff.resolution_status == 'RESOLVED' else 'Pendiente' }}</div>
+                        <div>{{ diff.resolved_at.strftime('%d/%m/%Y %H:%M') if diff.resolved_at else '-' }}</div>
+                        <div>{{ diff.resolved_user_code or '-' }}</div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="empty">No se registraron diferencias para este traslado.</td>
+                    <td colspan="8" class="empty">No se registraron diferencias para este traslado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-title">Conclusiones registradas</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Linea</th>
+                    <th style="width: 18%;">Estado</th>
+                    <th>Leyenda</th>
+                    <th style="width: 18%;">Fecha error</th>
+                    <th style="width: 18%;">Fecha resolucion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for diff in differences %}
+                <tr>
+                    <td class="text-center">{{ diff.detail_line }}</td>
+                    <td>{{ 'Resuelto' if diff.resolution_status == 'RESOLVED' else 'Pendiente' }}</td>
+                    <td>{{ diff.resolution_note or '-' }}</td>
+                    <td>{{ diff.detected_at.strftime('%d/%m/%Y %H:%M') if diff.detected_at else '-' }}</td>
+                    <td>{{ diff.resolved_at.strftime('%d/%m/%Y %H:%M') if diff.resolved_at else '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty">No hay conclusiones registradas.</td>
                 </tr>
                 {% endfor %}
             </tbody>

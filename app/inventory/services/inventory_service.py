@@ -772,6 +772,8 @@ FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
 FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"
 FLOW_IN_TRANSIT = "IN_TRANSIT"
 FLOW_RECEIVED = "RECEIVED"
+DIFFERENCE_PENDING = "PENDING"
+DIFFERENCE_RESOLVED = "RESOLVED"
 
 TRANSFER_STATUS_LABELS = {
     FLOW_RECOLLECTION_ISSUED: "Orden emitida",
@@ -878,14 +880,20 @@ def build_transfer_traceability_filters(status: str = "", date_from: str = "", d
     }
 
 
-def build_transfer_differences_filters(date_from: str = "", date_to: str = "", q: str = ""):
+def build_transfer_differences_filters(
+  date_from: str = "", date_to: str = "", q: str = "", resolution_status: str = ""
+):
     date_from_value = parse_date_filter((date_from or "").strip())
     date_to_value = parse_date_filter((date_to or "").strip())
     q_val = (q or "").strip()
+    resolution_status_value = (resolution_status or "").strip().upper()
+    if resolution_status_value not in [DIFFERENCE_PENDING, DIFFERENCE_RESOLVED]:
+      resolution_status_value = ""
     return {
         "date_from": (date_from or "").strip(),
         "date_to": (date_to or "").strip(),
         "q": q_val,
+        "resolution_status": resolution_status_value,
         "date_from_value": date_from_value,
         "date_to_value": date_to_value,
     }
@@ -903,11 +911,26 @@ def get_transfer_differences_rows(filters: dict):
          io.destination_store,
          destination_store.description AS destination_store_description,
          COALESCE(f.current_status, 'SIN_FLUJO') AS current_status,
+         MAX(COALESCE(issued_user.description, order_user.description, f.recollection_issued_user, io.user_code)) AS generated_user_name,
+         MAX(COALESCE(checking_user.description, f.checking_user)) AS checking_user_name,
+         MAX(COALESCE(transit_user.description, f.in_transit_user)) AS in_transit_user_name,
+         MAX(COALESCE(receiving_user.description, f.receiving_user)) AS receiving_user_name,
          COUNT(d.correlative) AS difference_lines,
          SUM(d.original_amount) AS expected_total,
          SUM(d.counted_amount) AS counted_total,
          SUM(d.difference) AS difference_total,
-         MAX(COALESCE(d.updated_at, d.detected_at)) AS last_difference_at
+         SUM(CASE WHEN d.resolution_status = 'RESOLVED' THEN 1 ELSE 0 END) AS resolved_lines,
+         SUM(CASE WHEN d.resolution_status = 'RESOLVED' THEN 0 ELSE 1 END) AS pending_lines,
+         CASE
+           WHEN SUM(CASE WHEN d.resolution_status = 'RESOLVED' THEN 0 ELSE 1 END) = 0 THEN 'RESOLVED'
+           ELSE 'PENDING'
+         END AS resolution_status,
+         MIN(d.detected_at) AS first_detected_at,
+         MAX(COALESCE(d.updated_at, d.detected_at)) AS last_difference_at,
+         MAX(d.resolved_at) AS last_resolved_at,
+         MAX(d.resolved_user_code) AS resolved_user_code,
+         MAX(resolved_user.description) AS resolved_user_name,
+         MAX(d.resolution_note) AS resolution_note
       FROM toolbox.inventory_operation_reception_differences d
       JOIN public.inventory_operation io
       ON io.correlative = d.operation_correlative
@@ -917,6 +940,18 @@ def get_transfer_differences_rows(filters: dict):
       ON origin_store.code = io.store
       LEFT JOIN public.store destination_store
       ON destination_store.code = io.destination_store
+      LEFT JOIN public.users order_user
+      ON order_user.code = io.user_code
+      LEFT JOIN public.users issued_user
+      ON issued_user.code = f.recollection_issued_user
+      LEFT JOIN public.users checking_user
+      ON checking_user.code = f.checking_user
+      LEFT JOIN public.users transit_user
+      ON transit_user.code = f.in_transit_user
+      LEFT JOIN public.users receiving_user
+      ON receiving_user.code = f.receiving_user
+      LEFT JOIN public.users resolved_user
+      ON resolved_user.code = d.resolved_user_code
      WHERE io.operation_type = 'TRANSFER'
        AND (:date_from IS NULL OR io.emission_date >= :date_from)
        AND (:date_to IS NULL OR io.emission_date <= :date_to)
@@ -937,6 +972,9 @@ def get_transfer_differences_rows(filters: dict):
           io.destination_store,
           destination_store.description,
           f.current_status
+       HAVING (:resolution_status = '')
+         OR (:resolution_status = 'RESOLVED' AND SUM(CASE WHEN d.resolution_status = 'RESOLVED' THEN 0 ELSE 1 END) = 0)
+         OR (:resolution_status = 'PENDING' AND SUM(CASE WHEN d.resolution_status = 'RESOLVED' THEN 0 ELSE 1 END) > 0)
      ORDER BY last_difference_at DESC NULLS LAST,
           io.correlative DESC
     """
@@ -946,8 +984,38 @@ def get_transfer_differences_rows(filters: dict):
     "date_to": filters.get("date_to_value"),
     "q": filters.get("q", ""),
     "q_like": f"%{filters.get('q', '')}%",
+    "resolution_status": filters.get("resolution_status", ""),
   }
   return db.session.execute(sql, params).mappings().all()
+
+
+def resolve_transfer_reception_differences(operation_correlative, user_code, resolution_note):
+  note = (resolution_note or "").strip()
+  if not note:
+    raise ValueError("Debe indicar una leyenda de resolucion.")
+
+  differences = InventoryOperationReceptionDifference.query.filter_by(
+    operation_correlative=operation_correlative
+  ).all()
+  if not differences:
+    raise ValueError("No hay diferencias registradas para este traslado.")
+
+  resolved_at = datetime.now()
+  updated = 0
+  for difference in differences:
+    if difference.resolution_status == DIFFERENCE_RESOLVED:
+      continue
+    difference.resolution_status = DIFFERENCE_RESOLVED
+    difference.resolution_note = note
+    difference.resolved_user_code = user_code
+    difference.resolved_at = resolved_at
+    updated += 1
+
+  if not updated:
+    raise ValueError("Todas las diferencias de este traslado ya estaban resueltas.")
+
+  db.session.commit()
+  return updated
 
 
 def build_transfer_product_traceability_filters(product_code: str = ""):
@@ -2266,7 +2334,32 @@ def get_transfer_reception_differences_report_data(order_id):
     .order_by(InventoryOperationReceptionDifference.detail_line.asc())
     .all()
   )
-  return order, differences
+  participants_sql = text(
+    """
+    SELECT COALESCE(issued_user.description, order_user.description, f.recollection_issued_user, io.user_code) AS generated_user_name,
+           COALESCE(checking_user.description, f.checking_user) AS checking_user_name,
+           COALESCE(transit_user.description, f.in_transit_user) AS in_transit_user_name,
+           COALESCE(receiving_user.description, f.receiving_user) AS receiving_user_name
+      FROM public.inventory_operation io
+      LEFT JOIN toolbox.inventory_operation_flow f
+        ON f.operation_correlative = io.correlative
+      LEFT JOIN public.users order_user
+        ON order_user.code = io.user_code
+      LEFT JOIN public.users issued_user
+        ON issued_user.code = f.recollection_issued_user
+      LEFT JOIN public.users checking_user
+        ON checking_user.code = f.checking_user
+      LEFT JOIN public.users transit_user
+        ON transit_user.code = f.in_transit_user
+      LEFT JOIN public.users receiving_user
+        ON receiving_user.code = f.receiving_user
+     WHERE io.correlative = :order_id
+    """
+  )
+  participants = db.session.execute(
+    participants_sql, {"order_id": order_id}
+  ).mappings().first() or {}
+  return order, differences, participants
 
 
 def get_products_locations_view_data(store_code, location):
@@ -2512,6 +2605,10 @@ def apply_transfer_reception_count(
       existing_difference.difference = difference_amount
       existing_difference.user_code = user_code
       existing_difference.updated_at = datetime.now()
+      existing_difference.resolution_status = DIFFERENCE_PENDING
+      existing_difference.resolution_note = None
+      existing_difference.resolved_user_code = None
+      existing_difference.resolved_at = None
 
     detail.amount = float(counted_amount)
   else:

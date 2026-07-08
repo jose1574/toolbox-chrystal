@@ -2633,7 +2633,7 @@ def transfer_operation_report(order_id):
 @login_required
 def transfer_reception_differences_report(order_id):
     user = current_user
-    order, differences = inventory_service.get_transfer_reception_differences_report_data(order_id)
+    order, differences, participants = inventory_service.get_transfer_reception_differences_report_data(order_id)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -2643,6 +2643,7 @@ def transfer_reception_differences_report(order_id):
             {
                 "order": order,
                 "differences": differences,
+                "participants": participants,
                 "title": f"Diferencias de recepción de traslado {order.correlative}",
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,

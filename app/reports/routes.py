@@ -2,7 +2,16 @@ from io import BytesIO
 from datetime import datetime
 
 import xlwt
-from flask import Response, make_response, render_template, request, send_file
+from flask import (
+    Response,
+    flash,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 from flask_login import current_user, login_required
 from sqlalchemy import func, select
 
@@ -303,6 +312,7 @@ def transfer_differences():
         request.args.get("date_from"),
         request.args.get("date_to"),
         request.args.get("q"),
+        request.args.get("resolution_status"),
     )
     transfers = inventory_service.get_transfer_differences_rows(filters)
     return render_template(
@@ -310,6 +320,30 @@ def transfer_differences():
         transfers=transfers,
         filters=filters,
         status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@reports_bp.route("/transfer_differences/<int:order_id>/resolve", methods=["POST"])
+@login_required
+def resolve_transfer_differences(order_id):
+    try:
+        updated = inventory_service.resolve_transfer_reception_differences(
+            order_id,
+            current_user.code,
+            request.form.get("resolution_note"),
+        )
+        flash(f"Se resolvieron {updated} diferencia(s) del traslado #{order_id}.", "success")
+    except ValueError as exc:
+        flash(str(exc), "warning")
+
+    return redirect(
+        url_for(
+            "reports.transfer_differences",
+            date_from=request.form.get("date_from", ""),
+            date_to=request.form.get("date_to", ""),
+            q=request.form.get("q", ""),
+            resolution_status=request.form.get("resolution_status", ""),
+        )
     )
 
 
@@ -462,7 +496,7 @@ def transfer_traceability_excel():
 @login_required
 def transfer_reception_differences_report(order_id):
     user = current_user
-    order, differences = inventory_service.get_transfer_reception_differences_report_data(order_id)
+    order, differences, participants = inventory_service.get_transfer_reception_differences_report_data(order_id)
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -472,6 +506,7 @@ def transfer_reception_differences_report(order_id):
             {
                 "order": order,
                 "differences": differences,
+                "participants": participants,
                 "title": f"Diferencias de recepción de traslado {order.correlative}",
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,

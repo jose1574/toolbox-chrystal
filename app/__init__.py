@@ -67,6 +67,7 @@ def create_toolbox_schema_tables():
     ]
 
     if not missing_tables:
+        ensure_toolbox_schema_columns(inspector)
         print(f"Toolbox schema tables verified: {len(toolbox_tables)}.")
         return
 
@@ -87,7 +88,40 @@ def create_toolbox_schema_tables():
             for index in table.indexes:
                 connection.execute(CreateIndex(index))
 
+    ensure_toolbox_schema_columns(inspect(db.engine))
     print(f"Toolbox schema tables created: {len(missing_tables)}.")
+
+
+def ensure_toolbox_schema_columns(inspector):
+    if "inventory_operation_reception_differences" not in inspector.get_table_names(schema="toolbox"):
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns(
+            "inventory_operation_reception_differences", schema="toolbox"
+        )
+    }
+    column_sql = {
+        "resolution_status": "ALTER TABLE toolbox.inventory_operation_reception_differences ADD COLUMN resolution_status VARCHAR(20) NOT NULL DEFAULT 'PENDING'",
+        "resolution_note": "ALTER TABLE toolbox.inventory_operation_reception_differences ADD COLUMN resolution_note TEXT",
+        "resolved_user_code": "ALTER TABLE toolbox.inventory_operation_reception_differences ADD COLUMN resolved_user_code VARCHAR(50)",
+        "resolved_at": "ALTER TABLE toolbox.inventory_operation_reception_differences ADD COLUMN resolved_at TIMESTAMP",
+    }
+    missing_columns = [name for name in column_sql if name not in columns]
+
+    if not missing_columns:
+        return
+
+    with db.engine.begin() as connection:
+        connection.execute(text("SET statement_timeout = 15000"))
+        for column_name in missing_columns:
+            connection.execute(text(column_sql[column_name]))
+
+    print(
+        "Toolbox schema columns added: "
+        f"inventory_operation_reception_differences ({', '.join(missing_columns)})."
+    )
 
 
 def create_app():

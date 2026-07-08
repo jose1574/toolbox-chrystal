@@ -2459,6 +2459,12 @@ class InventoryOperationReceptionDifference(db.Model):
         db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     updated_at = db.Column(db.DateTime)
+    resolution_status = db.Column(
+        db.String(20), nullable=False, server_default="PENDING"
+    )
+    resolution_note = db.Column(db.Text)
+    resolved_user_code = db.Column(db.String(50))
+    resolved_at = db.Column(db.DateTime)
 
     inventory_operation = db.relationship(
         "InventoryOperation",

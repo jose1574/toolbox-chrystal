@@ -20,11 +20,19 @@
 
             <form method="get" action="{{ url_for('reports.transfer_differences') }}" class="mt-4">
                 <div class="row g-3 align-items-end">
-                    <div class="col-12 col-lg-4">
+                    <div class="col-12 col-lg-3">
                         <label for="q" class="form-label small fw-semibold mb-1">Buscar</label>
                         <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Correlativo, documento, depósito..." class="form-control form-control-sm">
                     </div>
-                    <div class="col-12 col-lg-4">
+                    <div class="col-12 col-lg-2">
+                        <label for="resolution_status" class="form-label small fw-semibold mb-1">Resolución</label>
+                        <select id="resolution_status" name="resolution_status" class="form-select form-select-sm">
+                            <option value="" {% if not filters.resolution_status %}selected{% endif %}>Todas</option>
+                            <option value="PENDING" {% if filters.resolution_status == 'PENDING' %}selected{% endif %}>Pendientes</option>
+                            <option value="RESOLVED" {% if filters.resolution_status == 'RESOLVED' %}selected{% endif %}>Resueltas</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-3">
                         <label for="date_from" class="form-label small fw-semibold mb-1">Desde</label>
                         <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
                     </div>
@@ -46,10 +54,10 @@
     <div class="card shadow-sm border-0 bg-body overflow-hidden">
         <div class="card-header bg-body-tertiary border-0 px-4 py-3">
             <h2 class="h5 fw-semibold mb-1">Recepciones con diferencias registradas</h2>
-            <p class="text-body-secondary small mb-0">Selecciona un traslado para abrir su reporte PDF de diferencias.</p>
+            <p class="text-body-secondary small mb-0">Registra la conclusión de cada traslado para cerrar sus diferencias pendientes.</p>
         </div>
         <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0" style="min-width: 1060px;">
+            <table class="table table-sm align-middle mb-0" style="min-width: 1640px;">
                 <thead class="table-light text-uppercase small text-secondary">
                     <tr>
                         <th scope="col">Traslado</th>
@@ -61,6 +69,10 @@
                         <th scope="col" class="text-end">Contada</th>
                         <th scope="col" class="text-end">Diferencia</th>
                         <th scope="col">Estado</th>
+                        <th scope="col">Participantes</th>
+                        <th scope="col">Resolución</th>
+                        <th scope="col">Fechas</th>
+                        <th scope="col">Conclusión</th>
                         <th scope="col" class="text-end">Reporte</th>
                     </tr>
                 </thead>
@@ -85,13 +97,44 @@
                                 {{ status_labels.get(transfer.current_status, transfer.current_status) }}
                             </span>
                         </td>
+                        <td class="small text-body-secondary" style="min-width: 210px;">
+                            <div><span class="fw-semibold text-body">Generó:</span> {{ transfer.generated_user_name or '-' }}</div>
+                            <div><span class="fw-semibold text-body">Chequeó:</span> {{ transfer.checking_user_name or '-' }}</div>
+                            <div><span class="fw-semibold text-body">Trasladó:</span> {{ transfer.in_transit_user_name or '-' }}</div>
+                            <div><span class="fw-semibold text-body">Recibió:</span> {{ transfer.receiving_user_name or '-' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill {% if transfer.resolution_status == 'RESOLVED' %}text-bg-success{% else %}text-bg-danger{% endif %}">
+                                {% if transfer.resolution_status == 'RESOLVED' %}Resuelto{% else %}Pendiente{% endif %}
+                            </span>
+                            <div class="small text-body-secondary mt-1">
+                                {{ transfer.resolved_lines or 0 }} resuelta(s) / {{ transfer.pending_lines or 0 }} pendiente(s)
+                            </div>
+                            {% if transfer.resolved_user_code %}
+                            <div class="small text-body-secondary">Por: {{ transfer.resolved_user_name or transfer.resolved_user_code }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="small text-body-secondary">
+                            <div><span class="fw-semibold text-body">Error:</span> {{ transfer.first_detected_at.strftime('%d/%m/%Y %H:%M') if transfer.first_detected_at else '-' }}</div>
+                            <div><span class="fw-semibold text-body">Últ. cambio:</span> {{ transfer.last_difference_at.strftime('%d/%m/%Y %H:%M') if transfer.last_difference_at else '-' }}</div>
+                            <div><span class="fw-semibold text-body">Resuelto:</span> {{ transfer.last_resolved_at.strftime('%d/%m/%Y %H:%M') if transfer.last_resolved_at else '-' }}</div>
+                        </td>
+                        <td style="min-width: 280px;">
+                            {% if transfer.resolution_status == 'RESOLVED' %}
+                            <div class="small text-body-secondary">{{ transfer.resolution_note or '-' }}</div>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#resolve-transfer-differences-modal-{{ transfer.operation_correlative }}">
+                                Resolver
+                            </button>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             <a href="{{ url_for('reports.transfer_reception_differences_report', order_id=transfer.operation_correlative) }}" target="_blank" class="btn btn-sm btn-danger">Ver PDF</a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="10" class="py-4 text-center text-body-secondary fst-italic">No hay traslados con diferencias para los filtros seleccionados.</td>
+                        <td colspan="14" class="py-4 text-center text-body-secondary fst-italic">No hay traslados con diferencias para los filtros seleccionados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -99,4 +142,66 @@
         </div>
     </div>
 </div>
+
+{% for transfer in transfers %}
+{% if transfer.resolution_status != 'RESOLVED' %}
+<div class="modal fade" id="resolve-transfer-differences-modal-{{ transfer.operation_correlative }}" tabindex="-1" aria-labelledby="resolve-transfer-differences-title-{{ transfer.operation_correlative }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow">
+            <form method="post" action="{{ url_for('reports.resolve_transfer_differences', order_id=transfer.operation_correlative) }}">
+                <div class="modal-header bg-body-tertiary border-bottom">
+                    <div class="pe-3">
+                        <h2 class="modal-title h5 fw-semibold mb-1" id="resolve-transfer-differences-title-{{ transfer.operation_correlative }}">
+                            Resolver diferencias del traslado #{{ transfer.operation_correlative }}
+                        </h2>
+                        <p class="small text-body-secondary mb-0">Doc: {{ transfer.document_no or '-' }} | {{ transfer.pending_lines or 0 }} diferencia(s) pendiente(s)</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="date_from" value="{{ filters.date_from }}">
+                    <input type="hidden" name="date_to" value="{{ filters.date_to }}">
+                    <input type="hidden" name="q" value="{{ filters.q }}">
+                    <input type="hidden" name="resolution_status" value="{{ filters.resolution_status }}">
+
+                    <div class="border rounded-2 bg-body-tertiary p-3 mb-4">
+                        <div class="small fw-semibold text-uppercase text-body-secondary mb-2">Resumen del traslado</div>
+                        <div class="row g-2 small">
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded-2 bg-body px-3 py-2 h-100">
+                                    <div class="text-body-secondary">Origen</div>
+                                    <div class="fw-semibold">{{ transfer.store_description or transfer.store or '-' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded-2 bg-body px-3 py-2 h-100">
+                                    <div class="text-body-secondary">Destino</div>
+                                    <div class="fw-semibold">{{ transfer.destination_store_description or transfer.destination_store or '-' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded-2 bg-body px-3 py-2 h-100">
+                                    <div class="text-body-secondary">Diferencia</div>
+                                    <div class="fw-semibold {% if transfer.difference_total < 0 %}text-danger{% else %}text-success{% endif %}">{{ '%.2f'|format(transfer.difference_total or 0) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-2 p-3">
+                        <label for="resolution-note-{{ transfer.operation_correlative }}" class="form-label fw-semibold mb-2">Leyenda de resolución</label>
+                        <textarea id="resolution-note-{{ transfer.operation_correlative }}" name="resolution_note" rows="8" maxlength="1000" required class="form-control form-control-lg border" style="min-height: 14rem;" placeholder="Describe con detalle qué se revisó, qué acción se tomó y cómo quedó resuelta la diferencia."></textarea>
+                        <div class="form-text">Esta leyenda quedará guardada en el reporte y en el PDF de diferencias.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-body-tertiary border-top">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4">Marcar como resuelto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}
