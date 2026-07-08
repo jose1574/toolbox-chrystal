@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Trazabilidad por productos en traslados{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="margin-left: 4.75rem; width: calc(100% - 4.75rem);">
+    <div class="mx-auto" style="max-width: 100rem;">
+        <div class="card shadow-sm border-0 bg-body mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                    <div>
+                        <h1 class="h3 fw-bold mb-1">Trazabilidad por productos en traslados</h1>
+                        <p class="text-body-secondary mb-0">Ubica un producto dentro de ordenes de recoleccion emitidas, chequeadas o en transito.</p>
+                    </div>
+                    {% if rows %}
+                    <div class="card border-info-subtle bg-info-subtle">
+                        <div class="card-body py-2 px-3 text-info-emphasis text-center">
+                            <div class="small fw-semibold text-uppercase">Coincidencias</div>
+                            <div class="h4 fw-bold mb-0">{{ rows|length }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <form method="get" action="{{ url_for('reports.transfer_product_traceability') }}" class="mt-4" id="transfer-product-traceability-form">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-lg-6">
+                            <label for="transfer-product-code-input" class="form-label small fw-semibold mb-1">Codigo de producto</label>
+                            <input type="text" id="transfer-product-code-input" name="product_code" value="{{ filters.product_code }}" autocomplete="off" placeholder="CODIGO DE PRODUCTO" class="form-control form-control-sm text-uppercase">
+                        </div>
+                        <div class="col-12 col-lg-6 d-grid gap-2 d-sm-flex justify-content-lg-end">
+                            <button type="submit" class="btn btn-primary btn-sm px-3">Buscar</button>
+                            <button type="button" id="open-transfer-product-catalog" class="btn btn-outline-success btn-sm px-3">Buscar en catalogo</button>
+                            <a href="{{ url_for('reports.transfer_product_traceability') }}" class="btn btn-outline-secondary btn-sm px-3">Limpiar</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if filters.product_code and not product %}
+        <div class="alert alert-warning" role="alert">
+            No se encontro el producto indicado.
+        </div>
+        {% endif %}
+
+        {% if product %}
+        <div class="card shadow-sm border-0 bg-body mb-4">
+            <div class="card-header bg-body-tertiary">
+                <h2 class="h5 fw-semibold mb-0">Producto seleccionado</h2>
+            </div>
+            <div class="card-body">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2 small">
+                    <div><span class="fw-semibold">Codigo:</span> {{ product.code }}</div>
+                    <div><span class="fw-semibold">Referencia:</span> {{ product.referenc or '-' }}</div>
+                    <div><span class="fw-semibold">Unidad:</span> {{ product.unit_description or '-' }}</div>
+                    <div class="col-xl-6"><span class="fw-semibold">Descripcion:</span> {{ product.description or '-' }}</div>
+                    <div><span class="fw-semibold">Marca:</span> {{ product.mark_description or '-' }}</div>
+                    <div><span class="fw-semibold">Departamento:</span> {{ product.department_description or '-' }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm border-0 bg-body overflow-hidden">
+            <div class="card-header bg-body-tertiary border-0 px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+                <div>
+                    <h2 class="h5 fw-semibold mb-1">Presencia del producto en traslados abiertos</h2>
+                    <p class="text-body-secondary small mb-0">Cada fila indica la orden, su estado actual, el bulto asociado y el PDF correspondiente.</p>
+                </div>
+                <div class="small text-body-secondary">Total: {{ rows|length }} registro(s)</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" style="min-width: 1120px;">
+                    <thead class="table-light text-uppercase small text-secondary">
+                        <tr>
+                            <th scope="col">Traslado</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Origen</th>
+                            <th scope="col">Destino</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col" class="text-end">Solicitado</th>
+                            <th scope="col">Bulto</th>
+                            <th scope="col" class="text-end">Embalado</th>
+                            <th scope="col" class="text-end">Reporte</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">#{{ row.operation_correlative }}</div>
+                                <div class="small text-body-secondary">Doc: {{ row.document_no or '-' }}</div>
+                                <div class="small text-body-secondary">Linea: {{ row.detail_line or '-' }}</div>
+                            </td>
+                            <td>{{ row.emission_date or '-' }}</td>
+                            <td>{{ row.store_description or row.store or '-' }}</td>
+                            <td>{{ row.destination_store_description or row.destination_store or '-' }}</td>
+                            <td>
+                                <span class="badge rounded-pill {% if row.current_status == 'IN_TRANSIT' %}text-bg-primary{% elif row.current_status == 'RECOLLECTION_CHECKED' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+                                    {{ status_labels.get(row.current_status, row.current_status) }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-semibold">{{ '%.2f'|format(row.requested_amount or 0) }}</td>
+                            <td>
+                                {% if row.package_number %}
+                                <div class="fw-semibold">Bulto {{ row.package_number }}</div>
+                                <div class="small text-body-secondary">{{ row.package_status or '-' }}</div>
+                                {% else %}
+                                <span class="text-body-secondary fst-italic">Pendiente de bulto</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ '%.2f'|format(row.packed_amount or 0) if row.package_number else '-' }}</td>
+                            <td class="text-end">
+                                <div class="d-flex flex-wrap justify-content-end gap-2">
+                                    {% if row.current_status == 'IN_TRANSIT' %}
+                                    <a href="{{ url_for('inventory.transfer_operation_report', order_id=row.operation_correlative) }}" target="_blank" class="btn btn-sm btn-outline-primary">PDF traslado</a>
+                                    {% else %}
+                                    <a href="{{ url_for('inventory.order_collection_report', order_id=row.operation_correlative) }}" target="_blank" class="btn btn-sm btn-outline-primary">PDF orden</a>
+                                    {% endif %}
+                                    {% if row.package_correlative %}
+                                    <a href="{{ url_for('inventory.package_label_report', package_id=row.package_correlative) }}" target="_blank" class="btn btn-sm btn-outline-secondary">PDF bulto</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="py-4 text-center text-body-secondary fst-italic">
+                                {% if product %}
+                                El producto no esta presente en ordenes de recoleccion emitidas, chequeadas o en transito.
+                                {% else %}
+                                Selecciona un producto para consultar su trazabilidad en traslados.
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="transfer-product-modal-container"></div>
+
+<script>
+    (function () {
+        const codeInput = document.getElementById('transfer-product-code-input');
+        const form = document.getElementById('transfer-product-traceability-form');
+        const openCatalogButton = document.getElementById('open-transfer-product-catalog');
+        const modalContainer = document.getElementById('transfer-product-modal-container');
+        const modalUrl = '{{ url_for("reports.transfer_product_traceability_products_modal") }}';
+
+        async function openCatalogModal(query, page) {
+            const params = new URLSearchParams({
+                q: query || '',
+                page: page || 1,
+            });
+            const response = await fetch(`${modalUrl}?${params.toString()}`, {
+                credentials: 'same-origin',
+                headers: { 'HX-Request': 'true' },
+            });
+            modalContainer.innerHTML = await response.text();
+        }
+
+        function closeCatalogModal() {
+            modalContainer.innerHTML = '';
+        }
+
+        openCatalogButton.addEventListener('click', function () {
+            openCatalogModal('', 1);
+        });
+
+        document.addEventListener('click', function (event) {
+            const closeModal = event.target.closest('[data-close-transfer-product-modal]');
+            if (closeModal || event.target.id === 'transfer-product-modal') {
+                closeCatalogModal();
+                return;
+            }
+
+            const selectProduct = event.target.closest('[data-select-transfer-product]');
+            if (selectProduct) {
+                codeInput.value = (selectProduct.dataset.code || '').toUpperCase();
+                closeCatalogModal();
+                form.submit();
+                return;
+            }
+
+            const pageButton = event.target.closest('[data-transfer-product-page]');
+            if (pageButton) {
+                openCatalogModal(
+                    pageButton.dataset.query || '',
+                    Number(pageButton.dataset.transferProductPage || 1)
+                );
+            }
+        });
+
+        document.addEventListener('submit', function (event) {
+            const searchForm = event.target.closest('#transfer-product-catalog-search-form');
+            if (!searchForm) return;
+            event.preventDefault();
+            const formData = new FormData(searchForm);
+            openCatalogModal(formData.get('q') || '', 1);
+        });
+    })();
+</script>
+{% endblock %}

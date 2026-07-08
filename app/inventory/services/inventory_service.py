@@ -950,6 +950,74 @@ def get_transfer_differences_rows(filters: dict):
   return db.session.execute(sql, params).mappings().all()
 
 
+def build_transfer_product_traceability_filters(product_code: str = ""):
+  product_code_value = normalize_code(product_code)
+  return {
+    "product_code": product_code_value,
+    "resolved_product_code": resolve_main_code(product_code_value) if product_code_value else "",
+  }
+
+
+def get_transfer_product_traceability_rows(filters: dict):
+  product_code = filters.get("resolved_product_code", "")
+  if not product_code:
+    return []
+
+  sql = text(
+    """
+    SELECT io.correlative AS operation_correlative,
+           io.document_no,
+           io.emission_date,
+           io.description,
+           io.store,
+           origin_store.description AS store_description,
+           io.destination_store,
+           destination_store.description AS destination_store_description,
+           f.current_status,
+           iod.line AS detail_line,
+           iod.code_product AS product_code,
+           iod.description_product AS product_description,
+           iod.amount AS requested_amount,
+           package_product.package_correlative,
+           package_product.package_number,
+           package_product.package_status,
+           package_product.packed_amount,
+           package_product.packed_at
+      FROM public.inventory_operation_details iod
+      JOIN public.inventory_operation io
+        ON io.correlative = iod.main_correlative
+      JOIN toolbox.inventory_operation_flow f
+        ON f.operation_correlative = io.correlative
+      LEFT JOIN (
+        SELECT pkg.operation_correlative,
+               pkg.correlative AS package_correlative,
+               pkg.package_number,
+               pkg.status AS package_status,
+               pkg_detail.product_code,
+               pkg_detail.packed_amount,
+               pkg_detail.updated_at AS packed_at
+          FROM toolbox.inventory_operation_package pkg
+          JOIN toolbox.inventory_operation_package_detail pkg_detail
+            ON pkg_detail.package_correlative = pkg.correlative
+         WHERE pkg.status IN ('OPEN', 'CLOSED')
+      ) package_product
+        ON package_product.operation_correlative = io.correlative
+       AND UPPER(TRIM(package_product.product_code)) = UPPER(TRIM(iod.code_product))
+      LEFT JOIN public.store origin_store
+        ON origin_store.code = io.store
+      LEFT JOIN public.store destination_store
+        ON destination_store.code = io.destination_store
+     WHERE io.operation_type = 'TRANSFER'
+       AND f.current_status IN ('RECOLLECTION_ISSUED', 'RECOLLECTION_CHECKED', 'IN_TRANSIT')
+       AND UPPER(TRIM(iod.code_product)) = :product_code
+     ORDER BY io.emission_date DESC NULLS LAST,
+              io.correlative DESC,
+              package_product.package_number ASC NULLS LAST
+    """
+  )
+  return db.session.execute(sql, {"product_code": product_code}).mappings().all()
+
+
 def register_flow_step1(operation_correlative, user_code):
   conn = None
   cursor = None

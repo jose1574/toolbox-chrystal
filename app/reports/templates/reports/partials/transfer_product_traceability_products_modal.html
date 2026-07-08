@@ -1,0 +1,89 @@
+<div id="transfer-product-modal" class="modal fade show d-block" tabindex="-1" aria-hidden="true" role="dialog" aria-modal="true" style="background-color: rgba(0, 0, 0, 0.55);">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow bg-body">
+            <div class="modal-header align-items-start">
+                <div class="pe-3">
+                    <h2 class="modal-title h5 mb-1">Catalogo de productos</h2>
+                    <p class="small text-body-secondary mb-0">Busca por codigo, referencia o descripcion. Puedes separar terminos con *.</p>
+                </div>
+                <button type="button" class="btn-close" aria-label="Cerrar" data-close-transfer-product-modal></button>
+            </div>
+
+            <form id="transfer-product-catalog-search-form" class="border-bottom bg-body-tertiary px-4 py-3">
+                <div class="row g-2">
+                    <div class="col-12 col-sm-9">
+                        <input type="text" name="q" value="{{ query }}" autocomplete="off" placeholder="Ej: BUSHING*1/4 o codigo alterno" class="form-control">
+                    </div>
+                    <div class="col-12 col-sm-3 d-grid">
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="border-bottom px-4 py-2 small text-body-secondary">
+                {{ total_products }} producto(s) encontrado(s). Pagina {{ page }} de {{ total_pages }}.
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="d-block d-sm-none p-3 vstack gap-2">
+                    {% for product in products %}
+                    <div class="card card-body border bg-body-tertiary cursor-pointer {% if loop.last %}mb-0{% endif %}" tabindex="0" data-select-transfer-product data-code="{{ product.code }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="fw-semibold text-primary font-monospace">{{ product.code }}</span>
+                            <span class="badge text-bg-light border">{{ product.unit_description or 'UND' }}</span>
+                        </div>
+                        <div class="fw-medium mb-1">{{ product.description or '-' }}</div>
+                        <div class="small text-body-secondary">{{ product.mark_description or '-' }} | {{ product.department_description or '-' }}</div>
+                    </div>
+                    {% else %}
+                    <div class="py-5 text-center fst-italic text-body-secondary">No se encontraron productos.</div>
+                    {% endfor %}
+                </div>
+
+                <div class="table-responsive d-none d-sm-block">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-uppercase small text-secondary position-sticky top-0">
+                            <tr>
+                                <th scope="col">Codigo</th>
+                                <th scope="col">Descripcion</th>
+                                <th scope="col">Unidad</th>
+                                <th scope="col">Stock total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr class="cursor-pointer" tabindex="0" data-select-transfer-product data-code="{{ product.code }}">
+                                <td class="fw-semibold font-monospace">{{ product.code }}</td>
+                                <td>
+                                    <div class="fw-medium">{{ product.description or '-' }}</div>
+                                    <div class="small text-body-secondary">{{ product.mark_description or '-' }} | {{ product.department_description or '-' }}</div>
+                                </td>
+                                <td class="small">{{ product.unit_description or '-' }}</td>
+                                <td class="fw-semibold">{{ '%.2f'|format(product.stock_total or 0) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="py-5 text-center fst-italic text-body-secondary">
+                                    {% if query %}
+                                    No se encontraron productos para la busqueda indicada.
+                                    {% else %}
+                                    No hay productos registrados en el catalogo.
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer flex-column flex-sm-row justify-content-between gap-2 bg-body-tertiary">
+                <div class="small text-body-secondary order-2 order-sm-1 text-center text-sm-start">Haz clic sobre un registro para seleccionarlo.</div>
+                <div class="d-flex gap-2 order-1 order-sm-2">
+                    <button type="button" data-transfer-product-page="{{ page - 1 }}" data-query="{{ query }}" {% if page <= 1 %}disabled{% endif %} class="btn btn-outline-secondary w-100 w-sm-auto">Anterior</button>
+                    <button type="button" data-transfer-product-page="{{ page + 1 }}" data-query="{{ query }}" {% if page >= total_pages %}disabled{% endif %} class="btn btn-outline-secondary w-100 w-sm-auto">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

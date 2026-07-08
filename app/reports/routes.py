@@ -313,6 +313,41 @@ def transfer_differences():
     )
 
 
+@reports_bp.route("/transfer_product_traceability", methods=["GET"])
+@login_required
+def transfer_product_traceability():
+    filters = inventory_service.build_transfer_product_traceability_filters(
+        request.args.get("product_code")
+    )
+    product = _get_product_info(filters["resolved_product_code"])
+    rows = inventory_service.get_transfer_product_traceability_rows(filters) if product else []
+    return render_template(
+        "reports/transfer_product_traceability.html",
+        rows=rows,
+        product=product,
+        filters=filters,
+        status_labels=TRANSFER_STATUS_LABELS,
+    )
+
+
+@reports_bp.route("/transfer_product_traceability/products_modal", methods=["GET"])
+@login_required
+def transfer_product_traceability_products_modal():
+    query = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
+    products, total_products, total_pages, current_page = (
+        _search_products_for_stock_report(query, page=page, per_page=10)
+    )
+    return render_template(
+        "reports/partials/transfer_product_traceability_products_modal.html",
+        products=products,
+        query=query,
+        page=current_page,
+        total_pages=total_pages,
+        total_products=total_products,
+    )
+
+
 @reports_bp.route("/transfer_traceability/pdf", methods=["GET"])
 @login_required
 def transfer_traceability_pdf():
