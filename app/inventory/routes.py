@@ -861,6 +861,18 @@ def manual_order_cart_add():
         return render_template("partials/manual_order_cart.html", **cart_context)
 
     main_code = inventory_service.resolve_main_code(product_code)
+    unavailable_message = inventory_service.build_open_collection_product_message(
+        store_origin, store_dst, main_code
+    )
+    if unavailable_message:
+        cart_context = _build_manual_order_cart_context(
+            store_origin,
+            store_dst,
+            message=unavailable_message,
+            message_category="warning",
+        )
+        return render_template("partials/manual_order_cart.html", **cart_context)
+
     cart_map = _get_manual_order_cart_map(store_origin, store_dst)
     cart_map[main_code] = float(cart_map.get(main_code, 0)) + float(quantity)
     _set_manual_order_cart_map(store_origin, store_dst, cart_map)
@@ -966,9 +978,17 @@ def manual_order_search_results():
 @login_required
 def manual_order_product_lookup():
     store_origin = request.args.get("store_origin")
+    store_dst = request.args.get("store_dst")
     code = request.args.get("code")
     entered_code = inventory_service.normalize_code(code)
     main_code = inventory_service._resolver_main_code(code)
+
+    unavailable_message = inventory_service.build_open_collection_product_message(
+        store_origin, store_dst, main_code
+    )
+    if unavailable_message:
+        return jsonify({"ok": False, "message": unavailable_message}), 404
+
     product = inventory_service.get_product_for_manual_order(main_code, store_origin)
 
     if not product or float(product.stock_origin or 0) <= 0:
@@ -1000,7 +1020,7 @@ def manual_order_products_modal():
     query = request.args.get("q", "")
     page = request.args.get("page", 1, type=int)
     products, total_products, total_pages, current_page = inventory_service.search_products_for_manual_order(
-        store_origin, query, page=page, per_page=10
+        store_origin, query, page=page, per_page=10, store_dst=store_dst
     )
     return render_template(
         "partials/manual_order_product_modal.html",
@@ -1020,6 +1040,20 @@ def manual_order_product_detail():
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
     product_code = request.args.get("product_code")
+
+    unavailable_message = inventory_service.build_open_collection_product_message(
+        store_origin, store_dst, product_code
+    )
+    if unavailable_message:
+        return render_template(
+            "partials/manual_order_product_detail.html",
+            product_detail=None,
+            error_message=unavailable_message,
+            store_origin=store_origin,
+            store_dst=store_dst,
+            store_origin_code=store_origin,
+            store_dst_code=store_dst,
+        )
 
     detail_data = inventory_service.get_manual_order_product_detail_data(
         product_code, store_origin, store_dst

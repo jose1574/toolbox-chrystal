@@ -326,6 +326,9 @@ def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
   if not main_code or not store_origin or not store_dst:
     return None
 
+  if get_open_collection_product_codes(store_origin, store_dst, [main_code]):
+    return None
+
   product = Product.query.filter_by(code=main_code).first()
   if not product:
     return None
@@ -556,6 +559,16 @@ def search_products_for_manual_order(
 
   if department_code:
     filters.append(func.upper(func.trim(Product.department)) == department_code)
+
+  if store_dst:
+    unavailable_products = build_open_collection_products_query(
+      store_origin, store_dst
+    ).subquery()
+    filters.append(
+      ~func.upper(func.trim(Product.code)).in_(
+        select(unavailable_products.c.code_product)
+      )
+    )
 
   if query:
     if "*" in query:
@@ -1303,6 +1316,16 @@ def search_products_for_manual_order(
   if department_code:
     filters.append(func.upper(func.trim(Product.department)) == department_code)
 
+  if store_dst:
+    unavailable_products = build_open_collection_products_query(
+      store_origin, store_dst
+    ).subquery()
+    filters.append(
+      ~func.upper(func.trim(Product.code)).in_(
+        select(unavailable_products.c.code_product)
+      )
+    )
+
   if query:
     if "*" in query:
       wildcard_pattern = query.replace("\\", "\\\\")
@@ -1392,8 +1415,8 @@ def create_order_collection_operation(
   if open_product_codes:
     codes_text = ", ".join(sorted(open_product_codes))
     raise ValueError(
-      "Los siguientes productos ya estan en una orden de recoleccion emitida "
-      f"o chequeada: {codes_text}."
+      "Los siguientes productos ya estan en una orden de recoleccion emitida, "
+      f"chequeada o en transito para estos depositos: {codes_text}."
     )
 
   operation_description = (
@@ -1513,7 +1536,11 @@ def get_stores_ordered_by_description():
 
 
 def build_open_collection_products_query(store_origin, store_dst, status_codes=None):
-  statuses = status_codes or [FLOW_RECOLLECTION_ISSUED, FLOW_RECOLLECTION_CHECKED]
+  statuses = status_codes or [
+    FLOW_RECOLLECTION_ISSUED,
+    FLOW_RECOLLECTION_CHECKED,
+    FLOW_IN_TRANSIT,
+  ]
 
   return (
     select(
@@ -1551,6 +1578,71 @@ def get_open_collection_product_codes(store_origin, store_dst, product_codes=Non
     )
 
   return {row.code_product for row in db.session.execute(stmt).all()}
+
+
+def get_open_collection_product_conflicts(store_origin, store_dst, product_codes):
+  normalized_codes = {normalize_code(code) for code in product_codes if code}
+  if not store_origin or not store_dst or not normalized_codes:
+    return []
+
+  origin_store = aliased(Store)
+  destination_store = aliased(Store)
+
+  stmt = (
+    select(
+      func.upper(func.trim(InventoryOperationDetail.code_product)).label("product_code"),
+      InventoryOperation.correlative.label("operation_correlative"),
+      InventoryOperation.document_no.label("document_no"),
+      InventoryOperationFlow.current_status.label("current_status"),
+      InventoryOperation.store.label("store_origin"),
+      origin_store.description.label("store_origin_name"),
+      InventoryOperation.destination_store.label("store_dst"),
+      destination_store.description.label("store_dst_name"),
+    )
+    .distinct()
+    .join(
+      InventoryOperation,
+      InventoryOperation.correlative == InventoryOperationDetail.main_correlative,
+    )
+    .join(
+      InventoryOperationFlow,
+      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
+    )
+    .outerjoin(origin_store, origin_store.code == InventoryOperation.store)
+    .outerjoin(destination_store, destination_store.code == InventoryOperation.destination_store)
+    .where(
+      InventoryOperation.operation_type == "TRANSFER",
+      func.upper(func.trim(InventoryOperation.store)) == normalize_code(store_origin),
+      func.upper(func.trim(InventoryOperation.destination_store)) == normalize_code(store_dst),
+      func.upper(func.trim(InventoryOperationDetail.code_product)).in_(normalized_codes),
+      InventoryOperationFlow.current_status.in_(
+        [FLOW_RECOLLECTION_ISSUED, FLOW_RECOLLECTION_CHECKED, FLOW_IN_TRANSIT]
+      ),
+    )
+    .order_by(InventoryOperation.correlative.desc())
+  )
+  return db.session.execute(stmt).mappings().all()
+
+
+def build_open_collection_product_message(store_origin, store_dst, product_code):
+  conflicts = get_open_collection_product_conflicts(
+    store_origin, store_dst, [product_code]
+  )
+  if not conflicts:
+    return ""
+
+  conflict = conflicts[0]
+  status_label = TRANSFER_STATUS_LABELS.get(
+    conflict["current_status"], conflict["current_status"]
+  )
+  origin_name = conflict["store_origin_name"] or conflict["store_origin"]
+  destination_name = conflict["store_dst_name"] or conflict["store_dst"]
+  document_label = conflict["document_no"] or conflict["operation_correlative"]
+  return (
+    f"El producto {conflict['product_code']} no se puede recolectar porque ya esta "
+    f"en la orden #{document_label} ({status_label}) desde {origin_name} "
+    f"hacia {destination_name}."
+  )
 
 
 def get_auto_order_collection_data(store_origin, store_dst):
@@ -1594,6 +1686,9 @@ def get_auto_order_collection_data(store_origin, store_dst):
   checked_collection_products = build_open_collection_products_query(
     store_origin, store_dst, [FLOW_RECOLLECTION_CHECKED]
   ).subquery()
+  transit_collection_products = build_open_collection_products_query(
+    store_origin, store_dst, [FLOW_IN_TRANSIT]
+  ).subquery()
 
   pf = aliased(ProductsFailure)
   m = aliased(Mark)
@@ -1627,6 +1722,9 @@ def get_auto_order_collection_data(store_origin, store_dst):
       normalized_product_code.in_(
         select(checked_collection_products.c.code_product)
       ).label("in_checked_order"),
+      normalized_product_code.in_(
+        select(transit_collection_products.c.code_product)
+      ).label("in_transit_order"),
     )
     .join(stock_orig_totals, Product.code == stock_orig_totals.c.product_code)
     .outerjoin(stock_dst_totals, Product.code == stock_dst_totals.c.product_code)
