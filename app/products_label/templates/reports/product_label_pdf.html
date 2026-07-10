@@ -17,20 +17,18 @@
 			width: {{ page_width }};
 			height: {{ page_height }};
 			font-family: Arial, sans-serif;
-			color: #000;
 			font-size: 8.5pt;
 		}
 
 		.label {
 			width: {{ page_width }};
 			height: {{ page_height }};
-			border: 0.3mm solid #000;
 			box-sizing: border-box;
-			padding: 0.6mm 0.8mm;
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
-			align-items: stretch;
+			align-items: center;
+			text-align: center;
 			page-break-after: always;
 			overflow: hidden;
 		}
@@ -58,6 +56,9 @@
 
 		.barcode {
 			width: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
 			text-align: center;
 			margin: 0;
 		}
@@ -70,16 +71,16 @@
 		}
 
 		.code-text {
-			font-size: 7.5mm;
+			font-size: 10pt;
 			font-weight: 700;
 			text-align: center;
 			letter-spacing: -0.1mm;
 			margin: 0.6mm 0 0;
-			line-height: 1.05;
 			white-space: normal;
 			word-break: break-all;
 			overflow-wrap: anywhere;
 			max-width: 100%;
+			width: 100%;
 		}
 
 		.description-text {
@@ -91,11 +92,17 @@
 			word-break: break-word;
 			overflow-wrap: anywhere;
 			max-width: 100%;
+			width: 100%;
+		}
+
+		.format-57x40 .code-text {
+			font-size: 18pt;
+			line-height: 1.05;
 		}
 	</style>
 </head>
 
-<body>
+<body class="format-{{ label_format }}">
 	{% for label in labels %}
 	<div class="label">
 		{% if logo_base64 %}
@@ -105,14 +112,14 @@
 		{% endif %}
 		<div class="barcode">
 			{% if label.barcode_base64 %}
-			<img src="data:image/png;base64,{{ label.barcode_base64 }}" alt="Barcode {{ label.code }}">
+			<img src="data:image/png;base64,{{ label.barcode_base64 }}" alt="Code128 barcode {{ label.code }}">
 			{% else %}
 			<div>[SIN CODIGO DE BARRAS]</div>
 			{% endif %}
 		</div>
 		<p class="description-text">{{ label.description }}</p>
+		<p class="code-text"> <b>{{ label.code }}</b> </p>
 
-		<div class="code-text">{{ label.code }}</div>
 	</div>
 	{% endfor %}
 </body>

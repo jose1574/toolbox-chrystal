@@ -200,11 +200,11 @@ def print_labels():
                 'code': code,
                 'main_code': main_code,
                 'description': short_name,  # El PDF espera 'description'
-                'barcode_base64': generate_barcode(code),
+                'barcode_base64': generate_barcode(code, barcode_type='code128'),
             }
         )
 
-    logo_base64 = _load_logo_base64()
+    logo_base64 = None if label_format == '57x19' else _load_logo_base64()
 
     html_source = Path(__file__).resolve().parent / 'templates' / 'reports' / 'product_label_pdf.html'
 
@@ -222,6 +222,14 @@ def print_labels():
         barcode_height = '10mm'
         logo_max_height = '18mm'
         orientation = 'Portrait'
+    
+    if label_format == '57x19':
+        paper_format = 'Label57x19'
+        page_width = '57mm'
+        page_height = '19mm'
+        barcode_height = '8mm'
+        logo_max_height = '12mm'
+        orientation = 'Portrait'
 
     pdf = render_pdf_from_html_file(
         html_source,
@@ -232,6 +240,7 @@ def print_labels():
             'page_height': page_height,
             'barcode_height': barcode_height,
             'logo_max_height': logo_max_height,
+            'label_format': label_format,
         },
         paper_format=paper_format,
         orientation=orientation,
