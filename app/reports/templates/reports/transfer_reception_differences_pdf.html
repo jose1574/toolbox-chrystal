@@ -182,7 +182,7 @@
                     <td>
                         <div>{{ 'Resuelto' if diff.resolution_status == 'RESOLVED' else 'Pendiente' }}</div>
                         <div>{{ diff.resolved_at.strftime('%d/%m/%Y %H:%M') if diff.resolved_at else '-' }}</div>
-                        <div>{{ diff.resolved_user_code or '-' }}</div>
+                        <div><span class="label">Por:</span> {{ (diff.resolved_user.description or diff.resolved_user_code) if diff.resolved_user else diff.resolved_user_code or '-' }}</div>
                     </td>
                 </tr>
                 {% else %}
@@ -200,6 +200,7 @@
                     <th style="width: 12%;">Linea</th>
                     <th style="width: 18%;">Estado</th>
                     <th>Leyenda</th>
+                    <th style="width: 18%;">Resuelto por</th>
                     <th style="width: 18%;">Fecha error</th>
                     <th style="width: 18%;">Fecha resolucion</th>
                 </tr>
@@ -210,12 +211,13 @@
                     <td class="text-center">{{ diff.detail_line }}</td>
                     <td>{{ 'Resuelto' if diff.resolution_status == 'RESOLVED' else 'Pendiente' }}</td>
                     <td>{{ diff.resolution_note or '-' }}</td>
+                    <td>{{ (diff.resolved_user.description or diff.resolved_user_code) if diff.resolved_user else diff.resolved_user_code or '-' }}</td>
                     <td>{{ diff.detected_at.strftime('%d/%m/%Y %H:%M') if diff.detected_at else '-' }}</td>
                     <td>{{ diff.resolved_at.strftime('%d/%m/%Y %H:%M') if diff.resolved_at else '-' }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="empty">No hay conclusiones registradas.</td>
+                    <td colspan="6" class="empty">No hay conclusiones registradas.</td>
                 </tr>
                 {% endfor %}
             </tbody>

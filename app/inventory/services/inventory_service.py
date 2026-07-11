@@ -1019,6 +1019,10 @@ def get_transfer_differences_rows(filters: dict):
 
 
 def resolve_transfer_reception_differences(operation_correlative, user_code, resolution_note):
+  resolved_user_code = (user_code or "").strip()
+  if not resolved_user_code:
+    raise ValueError("No se pudo identificar el usuario que resuelve la incidencia.")
+
   note = (resolution_note or "").strip()
   if not note:
     raise ValueError("Debe indicar una leyenda de resolucion.")
@@ -1036,7 +1040,7 @@ def resolve_transfer_reception_differences(operation_correlative, user_code, res
       continue
     difference.resolution_status = DIFFERENCE_RESOLVED
     difference.resolution_note = note
-    difference.resolved_user_code = user_code
+    difference.resolved_user_code = resolved_user_code
     difference.resolved_at = resolved_at
     updated += 1
 
@@ -2554,6 +2558,7 @@ def get_transfer_reception_differences_report_data(order_id):
     .options(
       joinedload(InventoryOperationReceptionDifference.product),
       joinedload(InventoryOperationReceptionDifference.user),
+      joinedload(InventoryOperationReceptionDifference.resolved_user),
     )
     .order_by(InventoryOperationReceptionDifference.detail_line.asc())
     .all()

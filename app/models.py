@@ -2463,7 +2463,9 @@ class InventoryOperationReceptionDifference(db.Model):
         db.String(20), nullable=False, server_default="PENDING"
     )
     resolution_note = db.Column(db.Text)
-    resolved_user_code = db.Column(db.String(50))
+    resolved_user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE")
+    )
     resolved_at = db.Column(db.DateTime)
 
     inventory_operation = db.relationship(
@@ -2480,6 +2482,12 @@ class InventoryOperationReceptionDifference(db.Model):
         "User",
         primaryjoin="InventoryOperationReceptionDifference.user_code == User.code",
         backref="inventory_reception_differences",
+    )
+    resolved_user = db.relationship(
+        "User",
+        primaryjoin="InventoryOperationReceptionDifference.resolved_user_code == User.code",
+        foreign_keys=[resolved_user_code],
+        backref="resolved_inventory_reception_differences",
     )
 
 

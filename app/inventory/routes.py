@@ -1967,7 +1967,7 @@ def save_order_check():
         order.store1.description if getattr(order, "store1", None) else order.destination_store
     )
     order.description = (
-        "Orden de recoleccion chequeada del deposito de origen "
+        "CHEQUEADO"
         f"{origin_name} a destino {destination_name}"
     )
 
@@ -2650,30 +2650,8 @@ def transfer_operation_report(order_id):
 @inventory_bp.route("/transfer_operation/reception_differences_report/<int:order_id>")
 @login_required
 def transfer_reception_differences_report(order_id):
-    user = current_user
-    order, differences, participants = inventory_service.get_transfer_reception_differences_report_data(order_id)
-
-    barcode_base64 = generate_barcode(order.correlative)
-
-    return Response(
-        render_pdf(
-            "reports/transfer_reception_differences_pdf.html",
-            {
-                "order": order,
-                "differences": differences,
-                "participants": participants,
-                "title": f"Diferencias de recepción de traslado {order.correlative}",
-                "now": datetime.now(),
-                "barcode_base64": barcode_base64,
-                "user": user,
-            },
-            paper_format="Letter",
-            orientation="Portrait",
-        ),
-        mimetype="application/pdf",
-        headers={
-            "Content-Disposition": f"inline; filename=diferencias_traslado_{order.correlative}.pdf"
-        },
+    return redirect(
+        url_for("reports.transfer_reception_differences_report", order_id=order_id)
     )
 
 
