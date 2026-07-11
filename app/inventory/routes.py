@@ -1967,7 +1967,7 @@ def save_order_check():
         order.store1.description if getattr(order, "store1", None) else order.destination_store
     )
     order.description = (
-        "CHEQUEADO"
+        "CHEQUEADO "
         f"{origin_name} a destino {destination_name}"
     )
 

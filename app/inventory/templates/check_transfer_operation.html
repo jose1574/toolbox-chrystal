@@ -189,8 +189,7 @@
 					hx-post="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
 					hx-target="#main-content"
 					hx-select="#main-content"
-					hx-swap="innerHTML"
-					onsubmit="return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');">
+					hx-swap="innerHTML">
 					<input type="hidden" id="total-products-count" value="{{ details|length }}">
 					<input type="hidden" id="counted-codes" name="counted_codes" value="">
 						<button type="submit" id="receive-button" disabled
@@ -317,6 +316,22 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		return totalProducts > 0;
 	}
 
+	function getPendingProductsCount() {
+		const totalProducts = parseInt((totalProductsCountInput && totalProductsCountInput.value) || '0', 10);
+		return Math.max(totalProducts - countedCodesSet.size, 0);
+	}
+
+	function confirmReceiveOperation() {
+		const pendingProducts = getPendingProductsCount();
+		if (pendingProducts > 0) {
+			return confirm(
+				`Quedan ${pendingProducts} producto(s) sin contar. Al cerrar la recepción se registrarán como diferencias con cantidad recibida 0. ¿Desea cerrar, recepcionar y procesar inventario?`
+			);
+		}
+
+		return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');
+	}
+
 	function collectCountedCodes() {
 		return Array.from(countedCodesSet.values());
 	}
@@ -395,17 +410,27 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 	});
 
 	if (receiveForm) {
-		receiveForm.addEventListener('submit', function() {
+		receiveForm.addEventListener('submit', function(event) {
+			if (!confirmReceiveOperation()) {
+				event.preventDefault();
+				return;
+			}
 			updateCountedCodesInput();
 		});
 	}
 
-	window.addEventListener('DOMContentLoaded', function() {
+	function initializeReceiveState() {
 		initializeCountedCodesSet();
 		hideCountedRowsFromView();
 		updateCountedCodesInput();
 		updateReceiveButton();
-	});
+	}
+
+	if (document.readyState === 'loading') {
+		window.addEventListener('DOMContentLoaded', initializeReceiveState);
+	} else {
+		initializeReceiveState();
+	}
 })();
 
 if (!window.__transferCheckPdfHandlerAdded) {

@@ -777,25 +777,12 @@ def create_order_collection_operation(store_origin, store_dst, selected_items, s
 
 
 def process_inventory_operation(operation_correlative):
-  conn = None
-  cursor = None
-  try:
-    conn = db.engine.raw_connection()
-    cursor = conn.cursor()
-    sql = "SELECT save_inventory_operation(%s)"
-    data = (operation_correlative,)
-    cursor.execute(sql, data)
-    conn.commit()
-    return True
-  except Exception:
-    if conn:
-      conn.rollback()
-    raise
-  finally:
-    if cursor:
-      cursor.close()
-    if conn:
-      conn.close()
+  db.session.execute(
+    text("SELECT save_inventory_operation(:operation_correlative)"),
+    {"operation_correlative": operation_correlative},
+  )
+  db.session.flush()
+  return True
 
 FLOW_RECOLLECTION_ISSUED = "RECOLLECTION_ISSUED"
 FLOW_RECOLLECTION_CHECKED = "RECOLLECTION_CHECKED"
@@ -1302,25 +1289,12 @@ def validate_transfer_responsible(username, password, fallback_user_code):
 
 
 def process_inventory_operation(operation_correlative):
-  conn = None
-  cursor = None
-  try:
-    conn = db.engine.raw_connection()
-    cursor = conn.cursor()
-    sql = "SELECT save_inventory_operation(%s)"
-    data = (operation_correlative,)
-    cursor.execute(sql, data)
-    conn.commit()
-    return True
-  except Exception:
-    if conn:
-      conn.rollback()
-    raise
-  finally:
-    if cursor:
-      cursor.close()
-    if conn:
-      conn.close()
+  db.session.execute(
+    text("SELECT save_inventory_operation(:operation_correlative)"),
+    {"operation_correlative": operation_correlative},
+  )
+  db.session.flush()
+  return True
 
 
 def normalize_code(code: str) -> str:
