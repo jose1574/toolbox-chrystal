@@ -737,6 +737,25 @@ def save_auto_order_collection():
         )
 
 
+@inventory_bp.route("/auto_order_collection/committed_product_modal", methods=["GET"])
+@login_required
+def auto_order_committed_product_modal():
+    store_origin = request.args.get("store_origin")
+    product_code = request.args.get("product_code")
+    committed_orders = inventory_service.get_committed_collection_order_rows(
+        store_origin,
+        product_code,
+    )
+
+    return render_template(
+        "partials/auto_order_committed_product_modal.html",
+        product_code=inventory_service.resolve_main_code(product_code),
+        store_origin=store_origin,
+        committed_orders=committed_orders,
+        status_labels=inventory_service.TRANSFER_STATUS_LABELS,
+    )
+
+
 @inventory_bp.route("/manual_order_collection", methods=["GET"])
 @login_required
 def manual_order_collection():
@@ -861,19 +880,23 @@ def manual_order_cart_add():
         return render_template("partials/manual_order_cart.html", **cart_context)
 
     main_code = inventory_service.resolve_main_code(product_code)
-    unavailable_message = inventory_service.build_open_collection_product_message(
-        store_origin, store_dst, main_code
-    )
-    if unavailable_message:
+    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
+    requested_quantity = float(cart_map.get(main_code, 0)) + float(quantity)
+    stock_info = inventory_service.get_available_stock_for_collection(store_origin, [main_code]).get(main_code, {})
+    available_stock = float(stock_info.get("available_stock", 0))
+
+    if requested_quantity > available_stock:
         cart_context = _build_manual_order_cart_context(
             store_origin,
             store_dst,
-            message=unavailable_message,
+            message=(
+                f"El producto {main_code} solo tiene {available_stock:.2f} disponible "
+                "despues de reservar ordenes emitidas, chequeadas o en transito."
+            ),
             message_category="warning",
         )
         return render_template("partials/manual_order_cart.html", **cart_context)
 
-    cart_map = _get_manual_order_cart_map(store_origin, store_dst)
     cart_map[main_code] = float(cart_map.get(main_code, 0)) + float(quantity)
     _set_manual_order_cart_map(store_origin, store_dst, cart_map)
 
@@ -899,6 +922,19 @@ def manual_order_cart_update():
         if quantity is None or quantity <= 0:
             cart_map.pop(product_code, None)
         else:
+            stock_info = inventory_service.get_available_stock_for_collection(store_origin, [product_code]).get(product_code, {})
+            available_stock = float(stock_info.get("available_stock", 0))
+            if float(quantity) > available_stock:
+                cart_context = _build_manual_order_cart_context(
+                    store_origin,
+                    store_dst,
+                    message=(
+                        f"El producto {product_code} solo tiene {available_stock:.2f} disponible "
+                        "despues de reservar ordenes emitidas, chequeadas o en transito."
+                    ),
+                    message_category="warning",
+                )
+                return render_template("partials/manual_order_cart.html", **cart_context)
             cart_map[product_code] = float(quantity)
         _set_manual_order_cart_map(store_origin, store_dst, cart_map)
 
@@ -983,15 +1019,9 @@ def manual_order_product_lookup():
     entered_code = inventory_service.normalize_code(code)
     main_code = inventory_service._resolver_main_code(code)
 
-    unavailable_message = inventory_service.build_open_collection_product_message(
-        store_origin, store_dst, main_code
-    )
-    if unavailable_message:
-        return jsonify({"ok": False, "message": unavailable_message}), 404
-
     product = inventory_service.get_product_for_manual_order(main_code, store_origin)
 
-    if not product or float(product.stock_origin or 0) <= 0:
+    if not product or float(product.available_stock or 0) <= 0:
         return jsonify({"ok": False, "message": "Producto no encontrado o sin stock en origen."}), 404
 
     return jsonify(
@@ -1007,6 +1037,8 @@ def manual_order_product_lookup():
                 "mark_description": product.mark_description or "",
                 "department_description": product.department_description or "",
                 "stock_origin": float(product.stock_origin or 0),
+                "committed_stock": float(product.committed_stock or 0),
+                "available_stock": float(product.available_stock or 0),
             },
         }
     )
@@ -1040,20 +1072,6 @@ def manual_order_product_detail():
     store_origin = request.args.get("store_origin")
     store_dst = request.args.get("store_dst")
     product_code = request.args.get("product_code")
-
-    unavailable_message = inventory_service.build_open_collection_product_message(
-        store_origin, store_dst, product_code
-    )
-    if unavailable_message:
-        return render_template(
-            "partials/manual_order_product_detail.html",
-            product_detail=None,
-            error_message=unavailable_message,
-            store_origin=store_origin,
-            store_dst=store_dst,
-            store_origin_code=store_origin,
-            store_dst_code=store_dst,
-        )
 
     detail_data = inventory_service.get_manual_order_product_detail_data(
         product_code, store_origin, store_dst

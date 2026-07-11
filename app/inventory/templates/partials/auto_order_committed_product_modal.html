@@ -1,0 +1,61 @@
+<div id="product-modal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;" role="dialog" aria-modal="true">
+    <div class="bg-body border border-secondary-subtle rounded shadow w-100" style="max-width: 56rem; max-height: 90vh; overflow: hidden;">
+        <div class="d-flex align-items-start justify-content-between gap-3 p-3 border-bottom border-secondary-subtle">
+            <div>
+                <div class="small text-body-secondary">Producto comprometido</div>
+                <h2 class="h5 fw-bold text-body mb-0">{{ product_code or '-' }}</h2>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-close-product-modal>Cerrar</button>
+        </div>
+
+        <div class="p-3 overflow-y-auto" style="max-height: calc(90vh - 5rem);">
+            {% if committed_orders %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="bg-body-tertiary small text-uppercase">
+                        <tr>
+                            <th scope="col">Orden</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Origen</th>
+                            <th scope="col">Destino</th>
+                            <th scope="col" class="text-end">Cantidad</th>
+                            <th scope="col" class="text-end">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in committed_orders %}
+                        {% set order_label = order.document_no or order.operation_correlative %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">#{{ order_label }}</div>
+                                <div class="small text-body-secondary">{{ order.emission_date or '-' }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                    {{ status_labels.get(order.current_status, order.current_status) }}
+                                </span>
+                            </td>
+                            <td>{{ order.store_origin_name or order.store_origin }}</td>
+                            <td>{{ order.store_dst_name or order.store_dst }}</td>
+                            <td class="text-end fw-semibold">{{ '%.2f'|format(order.committed_quantity or 0) }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('inventory.order_collection_report', order_id=order.operation_correlative) }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="btn btn-sm btn-outline-primary">
+                                    Abrir PDF
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rounded border border-secondary-subtle bg-body-tertiary p-3 text-center small text-body-secondary fst-italic">
+                No se encontraron ordenes comprometidas para este producto.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

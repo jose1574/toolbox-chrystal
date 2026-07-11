@@ -32,6 +32,7 @@
     }
 
     .auto-order-table .col-stock,
+    .auto-order-table .col-committed,
     .auto-order-table .col-min,
     .auto-order-table .col-max,
     .auto-order-table .col-destination,
@@ -70,6 +71,7 @@
         .auto-order-table .col-mark,
         .auto-order-table .col-department,
         .auto-order-table .col-stock,
+        .auto-order-table .col-committed,
         .auto-order-table .col-min,
         .auto-order-table .col-max,
         .auto-order-table .col-destination,
@@ -227,15 +229,15 @@
                 <div
                     class="filter-dropdown-menu d-none position-absolute start-0 z-3 mt-1 bg-body border border-secondary-subtle rounded shadow-sm p-1" style="width: 20rem; max-width: 90vw; max-height: 12rem; overflow-y: auto;">
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
-                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-issued" value="Fuera de emitidas" checked>
+                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-issued" value="Fuera de emitidas">
                         <span class="ms-2 small text-body-secondary text-truncate">los que estan en una <b>orden emitida</b></span>
                     </label>
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
-                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-checked" value="Fuera de chequeadas" checked>
+                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-checked" value="Fuera de chequeadas">
                         <span class="ms-2 small text-body-secondary text-truncate">los que estan en una <b>orden chequeada</b></span>
                     </label>
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
-                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-transit" value="Fuera de transito" checked>
+                        <input class="order-checkbox form-check-input mt-0" type="checkbox" id="filter-out-transit" value="Fuera de transito">
                         <span class="ms-2 small text-body-secondary text-truncate">los que estan <b>en transito</b></span>
                     </label>
                     <label class="d-flex align-items-center p-1 rounded cursor-pointer">
@@ -309,6 +311,7 @@
                     <col class="col-mark">
                     <col class="col-department">
                     <col class="col-stock">
+                    <col class="col-committed">
                     <col class="col-min">
                     <col class="col-max">
                     <col class="col-destination">
@@ -327,6 +330,7 @@
                         <th scope="col" class="px-6 py-3">Marca</th>
                         <th scope="col" class="px-6 py-3">Departamento</th>
                         <th scope="col" class="px-6 py-3">Stock Orig. {{ store_origin_name or store_origin }}</th>
+                        <th scope="col" class="px-6 py-3">Comprometido</th>
                         <th scope="col" class="px-6 py-3">Exist. Min</th>
                         <th scope="col" class="px-6 py-3">Exist. Max</th>
                         <th scope="col" class="px-6 py-3">Stock Dest. {{ store_dst_name or store_dst }}</th>
@@ -345,8 +349,7 @@
                         data-in-transit-order="{{ 'true' if product.in_transit_order else 'false' }}">
                         <td class="px-6 py-4">
                             <input type="checkbox" name="{{ product.code }}" value="selected"
-                                class="product-checkbox form-check-input"
-                            {% if product.in_issued_order or product.in_checked_order or product.in_transit_order %}disabled title="Producto incluido en una orden de recolección emitida, chequeada o en tránsito"{% endif %}>
+                                class="product-checkbox form-check-input">
                         </td>
                         <td class="px-6 py-4 fw-semibold text-body">
                             <a href="{{ url_for('inventory.modal_product_params') }}?product_code={{ product.code|urlencode }}&store={{ store_dst|urlencode }}"
@@ -363,6 +366,20 @@
                         <td class="px-6 py-4">{{ product.mark_description }}</td>
                         <td class="px-6 py-4">{{ product.department_description }}</td>
                         <td class="px-6 py-4">{{ product.stock_origin }}</td>
+                        <td class="px-6 py-4">
+                            {% if product.committed_stock and product.committed_stock > 0 %}
+                            <button type="button"
+                                class="btn btn-sm btn-link text-warning-emphasis fw-bold p-0 text-decoration-underline"
+                                hx-get="{{ url_for('inventory.auto_order_committed_product_modal') }}"
+                                hx-target="#product-modal"
+                                hx-swap="outerHTML"
+                                hx-vals='{{ {"store_origin": store_origin, "product_code": product.code}|tojson }}'>
+                                {{ product.committed_stock }}
+                            </button>
+                            {% else %}
+                            0
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4">{{ product.minimum_stock }}</td>
                         <td class="px-6 py-4">{{ product.maximum_stock }}</td>
                         <td class="px-6 py-4">{{ product.stock_destination }}</td>
@@ -373,7 +390,7 @@
                     </tr>
                     {% else %}
                     <tr class="bg-body">
-                        <td colspan="11" class="px-6 py-4 text-center text-body-secondary fst-italic">No se encontraron productos
+                        <td colspan="12" class="px-6 py-4 text-center text-body-secondary fst-italic">No se encontraron productos
                             que requieran transferencia según los niveles de stock.</td>
                     </tr>
                     {% endfor %}

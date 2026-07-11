@@ -246,5 +246,18 @@
     </div>
     {% endif %}
 </div>
+<div id="product-modal"></div>
+<script>
+    document.addEventListener('click', (event) => {
+        const closeButton = event.target.closest('[data-close-product-modal]');
+        const clickedBackdrop = event.target.id === 'product-modal';
+        if (closeButton || clickedBackdrop) {
+            const modal = document.getElementById('product-modal');
+            if (modal) {
+                modal.outerHTML = '<div id="product-modal"></div>';
+            }
+        }
+    });
+</script>
 <script src="{{ url_for('inventory.static', filename='js/manual_order_collection_tour.js') }}"></script>
 {% endblock %}

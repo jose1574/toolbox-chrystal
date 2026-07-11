@@ -291,6 +291,8 @@ def get_product_for_manual_order(product_code, store_origin):
   if not main_code or not store_origin:
     return None
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   stock_totals = (
     select(
       ProductsStock.product_code.label("product_code"),
@@ -310,12 +312,19 @@ def get_product_for_manual_order(product_code, store_origin):
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
       func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+      func.coalesce(committed_totals.c.committed_quantity, 0).label("committed_stock"),
+      func.greatest(
+        func.coalesce(stock_totals.c.stock_total, 0)
+        - func.coalesce(committed_totals.c.committed_quantity, 0),
+        0,
+      ).label("available_stock"),
     )
     .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
     .join(Unit, Unit.code == ProductsUnit.unit)
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
     .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
     .where(func.upper(func.trim(Product.code)) == main_code)
   )
   return db.session.execute(stmt).first()
@@ -324,9 +333,6 @@ def get_product_for_manual_order(product_code, store_origin):
 def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
   main_code = _resolver_main_code(product_code)
   if not main_code or not store_origin or not store_dst:
-    return None
-
-  if get_open_collection_product_codes(store_origin, store_dst, [main_code]):
     return None
 
   product = Product.query.filter_by(code=main_code).first()
@@ -368,6 +374,8 @@ def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
     (row["stock"] for row in stock_by_store if normalize_code(row["store_code"]) == normalize_code(store_origin)),
     0,
   )
+  committed_origin = get_committed_collection_quantity(store_origin, main_code)
+  available_origin = max(float(stock_origin or 0) - float(committed_origin or 0), 0)
   stock_destination = next(
     (row["stock"] for row in stock_by_store if normalize_code(row["store_code"]) == normalize_code(store_dst)),
     0,
@@ -381,6 +389,8 @@ def get_manual_order_product_detail_data(product_code, store_origin, store_dst):
     "department_description": department_row.description if department_row else "",
     "stock_global": float(stock_global or 0),
     "stock_origin": float(stock_origin or 0),
+    "committed_stock": float(committed_origin or 0),
+    "available_stock": float(available_origin or 0),
     "stock_destination": float(stock_destination or 0),
     "stock_by_store": stock_by_store,
     "minimum_stock": float(product_params.minimal_stock or 0) if product_params else 0,
@@ -420,6 +430,8 @@ def get_manual_order_cart_context(store_origin, store_dst, cart_map):
       "has_items": False,
     }
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   stock_totals = (
     select(
       ProductsStock.product_code.label("product_code"),
@@ -436,10 +448,17 @@ def get_manual_order_cart_context(store_origin, store_dst, cart_map):
       Product.description,
       Unit.description.label("unit_description"),
       func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+      func.coalesce(committed_totals.c.committed_quantity, 0).label("committed_stock"),
+      func.greatest(
+        func.coalesce(stock_totals.c.stock_total, 0)
+        - func.coalesce(committed_totals.c.committed_quantity, 0),
+        0,
+      ).label("available_stock"),
     )
     .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
     .join(Unit, Unit.code == ProductsUnit.unit)
     .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
     .where(Product.code.in_(list(normalized_items.keys())))
   ).all()
 
@@ -450,6 +469,8 @@ def get_manual_order_cart_context(store_origin, store_dst, cart_map):
     quantity = float(normalized_items[code])
     unit_description = row.unit_description if row else "UND"
     stock_origin = float(row.stock_origin or 0) if row else 0.0
+    committed_stock = float(row.committed_stock or 0) if row else 0.0
+    available_stock = float(row.available_stock or 0) if row else 0.0
     items.append(
       {
         "code": code,
@@ -457,7 +478,9 @@ def get_manual_order_cart_context(store_origin, store_dst, cart_map):
         "quantity": quantity,
         "unit_description": unit_description,
         "stock_origin": stock_origin,
-        "is_over_stock": quantity > stock_origin,
+        "committed_stock": committed_stock,
+        "available_stock": available_stock,
+        "is_over_stock": quantity > available_stock,
       }
     )
 
@@ -484,11 +507,19 @@ def get_manual_order_filter_options(store_origin):
     .subquery()
   )
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+  available_stock_expr = func.greatest(
+    func.coalesce(stock_totals.c.stock_total, 0)
+    - func.coalesce(committed_totals.c.committed_quantity, 0),
+    0,
+  )
+
   marks = db.session.execute(
     select(Mark.code, Mark.description)
     .join(Product, Product.mark == Mark.code)
     .join(stock_totals, stock_totals.c.product_code == Product.code)
-    .where(func.coalesce(stock_totals.c.stock_total, 0) > 0)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
+    .where(available_stock_expr > 0)
     .group_by(Mark.code, Mark.description)
     .order_by(Mark.description.asc())
   ).all()
@@ -497,7 +528,8 @@ def get_manual_order_filter_options(store_origin):
     select(Department.code, Department.description)
     .join(Product, Product.department == Department.code)
     .join(stock_totals, stock_totals.c.product_code == Product.code)
-    .where(func.coalesce(stock_totals.c.stock_total, 0) > 0)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
+    .where(available_stock_expr > 0)
     .group_by(Department.code, Department.description)
     .order_by(Department.description.asc())
   ).all()
@@ -537,38 +569,32 @@ def search_products_for_manual_order(
     .subquery()
   )
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   destination_params = aliased(ProductsFailure)
 
   filters = []
   stock_total_expr = func.coalesce(stock_totals.c.stock_total, 0)
+  committed_stock_expr = func.coalesce(committed_totals.c.committed_quantity, 0)
+  available_stock_expr = func.greatest(stock_total_expr - committed_stock_expr, 0)
 
   if stock_filter == "all":
     pass
   elif stock_filter == "out_stock":
-    filters.append(stock_total_expr <= 0)
+    filters.append(available_stock_expr <= 0)
   elif stock_filter == "low_stock":
-    filters.append(stock_total_expr > 0)
+    filters.append(available_stock_expr > 0)
     if store_dst:
-      filters.append(stock_total_expr <= func.coalesce(destination_params.minimal_stock, 0))
+      filters.append(available_stock_expr <= func.coalesce(destination_params.minimal_stock, 0))
       filters.append(func.coalesce(destination_params.minimal_stock, 0) > 0)
   else:
-    filters.append(stock_total_expr > 0)
+    filters.append(available_stock_expr > 0)
 
   if mark_code:
     filters.append(func.upper(func.trim(Product.mark)) == mark_code)
 
   if department_code:
     filters.append(func.upper(func.trim(Product.department)) == department_code)
-
-  if store_dst:
-    unavailable_products = build_open_collection_products_query(
-      store_origin, store_dst
-    ).subquery()
-    filters.append(
-      ~func.upper(func.trim(Product.code)).in_(
-        select(unavailable_products.c.code_product)
-      )
-    )
 
   if query:
     if "*" in query:
@@ -598,12 +624,15 @@ def search_products_for_manual_order(
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
       stock_total_expr.label("stock_origin"),
+      committed_stock_expr.label("committed_stock"),
+      available_stock_expr.label("available_stock"),
     )
     .join(ProductsUnit, (ProductsUnit.product_code == Product.code) & (ProductsUnit.main_unit == True))
     .join(Unit, Unit.code == ProductsUnit.unit)
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
     .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
     .outerjoin(
       destination_params,
       (destination_params.product_code == Product.code)
@@ -1364,6 +1393,8 @@ def get_product_for_manual_order(product_code, store_origin):
   if not main_code or not store_origin:
     return None
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   stock_totals = (
     select(
       ProductsStock.product_code.label("product_code"),
@@ -1383,6 +1414,12 @@ def get_product_for_manual_order(product_code, store_origin):
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
       func.coalesce(stock_totals.c.stock_total, 0).label("stock_origin"),
+      func.coalesce(committed_totals.c.committed_quantity, 0).label("committed_stock"),
+      func.greatest(
+        func.coalesce(stock_totals.c.stock_total, 0)
+        - func.coalesce(committed_totals.c.committed_quantity, 0),
+        0,
+      ).label("available_stock"),
     )
     .join(
       ProductsUnit,
@@ -1392,6 +1429,7 @@ def get_product_for_manual_order(product_code, store_origin):
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
     .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
     .where(func.upper(func.trim(Product.code)) == main_code)
   )
   return db.session.execute(stmt).first()
@@ -1429,38 +1467,32 @@ def search_products_for_manual_order(
     .subquery()
   )
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   destination_params = aliased(ProductsFailure)
 
   filters = []
   stock_total_expr = func.coalesce(stock_totals.c.stock_total, 0)
+  committed_stock_expr = func.coalesce(committed_totals.c.committed_quantity, 0)
+  available_stock_expr = func.greatest(stock_total_expr - committed_stock_expr, 0)
 
   if stock_filter == "all":
     pass
   elif stock_filter == "out_stock":
-    filters.append(stock_total_expr <= 0)
+    filters.append(available_stock_expr <= 0)
   elif stock_filter == "low_stock":
-    filters.append(stock_total_expr > 0)
+    filters.append(available_stock_expr > 0)
     if store_dst:
-      filters.append(stock_total_expr <= func.coalesce(destination_params.minimal_stock, 0))
+      filters.append(available_stock_expr <= func.coalesce(destination_params.minimal_stock, 0))
       filters.append(func.coalesce(destination_params.minimal_stock, 0) > 0)
   else:
-    filters.append(stock_total_expr > 0)
+    filters.append(available_stock_expr > 0)
 
   if mark_code:
     filters.append(func.upper(func.trim(Product.mark)) == mark_code)
 
   if department_code:
     filters.append(func.upper(func.trim(Product.department)) == department_code)
-
-  if store_dst:
-    unavailable_products = build_open_collection_products_query(
-      store_origin, store_dst
-    ).subquery()
-    filters.append(
-      ~func.upper(func.trim(Product.code)).in_(
-        select(unavailable_products.c.code_product)
-      )
-    )
 
   if query:
     if "*" in query:
@@ -1490,6 +1522,8 @@ def search_products_for_manual_order(
       Mark.description.label("mark_description"),
       Department.description.label("department_description"),
       stock_total_expr.label("stock_origin"),
+      committed_stock_expr.label("committed_stock"),
+      available_stock_expr.label("available_stock"),
     )
     .join(
       ProductsUnit,
@@ -1499,6 +1533,7 @@ def search_products_for_manual_order(
     .outerjoin(Mark, Mark.code == Product.mark)
     .outerjoin(Department, Department.code == Product.department)
     .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
     .outerjoin(
       destination_params,
       (destination_params.product_code == Product.code)
@@ -1545,14 +1580,19 @@ def create_order_collection_operation(
   if not normalized_items:
     raise ValueError("No se han seleccionado productos.")
 
-  open_product_codes = get_open_collection_product_codes(
-    store_origin, store_dst, normalized_items.keys()
-  )
-  if open_product_codes:
-    codes_text = ", ".join(sorted(open_product_codes))
+  available_by_code = get_available_stock_for_collection(store_origin, normalized_items.keys())
+  over_committed_codes = []
+  for code, quantity in normalized_items.items():
+    available_stock = available_by_code.get(code, {}).get("available_stock", 0)
+    if float(quantity) > float(available_stock):
+      over_committed_codes.append(
+        f"{code} solicitado {float(quantity):.2f}, disponible {float(available_stock):.2f}"
+      )
+
+  if over_committed_codes:
     raise ValueError(
-      "Los siguientes productos ya estan en una orden de recoleccion emitida, "
-      f"chequeada o en transito para estos depositos: {codes_text}."
+      "Las cantidades superan el stock disponible despues de reservar ordenes "
+      "emitidas, chequeadas o en transito: " + "; ".join(over_committed_codes) + "."
     )
 
   operation_description = (
@@ -1678,6 +1718,15 @@ def build_open_collection_products_query(store_origin, store_dst, status_codes=N
     FLOW_IN_TRANSIT,
   ]
 
+  filters = [
+    InventoryOperation.operation_type == "TRANSFER",
+    func.upper(func.trim(InventoryOperation.store)) == normalize_code(store_origin),
+    InventoryOperationDetail.code_product.isnot(None),
+    InventoryOperationFlow.current_status.in_(statuses),
+  ]
+  if store_dst:
+    filters.append(func.upper(func.trim(InventoryOperation.destination_store)) == normalize_code(store_dst))
+
   return (
     select(
       func.upper(func.trim(InventoryOperationDetail.code_product)).label("code_product")
@@ -1691,14 +1740,150 @@ def build_open_collection_products_query(store_origin, store_dst, status_codes=N
       InventoryOperationFlow,
       InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
     )
+    .where(*filters)
+  )
+
+
+def build_committed_collection_quantities_query(store_origin, product_codes=None, status_codes=None):
+  statuses = status_codes or [
+    FLOW_RECOLLECTION_ISSUED,
+    FLOW_RECOLLECTION_CHECKED,
+    FLOW_IN_TRANSIT,
+  ]
+  normalized_codes = {normalize_code(code) for code in (product_codes or []) if code}
+
+  filters = [
+    InventoryOperation.operation_type == "TRANSFER",
+    func.upper(func.trim(InventoryOperation.store)) == normalize_code(store_origin),
+    InventoryOperationDetail.code_product.isnot(None),
+    InventoryOperationFlow.current_status.in_(statuses),
+  ]
+  if normalized_codes:
+    filters.append(func.upper(func.trim(InventoryOperationDetail.code_product)).in_(normalized_codes))
+
+  return (
+    select(
+      func.upper(func.trim(InventoryOperationDetail.code_product)).label("product_code"),
+      func.sum(func.coalesce(InventoryOperationDetail.amount, 0)).label("committed_quantity"),
+    )
+    .join(
+      InventoryOperation,
+      InventoryOperation.correlative == InventoryOperationDetail.main_correlative,
+    )
+    .join(
+      InventoryOperationFlow,
+      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
+    )
+    .where(*filters)
+    .group_by(func.upper(func.trim(InventoryOperationDetail.code_product)))
+  )
+
+
+def get_committed_collection_quantity(store_origin, product_code):
+  if not store_origin or not product_code:
+    return 0.0
+
+  stmt = build_committed_collection_quantities_query(store_origin, [product_code])
+  row = db.session.execute(stmt).mappings().first()
+  return float(row["committed_quantity"] or 0) if row else 0.0
+
+
+def get_available_stock_for_collection(store_origin, product_codes):
+  normalized_codes = {normalize_code(code) for code in product_codes if code}
+  if not store_origin or not normalized_codes:
+    return {}
+
+  stock_totals = (
+    select(
+      ProductsStock.product_code.label("product_code"),
+      func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
+    )
+    .where(
+      ProductsStock.store == store_origin,
+      func.upper(func.trim(ProductsStock.product_code)).in_(normalized_codes),
+    )
+    .group_by(ProductsStock.product_code)
+    .subquery()
+  )
+  committed_totals = build_committed_collection_quantities_query(store_origin, normalized_codes).subquery()
+  stock_expr = func.coalesce(stock_totals.c.stock_total, 0)
+  committed_expr = func.coalesce(committed_totals.c.committed_quantity, 0)
+
+  rows = db.session.execute(
+    select(
+      Product.code.label("product_code"),
+      stock_expr.label("stock_origin"),
+      committed_expr.label("committed_stock"),
+      func.greatest(stock_expr - committed_expr, 0).label("available_stock"),
+    )
+    .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == func.upper(func.trim(Product.code)))
+    .where(func.upper(func.trim(Product.code)).in_(normalized_codes))
+  ).mappings().all()
+
+  return {
+    normalize_code(row["product_code"]): {
+      "stock_origin": float(row["stock_origin"] or 0),
+      "committed_stock": float(row["committed_stock"] or 0),
+      "available_stock": float(row["available_stock"] or 0),
+    }
+    for row in rows
+  }
+
+
+def get_committed_collection_order_rows(store_origin, product_code):
+  main_code = resolve_main_code(product_code)
+  if not store_origin or not main_code:
+    return []
+
+  origin_store = aliased(Store)
+  destination_store = aliased(Store)
+
+  stmt = (
+    select(
+      InventoryOperation.correlative.label("operation_correlative"),
+      InventoryOperation.document_no.label("document_no"),
+      InventoryOperation.emission_date.label("emission_date"),
+      InventoryOperation.description.label("description"),
+      InventoryOperationFlow.current_status.label("current_status"),
+      InventoryOperation.store.label("store_origin"),
+      origin_store.description.label("store_origin_name"),
+      InventoryOperation.destination_store.label("store_dst"),
+      destination_store.description.label("store_dst_name"),
+      func.sum(func.coalesce(InventoryOperationDetail.amount, 0)).label("committed_quantity"),
+    )
+    .join(
+      InventoryOperation,
+      InventoryOperation.correlative == InventoryOperationDetail.main_correlative,
+    )
+    .join(
+      InventoryOperationFlow,
+      InventoryOperationFlow.operation_correlative == InventoryOperation.correlative,
+    )
+    .outerjoin(origin_store, origin_store.code == InventoryOperation.store)
+    .outerjoin(destination_store, destination_store.code == InventoryOperation.destination_store)
     .where(
       InventoryOperation.operation_type == "TRANSFER",
       func.upper(func.trim(InventoryOperation.store)) == normalize_code(store_origin),
-      func.upper(func.trim(InventoryOperation.destination_store)) == normalize_code(store_dst),
-      InventoryOperationDetail.code_product.isnot(None),
-      InventoryOperationFlow.current_status.in_(statuses),
+      func.upper(func.trim(InventoryOperationDetail.code_product)) == main_code,
+      InventoryOperationFlow.current_status.in_(
+        [FLOW_RECOLLECTION_ISSUED, FLOW_RECOLLECTION_CHECKED, FLOW_IN_TRANSIT]
+      ),
     )
+    .group_by(
+      InventoryOperation.correlative,
+      InventoryOperation.document_no,
+      InventoryOperation.emission_date,
+      InventoryOperation.description,
+      InventoryOperationFlow.current_status,
+      InventoryOperation.store,
+      origin_store.description,
+      InventoryOperation.destination_store,
+      destination_store.description,
+    )
+    .order_by(InventoryOperation.emission_date.desc().nullslast(), InventoryOperation.correlative.desc())
   )
+  return db.session.execute(stmt).mappings().all()
 
 
 def get_open_collection_product_codes(store_origin, store_dst, product_codes=None):
@@ -1806,6 +1991,8 @@ def get_auto_order_collection_data(store_origin, store_dst):
     .subquery()
   )
 
+  committed_totals = build_committed_collection_quantities_query(store_origin).subquery()
+
   stock_dst_totals = (
     select(
       ProductsStock.product_code.label("product_code"),
@@ -1817,13 +2004,13 @@ def get_auto_order_collection_data(store_origin, store_dst):
   )
 
   issued_collection_products = build_open_collection_products_query(
-    store_origin, store_dst, [FLOW_RECOLLECTION_ISSUED]
+    store_origin, None, [FLOW_RECOLLECTION_ISSUED]
   ).subquery()
   checked_collection_products = build_open_collection_products_query(
-    store_origin, store_dst, [FLOW_RECOLLECTION_CHECKED]
+    store_origin, None, [FLOW_RECOLLECTION_CHECKED]
   ).subquery()
   transit_collection_products = build_open_collection_products_query(
-    store_origin, store_dst, [FLOW_IN_TRANSIT]
+    store_origin, None, [FLOW_IN_TRANSIT]
   ).subquery()
 
   pf = aliased(ProductsFailure)
@@ -1833,8 +2020,13 @@ def get_auto_order_collection_data(store_origin, store_dst):
   pu = aliased(ProductsUnit)
 
   needed = pf.maximum_stock - func.coalesce(stock_dst_totals.c.stock_total, 0)
+  available_origin = func.greatest(
+    func.coalesce(stock_orig_totals.c.stock_total, 0)
+    - func.coalesce(committed_totals.c.committed_quantity, 0),
+    0,
+  )
   to_transfer = func.least(
-    func.coalesce(stock_orig_totals.c.stock_total, 0), func.greatest(needed, 0)
+    available_origin, func.greatest(needed, 0)
   ).label("to_transfer")
   normalized_product_code = func.upper(func.trim(Product.code))
 
@@ -1847,6 +2039,8 @@ def get_auto_order_collection_data(store_origin, store_dst):
       m.description.label("mark_description"),
       d.description.label("department_description"),
       func.coalesce(stock_orig_totals.c.stock_total, 0).label("stock_origin"),
+      func.coalesce(committed_totals.c.committed_quantity, 0).label("committed_stock"),
+      available_origin.label("available_stock"),
       pf.minimal_stock.label("minimum_stock"),
       pf.maximum_stock.label("maximum_stock"),
       func.coalesce(stock_dst_totals.c.stock_total, 0).label("stock_destination"),
@@ -1863,6 +2057,7 @@ def get_auto_order_collection_data(store_origin, store_dst):
       ).label("in_transit_order"),
     )
     .join(stock_orig_totals, Product.code == stock_orig_totals.c.product_code)
+    .outerjoin(committed_totals, committed_totals.c.product_code == normalized_product_code)
     .outerjoin(stock_dst_totals, Product.code == stock_dst_totals.c.product_code)
     .outerjoin(pf, (Product.code == pf.product_code) & (pf.store_code == store_dst))
     .join(pu, (Product.code == pu.product_code) & (pu.main_unit == True))
@@ -1870,7 +2065,7 @@ def get_auto_order_collection_data(store_origin, store_dst):
     .join(d, Product.department == d.code)
     .outerjoin(m, Product.mark == m.code)
     .where(
-      (func.coalesce(stock_orig_totals.c.stock_total, 0) > 0)
+      (available_origin > 0)
       & (func.coalesce(stock_dst_totals.c.stock_total, 0) < pf.minimal_stock)
       & (needed > 0)
     )

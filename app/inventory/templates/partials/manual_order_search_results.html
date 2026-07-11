@@ -15,7 +15,8 @@
                         <span class="text-body-secondary fw-normal">{{ product.code }}</span> - {{ product.description or '-' }}
                     </h6>
                     <div class="text-body-secondary" style="font-size: 11px;">Marca: {{ product.mark_description or '-' }} · Departamento: {{ product.department_description or '-' }}</div>
-                    <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Stock deposito de origen: {{ '%.2f'|format(product.stock_origin or 0) }} {{ product.unit_description or '' }}</span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis p-1" style="font-size: 11px;">Comprometido: {{ '%.2f'|format(product.committed_stock or 0) }}</span>
+                    <span class="badge bg-success-subtle text-success-emphasis p-1" style="font-size: 11px;">Disponible origen: {{ '%.2f'|format(product.available_stock or 0) }} {{ product.unit_description or '' }}</span>
                 </div>
                 <button type="button"
                     class="btn btn-sm btn-outline-secondary product-action"

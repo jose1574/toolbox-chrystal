@@ -7,7 +7,7 @@
     {% if gap_to_max < 0 %}
         {% set gap_to_max = 0 %}
     {% endif %}
-    {% set suggested_qty = detail.stock_origin or 0 %}
+    {% set suggested_qty = detail.available_stock or 0 %}
     {% if suggested_qty > gap_to_max %}
         {% set suggested_qty = gap_to_max %}
     {% endif %}
@@ -55,8 +55,43 @@
             <div class="rounded border border-secondary-subtle p-2 mb-3">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="fw-semibold">Existencias</div>
-                    <span class="badge bg-success-subtle text-success-emphasis">Stock total: {{ '%.2f'|format(detail.stock_global or 0) if detail else '0.00' }} {{ unit_label }}</span>
+                    <span class="badge bg-success-subtle text-success-emphasis">Disponible origen: {{ '%.2f'|format(detail.available_stock or 0) if detail else '0.00' }} {{ unit_label }}</span>
                 </div>
+                {% if detail %}
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <div class="rounded bg-body-tertiary border border-secondary-subtle p-2 text-center h-100">
+                            <div class="text-body-secondary text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Origen</div>
+                            <div class="fw-bold">{{ '%.2f'|format(detail.stock_origin or 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="rounded bg-warning-subtle border border-warning-subtle p-2 text-center h-100">
+                            <div class="text-warning-emphasis text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Comprometido</div>
+                            <div class="fw-bold text-warning-emphasis">
+                                {% if detail.committed_stock and detail.committed_stock > 0 %}
+                                <button type="button"
+                                    class="btn btn-sm btn-link text-warning-emphasis fw-bold p-0 text-decoration-underline"
+                                    hx-get="{{ url_for('inventory.auto_order_committed_product_modal') }}"
+                                    hx-target="#product-modal"
+                                    hx-swap="outerHTML"
+                                    hx-vals='{{ {"store_origin": store_origin_code if store_origin_code is defined else "", "product_code": detail.main_code}|tojson }}'>
+                                    {{ '%.2f'|format(detail.committed_stock or 0) }}
+                                </button>
+                                {% else %}
+                                {{ '%.2f'|format(detail.committed_stock or 0) }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="rounded bg-success-subtle border border-success-subtle p-2 text-center h-100">
+                            <div class="text-success-emphasis text-uppercase" style="font-size: 0.62rem; letter-spacing: 0.04em;">Disponible</div>
+                            <div class="fw-bold text-success-emphasis">{{ '%.2f'|format(detail.available_stock or 0) }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0 small">
                         <thead class="text-body-secondary">
@@ -123,11 +158,11 @@
         <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
             <span class="small fw-semibold">CANTIDAD:</span>
             <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold" type="button" data-qty-action="decrement">-</button>
-            <input id="manual-product-quantity" name="quantity" type="text" class="form-control form-control-sm text-center fw-bold" value="{{ '%.2f'|format(suggested_qty or 1) if detail else '1' }}" style="width: 45px;" inputmode="decimal" data-tour="manual-order-quantity-input">
+            <input id="manual-product-quantity" name="quantity" type="text" class="form-control form-control-sm text-center fw-bold" value="{{ '%.2f'|format(suggested_qty) if detail else '1' }}" style="width: 45px;" inputmode="decimal" data-tour="manual-order-quantity-input">
             <button class="btn btn-outline-secondary btn-sm px-2 py-0 fw-bold" type="button" data-qty-action="increment">+</button>
         </div>
         <div class="container pb-4">
-            <button class="btn btn-primary w-100 py-2 fw-bold text-uppercase mb-1 shadow-sm" type="submit" data-tour="manual-order-add-button" {% if not detail %}disabled{% endif %}>Añadir a Orden</button>        
+            <button class="btn btn-primary w-100 py-2 fw-bold text-uppercase mb-1 shadow-sm" type="submit" data-tour="manual-order-add-button" {% if not detail or (detail.available_stock or 0) <= 0 %}disabled{% endif %}>Añadir a Orden</button>
         </div>
     </form>
 </div>

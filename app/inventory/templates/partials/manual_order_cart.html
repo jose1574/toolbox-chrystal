@@ -22,8 +22,11 @@
                         <div class="order-item-meta text-body-secondary">
                             Cantidad: {{ '%.2f'|format(item.quantity or 0) }} | Unidad: {{ item.unit_description or 'UND' }}
                         </div>
+                        <div class="order-item-meta text-body-secondary">
+                            Stock origen: {{ '%.2f'|format(item.stock_origin or 0) }} | Comprometido: {{ '%.2f'|format(item.committed_stock or 0) }} | Disponible: {{ '%.2f'|format(item.available_stock or 0) }}
+                        </div>
                         {% if item.is_over_stock %}
-                        <div class="small text-danger">Supera el stock disponible en origen ({{ '%.2f'|format(item.stock_origin or 0) }}).</div>
+                        <div class="small text-danger">Supera el stock disponible en origen ({{ '%.2f'|format(item.available_stock or 0) }}).</div>
                         {% endif %}
                     </td>
                     <td class="py-2 text-end" style="width: 140px;">
