@@ -6,7 +6,7 @@
     <h1 class="h3 fw-bold text-body mb-3">Ubicación de Productos</h1>
 
     {% if not store %}
-    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle">
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle form-gradient-surface">
         <h2 class="h5 fw-semibold text-body">Seleccionar Depósito</h2>
         <form action="{{ url_for('inventory.products_locations') }}" method="post" class="d-grid gap-3">
             <div>
@@ -38,7 +38,7 @@
     {% endif %}
 
     {% if store and not location %}
-    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle mt-3">
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle mt-3 form-gradient-surface">
         <h2 class="h5 fw-semibold text-body">Asignar ubicación</h2>
         <form action="{{ url_for('inventory.products_locations') }}" method="post" class="d-grid gap-3">
             <input type="hidden" name="store_code" value="{{ store.code }}">
@@ -69,7 +69,7 @@
         <p class="mb-0"><span class="fw-semibold">Nueva Ubicación:</span> {{ location }}</p>
     </div>
 
-    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle">
+    <div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle form-gradient-surface">
         <h2 class="h5 fw-semibold text-body">Buscar y Seleccionar Productos</h2>
         <div id="search-error" class="d-none text-danger small mb-3"></div>
 

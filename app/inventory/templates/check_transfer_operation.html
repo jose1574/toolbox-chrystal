@@ -9,10 +9,36 @@
 
 {% block content %}
 <style>
+	:root {
+		--transfer-reception-hero-radial: rgba(25, 135, 84, 0.14);
+		--transfer-reception-hero-start: rgba(255, 255, 255, 0.9);
+		--transfer-reception-hero-end: rgba(248, 249, 250, 0.96);
+		--transfer-reception-panel-hover-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+		--transfer-reception-tour-btn-bg: var(--bs-emphasis-color);
+		--transfer-reception-tour-btn-border: var(--bs-emphasis-color);
+		--transfer-reception-tour-btn-color: var(--bs-body-bg);
+		--transfer-reception-tour-btn-hover-bg: #000;
+		--transfer-reception-tour-btn-hover-border: #000;
+		--transfer-reception-diff-bg: rgba(255, 193, 7, 0.22);
+	}
+
+	[data-bs-theme="dark"] {
+		--transfer-reception-hero-radial: rgba(25, 135, 84, 0.26);
+		--transfer-reception-hero-start: rgba(19, 32, 27, 0.94);
+		--transfer-reception-hero-end: rgba(15, 24, 21, 0.98);
+		--transfer-reception-panel-hover-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.38);
+		--transfer-reception-tour-btn-bg: var(--bs-success);
+		--transfer-reception-tour-btn-border: var(--bs-success);
+		--transfer-reception-tour-btn-color: #f8f9fa;
+		--transfer-reception-tour-btn-hover-bg: #157347;
+		--transfer-reception-tour-btn-hover-border: #146c43;
+		--transfer-reception-diff-bg: rgba(255, 193, 7, 0.16);
+	}
+
 	.transfer-reception-hero {
 		background:
-			radial-gradient(circle at top right, rgba(25, 135, 84, 0.12), transparent 34%),
-			linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 249, 250, 0.98));
+			radial-gradient(circle at top right, var(--transfer-reception-hero-radial), transparent 36%),
+			linear-gradient(180deg, var(--transfer-reception-hero-start), var(--transfer-reception-hero-end));
 	}
 
 	.transfer-reception-panel {
@@ -21,7 +47,25 @@
 
 	.transfer-reception-panel:hover {
 		border-color: var(--bs-success-border-subtle) !important;
-		box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+		box-shadow: var(--transfer-reception-panel-hover-shadow);
+	}
+
+	.transfer-reception-tour-btn {
+		background-color: var(--transfer-reception-tour-btn-bg);
+		border-color: var(--transfer-reception-tour-btn-border);
+		color: var(--transfer-reception-tour-btn-color);
+	}
+
+	.transfer-reception-tour-btn:hover,
+	.transfer-reception-tour-btn:focus-visible,
+	.transfer-reception-tour-btn:active {
+		background-color: var(--transfer-reception-tour-btn-hover-bg) !important;
+		border-color: var(--transfer-reception-tour-btn-hover-border) !important;
+		color: var(--transfer-reception-tour-btn-color) !important;
+	}
+
+	.transfer-reception-table tr.row-diff > * {
+		background-color: var(--transfer-reception-diff-bg) !important;
 	}
 </style>
 
@@ -36,7 +80,7 @@
 				</p>
 			</div>
 			<div class="d-flex flex-wrap gap-2">
-				<button type="button" class="btn btn-dark d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-reception">
+				<button type="button" class="btn transfer-reception-tour-btn d-inline-flex align-items-center justify-content-center" data-tour-start="transfer-reception">
 					Ver recorrido
 				</button>
 				<a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
@@ -138,7 +182,7 @@
 		<div id="modal-container"></div>
 		{% endif %}
 
-			<div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body mt-4" data-tour="transfer-reception-table">
+			<div class="table-responsive shadow-sm rounded border border-secondary-subtle bg-body mt-4 transfer-reception-table" data-tour="transfer-reception-table">
 			{% if flow_status == 'IN_TRANSIT' %}
 				<div class="d-flex align-items-center justify-content-end px-3 pt-3 pb-2" data-tour="transfer-reception-close-card">
 				<form id="receive-form" method="post" action="{{ url_for('inventory.receive_transfer_operation', operation_id=operation.correlative) }}"
@@ -178,7 +222,7 @@
 					{% set has_counted = (counted_display is not none) %}
 					{% set has_diff = has_counted and difference_display != 0 %}
 					{% set must_hide = has_counted and not has_diff %}
-					<tr id="row-{{ detail.code_product }}" data-counted="{% if has_counted %}true{% else %}false{% endif %}" class="{% if has_diff %}row-diff{% endif %}{% if has_diff and must_hide %} {% endif %}{% if must_hide %}d-none{% endif %}"{% if has_diff %} style="background-color:#fff3cd;"{% endif %}>
+					<tr id="row-{{ detail.code_product }}" data-counted="{% if has_counted %}true{% else %}false{% endif %}" class="{% if has_diff %}row-diff{% endif %}{% if has_diff and must_hide %} {% endif %}{% if must_hide %}d-none{% endif %}">
 						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">
 							<input type="hidden" id="row-hidden-{{ detail.code_product }}" value="{% if must_hide %}1{% else %}0{% endif %}">
 							{{ detail.code_product }}
@@ -339,7 +383,6 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 			if (hasDiff) {
 				row.classList.remove('d-none');
 				row.classList.add('row-diff');
-				row.style.backgroundColor = '#fff3cd';
 			} else {
 				row.classList.remove('row-diff');
 				row.style.backgroundColor = '';

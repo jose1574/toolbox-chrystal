@@ -2,6 +2,32 @@
 {% block title %}Orden manual de recoleccion - Toolbox{% endblock %}
 {% block content %}
 <style>
+    :root {
+        --store-selection-hero-radial: rgba(25, 135, 84, 0.14);
+        --store-selection-hero-start: rgba(255, 255, 255, 0.9);
+        --store-selection-hero-end: rgba(248, 249, 250, 0.96);
+        --store-selection-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+    }
+
+    [data-bs-theme="dark"] {
+        --store-selection-hero-radial: rgba(25, 135, 84, 0.26);
+        --store-selection-hero-start: rgba(19, 32, 27, 0.94);
+        --store-selection-hero-end: rgba(15, 24, 21, 0.98);
+        --store-selection-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.38);
+    }
+
+    .store-selection-hero {
+        background:
+            radial-gradient(circle at top right, var(--store-selection-hero-radial), transparent 36%),
+            linear-gradient(180deg, var(--store-selection-hero-start), var(--store-selection-hero-end));
+    }
+
+    .store-selection-hero:hover,
+    .store-selection-hero:focus-within {
+        border-color: var(--bs-success-border-subtle) !important;
+        box-shadow: var(--store-selection-shadow) !important;
+    }
+
     .search-toolbar .form-control,
     .search-toolbar .btn {
         min-height: 1.8rem;
@@ -118,7 +144,7 @@
     {% endwith %}
 
     {% if not store_origin or not store_dst %}
-    <div class="mx-auto w-100 rounded border border-secondary-subtle bg-body p-4 shadow-sm flex-shrink-0 mb-4" style="max-width: 48rem;" data-tour="manual-order-store-form">
+    <div class="mx-auto w-100 rounded border border-secondary-subtle p-4 shadow-sm flex-shrink-0 mb-4 store-selection-hero form-gradient-surface" style="max-width: 48rem;" data-tour="manual-order-store-form">
         <h2 class="mb-3 h5 fw-semibold text-body">Seleccionar depositos</h2>
         <form method="get" action="{{ url_for('inventory.manual_order_collection') }}" hx-get="{{ url_for('inventory.manual_order_collection') }}"
             hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="d-grid gap-3">

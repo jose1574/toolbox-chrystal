@@ -105,7 +105,7 @@
 
         <div class="row g-4 align-items-start">
             <div class="col-12 col-lg-5">
-                <div class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel h-100" data-tour="transfer-operation-search-card">
+                <div class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel h-100 form-gradient-surface" data-tour="transfer-operation-search-card">
                     <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                         <div>
                             <p class="text-uppercase small fw-semibold text-body-secondary mb-1">Paso 1</p>
@@ -172,7 +172,7 @@
                         </table>
                     </div>
 
-                    <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel d-grid gap-3"
+                    <form action="{{ url_for('inventory.start_transfer_operation') }}" method="post" class="p-4 rounded-4 border border-secondary-subtle bg-body transfer-panel d-grid gap-3 form-gradient-surface"
                         data-tour="transfer-operation-start-card"
                         onsubmit="return confirm('¿Iniciar traslado de esta operación?');">
                         <input type="hidden" name="action" value="start">

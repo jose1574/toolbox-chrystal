@@ -7,7 +7,7 @@
 </div>
 
 {% if not store %}
-<div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle ms-5 me-3">
+<div class="bg-body shadow-sm p-4 rounded border border-secondary-subtle ms-5 me-3 form-gradient-surface">
     <h2 class="h5 fw-bold text-body">Seleccionar Depósito</h2>
     <form action="{{ url_for('inventory.product_counter') }}">
         <div>
@@ -51,7 +51,7 @@
     </a>
 </div>
 <!-- resultado del conteo de productos -->
-<div class="bg-body shadow-sm rounded border border-secondary-subtle mt-3 p-3 ms-5 me-3">
+<div class="bg-body shadow-sm rounded border border-secondary-subtle mt-3 p-3 ms-5 me-3 form-gradient-surface">
     <div id="container-table"
         class="w-100 overflow-x-auto border border-secondary-subtle rounded bg-body">
 

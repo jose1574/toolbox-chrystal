@@ -2,6 +2,56 @@
 {% block title %}Orden de recolección - Toolbox{% endblock %}
 {% block content %}
 <style>
+    :root {
+        --store-selection-hero-radial: rgba(25, 135, 84, 0.14);
+        --store-selection-hero-start: rgba(255, 255, 255, 0.9);
+        --store-selection-hero-end: rgba(248, 249, 250, 0.96);
+        --store-selection-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+        --store-selection-tour-btn-bg: var(--bs-emphasis-color);
+        --store-selection-tour-btn-border: var(--bs-emphasis-color);
+        --store-selection-tour-btn-color: var(--bs-body-bg);
+        --store-selection-tour-btn-hover-bg: #000;
+        --store-selection-tour-btn-hover-border: #000;
+    }
+
+    [data-bs-theme="dark"] {
+        --store-selection-hero-radial: rgba(25, 135, 84, 0.26);
+        --store-selection-hero-start: rgba(19, 32, 27, 0.94);
+        --store-selection-hero-end: rgba(15, 24, 21, 0.98);
+        --store-selection-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.38);
+        --store-selection-tour-btn-bg: var(--bs-success);
+        --store-selection-tour-btn-border: var(--bs-success);
+        --store-selection-tour-btn-color: #f8f9fa;
+        --store-selection-tour-btn-hover-bg: #157347;
+        --store-selection-tour-btn-hover-border: #146c43;
+    }
+
+    .store-selection-hero {
+        background:
+            radial-gradient(circle at top right, var(--store-selection-hero-radial), transparent 36%),
+            linear-gradient(180deg, var(--store-selection-hero-start), var(--store-selection-hero-end));
+    }
+
+    .store-selection-hero:hover,
+    .store-selection-hero:focus-within {
+        border-color: var(--bs-success-border-subtle) !important;
+        box-shadow: var(--store-selection-shadow) !important;
+    }
+
+    .store-selection-tour-btn {
+        background-color: var(--store-selection-tour-btn-bg);
+        border-color: var(--store-selection-tour-btn-border);
+        color: var(--store-selection-tour-btn-color);
+    }
+
+    .store-selection-tour-btn:hover,
+    .store-selection-tour-btn:focus-visible,
+    .store-selection-tour-btn:active {
+        background-color: var(--store-selection-tour-btn-hover-bg) !important;
+        border-color: var(--store-selection-tour-btn-hover-border) !important;
+        color: var(--store-selection-tour-btn-color) !important;
+    }
+
     .auto-order-table {
         width: 100%;
         table-layout: fixed;
@@ -96,10 +146,10 @@
     {% endwith %}
 <div class="container-fluid py-4 px-3 px-lg-4">
     {% if not store_origin or not store_dst %}
-    <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto w-100" style="max-width: 32rem;" data-tour="auto-order-store-form">
+    <div class="p-4 border border-secondary-subtle rounded shadow-sm mx-auto w-100 store-selection-hero form-gradient-surface" style="max-width: 32rem;" data-tour="auto-order-store-form">
         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
             <h1 class="h3 fw-bold text-body mb-0" data-tour="auto-order-title">Orden de Traslado Automático</h1>
-            <button type="button" class="btn btn-dark btn-sm" data-tour-start="auto-order" data-tour="auto-order-start-button">
+            <button type="button" class="btn btn-sm store-selection-tour-btn" data-tour-start="auto-order" data-tour="auto-order-start-button">
                 Ver recorrido
             </button>
         </div>
