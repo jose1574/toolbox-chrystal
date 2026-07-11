@@ -9421,6 +9421,7 @@ class InventoryOperationCheckingProgress(db.Model):
         nullable=False,
         index=True,
     )
+    original_amount = db.Column(db.Double(53), nullable=False)
     counted_amount = db.Column(db.Double(53), nullable=False)
     updated_at = db.Column(
         db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")

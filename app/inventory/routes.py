@@ -1257,7 +1257,7 @@ def check_order():
                 "check_order_collection.html", order=None, details=[], error=error
             )
 
-        results = inventory_service.get_check_order_rows(order_id)
+        results = inventory_service.get_check_order_rows(order_id, current_user.code)
 
         if not results:
             error = f"No se encontró la orden con ID {order_id} o no contiene detalles."

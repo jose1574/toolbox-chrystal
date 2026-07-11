@@ -141,9 +141,10 @@
                 {% set code_key = item.code_product|string|trim|upper %}
                 {% set persisted_count = counted_by_code.get(code_key) if counted_by_code else none %}
                 {% set has_persisted = persisted_count is not none %}
-                {% set diff = (persisted_count - item.amount) if has_persisted else 0 %}
+                {% set order_original_amount = item.original_amount|default(item.amount) %}
+                {% set diff = (persisted_count - order_original_amount) if has_persisted else 0 %}
                 <tr id="row-{{ item.code_product }}" data-code="{{ item.code_product }}"
-                    data-expected="{{ item.amount }}" class="{% if has_persisted %}{% if diff != 0 %}row-counted-diff{% else %}row-counted-match{% endif %}{% endif %}">
+                    data-expected="{{ order_original_amount }}" class="{% if has_persisted %}{% if diff != 0 %}row-counted-diff{% else %}row-counted-match{% endif %}{% endif %}">
                     <td class="px-4 py-3 fw-semibold text-body">{{ item.code_product }}</td>
                     <td class="px-4 py-3 small fw-semibold leading-relaxed">
                         {{ item.product_description }}
@@ -152,7 +153,7 @@
                         {{ item.unit_description }}
                     </td>
                     <td class="px-4 py-3 text-center fw-bold text-primary bg-primary-subtle" id="order-amount-{{ item.code_product }}">
-                        {{ item.amount }}
+                        {{ order_original_amount }}
                     </td>
                     <td class="px-4 py-3 text-center" id="counted-{{ item.code_product }}">
                         {% if has_persisted %}{{ "%.2f"|format(persisted_count) }}{% else %}--{% endif %}

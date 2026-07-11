@@ -1934,10 +1934,18 @@ def get_user_checking_progress_map(operation_correlative, user_code):
   }
 
 
-def upsert_user_checking_progress(operation_correlative, user_code, product_code, counted_amount):
+def upsert_user_checking_progress(
+  operation_correlative,
+  user_code,
+  product_code,
+  counted_amount,
+  original_amount=None,
+):
   normalized_code = normalize_code(product_code)
   if not operation_correlative or not user_code or not normalized_code:
     raise ValueError("Missing required fields to persist checking progress.")
+
+  original_value = float(original_amount if original_amount is not None else counted_amount)
 
   existing = InventoryOperationCheckingProgress.query.filter_by(
     operation_correlative=operation_correlative,
@@ -1946,6 +1954,8 @@ def upsert_user_checking_progress(operation_correlative, user_code, product_code
   ).first()
 
   if existing:
+    if existing.original_amount is None:
+      existing.original_amount = original_value
     existing.counted_amount = float(counted_amount)
     existing.updated_at = datetime.now()
     db.session.flush()
@@ -1955,6 +1965,7 @@ def upsert_user_checking_progress(operation_correlative, user_code, product_code
     operation_correlative=operation_correlative,
     user_code=user_code,
     product_code=normalized_code,
+    original_amount=original_value,
     counted_amount=float(counted_amount),
     updated_at=datetime.now(),
   )
@@ -1987,7 +1998,7 @@ def clear_user_checking_progress(operation_correlative, user_code):
   return deleted
 
 
-def get_check_order_rows(order_id):
+def get_check_order_rows(order_id, user_code=None):
   io = aliased(InventoryOperation)
   iod = aliased(InventoryOperationDetail)
   pu = aliased(ProductsUnit)
@@ -1995,6 +2006,19 @@ def get_check_order_rows(order_id):
   u = aliased(Unit)
   store_dst = aliased(Store)
   store_origin = aliased(Store)
+  inventory_operation_checking_progress = aliased(InventoryOperationCheckingProgress)
+
+  progress_join = (
+    (inventory_operation_checking_progress.operation_correlative == io.correlative)
+    & (
+      func.upper(func.trim(inventory_operation_checking_progress.product_code))
+      == func.upper(func.trim(iod.code_product))
+    )
+  )
+  if user_code:
+    progress_join = progress_join & (
+      inventory_operation_checking_progress.user_code == user_code
+    )
 
   stmt = (
     select(
@@ -2013,6 +2037,10 @@ def get_check_order_rows(order_id):
       u.description.label("unit_description"),
       store_origin.description.label("store_origin_description"),
       store_dst.description.label("store_dst_description"),
+      func.coalesce(
+        inventory_operation_checking_progress.original_amount,
+        iod.amount,
+      ).label("original_amount"),
     )
     .join(iod, iod.main_correlative == io.correlative)
     .join(p, p.code == iod.code_product)
@@ -2020,6 +2048,7 @@ def get_check_order_rows(order_id):
     .join(u, u.code == pu.unit)
     .join(store_origin, store_origin.code == io.store)
     .join(store_dst, store_dst.code == io.destination_store)
+    .outerjoin(inventory_operation_checking_progress, progress_join)
     .where(
       io.correlative == order_id,
       io.operation_type == "TRANSFER",
