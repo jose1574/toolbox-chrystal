@@ -54,7 +54,11 @@
 
         .sidebar-item,
         .sidebar-subitem {
-            transition: background-color .18s ease, color .18s ease;
+            transition:
+                background-color .22s ease,
+                border-color .22s ease,
+                box-shadow .22s ease,
+                color .22s ease;
         }
 
         .sidebar-item:hover,
@@ -63,7 +67,16 @@
         .sidebar-subitem:hover,
         .sidebar-subitem:focus-visible {
             background-color: rgba(var(--bs-warning-rgb), 0.14) !important;
+            box-shadow: inset 0 0 0 1px rgba(var(--bs-warning-rgb), 0.26);
             color: var(--bs-warning-text-emphasis) !important;
+        }
+
+        .sidebar-arrow {
+            transition: transform .22s ease;
+        }
+
+        .sidebar-dropdown-trigger[aria-expanded="true"] .sidebar-arrow {
+            transform: rotate(180deg);
         }
 
         #dropdown-shopping {
@@ -410,9 +423,11 @@
             const allSidebarIcons = document.querySelectorAll('#default-sidebar svg');
             const collapsedWidth = '4rem';
             const expandedWidth = '13rem';
-            let expanded = localStorage.getItem('sidebarExpanded') === 'true';
+            let pinnedExpanded = localStorage.getItem('sidebarExpanded') === 'true';
+            let expanded = pinnedExpanded;
+            let hoverExpanded = false;
 
-            sidebar.style.transition = 'width .25s ease';
+            sidebar.style.transition = 'width .28s cubic-bezier(.2, 0, .2, 1), box-shadow .22s ease';
 
             allSidebarIcons.forEach((icon) => {
                 icon.setAttribute('width', '16');
@@ -439,12 +454,25 @@
                 dropdownButtons.forEach((button) => button.setAttribute('aria-expanded', 'false'));
             }
 
-            function setExpandedState(value) {
+            function openDropdown(button) {
+                const id = button.getAttribute('data-dropdown');
+                const panel = id ? document.getElementById(id) : null;
+                if (!panel) return;
+
+                closeSubmenus();
+                panel.classList.remove('d-none');
+                button.setAttribute('aria-expanded', 'true');
+            }
+
+            function setExpandedState(value, persist = true) {
                 expanded = value;
                 sidebar.style.width = expanded ? expandedWidth : collapsedWidth;
                 sidebar.classList.toggle('shadow-lg', expanded);
                 backdrop.classList.toggle('d-none', !expanded);
-                localStorage.setItem('sidebarExpanded', expanded ? 'true' : 'false');
+                if (persist) {
+                    pinnedExpanded = expanded;
+                    localStorage.setItem('sidebarExpanded', expanded ? 'true' : 'false');
+                }
                 appContent.classList.toggle('sidebar-expanded', expanded && window.innerWidth >= 1024);
 
                 textElements.forEach((el) => el.classList.toggle('d-none', !expanded));
@@ -456,8 +484,27 @@
                 if (!expanded) closeSubmenus();
             }
 
-            toggle.addEventListener('click', () => setExpandedState(!expanded));
-            backdrop.addEventListener('click', () => setExpandedState(false));
+            toggle.addEventListener('click', () => {
+                hoverExpanded = false;
+                setExpandedState(!expanded);
+            });
+
+            sidebar.addEventListener('mouseenter', () => {
+                if (expanded || window.innerWidth < 1024) return;
+                hoverExpanded = true;
+                setExpandedState(true, false);
+            });
+
+            sidebar.addEventListener('mouseleave', () => {
+                if (!hoverExpanded) return;
+                hoverExpanded = false;
+                setExpandedState(pinnedExpanded, false);
+            });
+
+            backdrop.addEventListener('click', () => {
+                hoverExpanded = false;
+                setExpandedState(false);
+            });
 
             document.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape' && expanded) setExpandedState(false);
@@ -468,14 +515,31 @@
                 if (!target) return;
 
                 if (!expanded && target.classList.contains('sidebar-item') && target.id !== 'sidebar-toggle') {
+                    hoverExpanded = false;
                     setExpandedState(true);
                     return;
                 }
 
-                if (expanded && target.tagName === 'A') setExpandedState(false);
+                if (expanded && target.tagName === 'A') {
+                    hoverExpanded = false;
+                    setExpandedState(false);
+                }
             });
 
             dropdownButtons.forEach((button) => {
+                const menuItem = button.closest('li');
+
+                if (menuItem) {
+                    menuItem.addEventListener('mouseenter', () => {
+                        if (window.innerWidth < 1024) return;
+                        if (!expanded) {
+                            hoverExpanded = true;
+                            setExpandedState(true, false);
+                        }
+                        openDropdown(button);
+                    });
+                }
+
                 button.addEventListener('click', (event) => {
                     if (!expanded) return;
                     event.preventDefault();
@@ -483,19 +547,17 @@
 
                     const id = button.getAttribute('data-dropdown');
                     const panel = id ? document.getElementById(id) : null;
-                    if (!panel) return;
-
-                    const willOpen = panel.classList.contains('d-none');
+                    const willOpen = panel && panel.classList.contains('d-none');
                     closeSubmenus();
-                    if (willOpen) {
-                        panel.classList.remove('d-none');
-                        button.setAttribute('aria-expanded', 'true');
-                    }
+                    if (willOpen) openDropdown(button);
                 });
             });
 
             window.addEventListener('resize', () => {
-                if (window.innerWidth < 1024 && expanded) setExpandedState(false);
+                if (window.innerWidth < 1024 && expanded) {
+                    hoverExpanded = false;
+                    setExpandedState(false);
+                }
             });
 
             setExpandedState(expanded);
