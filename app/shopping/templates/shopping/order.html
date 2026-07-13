@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container alert alert-danger text-center">
+    aun en desarrollo no tocar
+</div>
+
+{% if not provider %}
+
+{% include 'shopping/partials/select_provider.html' %}
+
+{% else %}
+<style>
+    .shopping-order-workspace {
+        font-size: 0.72rem;
+    }
+
+    .shopping-order-workspace .form-control-sm,
+    .shopping-order-workspace .form-select-sm,
+    .shopping-order-workspace .btn-sm {
+        font-size: 0.7rem;
+        min-height: 1.85rem;
+    }
+
+    .shopping-order-workspace .section-title {
+        font-size: 0.78rem;
+        letter-spacing: 0;
+    }
+
+    .shopping-order-panel {
+        min-height: 8.5rem;
+        overflow: hidden;
+    }
+
+    .shopping-order-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .shopping-order-chart {
+        min-height: 9rem;
+        background:
+            linear-gradient(var(--bs-border-color-translucent) 1px, transparent 1px),
+            linear-gradient(90deg, var(--bs-border-color-translucent) 1px, transparent 1px);
+        background-size: 3rem 3rem;
+    }
+</style>
+
+<div class="container-fluid py-3 px-3 px-lg-4 shopping-order-workspace">
+{% include 'shopping/partials/order_in_wait.html' %}
+
+<div class="container-fluid px-0 my-2">
+    <div class="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-2 rounded border border-secondary-subtle bg-body px-2 px-lg-3 py-2 shadow-sm w-100">
+        <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 flex-grow-1">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2 flex-grow-1 min-w-0">
+                <span class="text-body-secondary text-uppercase fw-semibold text-nowrap">Nombre del proveedor:</span>
+                <p class="mb-0 fw-semibold text-body text-truncate">{{ provider.description }}</p>
+            </div>
+            <a href="#" class="btn btn-sm btn-outline-secondary px-4 shadow-sm align-self-lg-center">Ver detalles</a>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 ms-xl-auto">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2">
+                <label for="expected-reception-date" class="form-label mb-0 text-body-secondary fw-semibold text-nowrap">Fecha aproximada de recepcion</label>
+                <input type="date" class="form-control form-control-sm" id="expected-reception-date" value="{{ expected_reception_date }}" >
+            </div>
+            <a href="#" class="btn btn-sm btn-primary px-4 shadow-sm text-uppercase fw-semibold">Carrito</a>
+        </div>
+    </div>
+</div>
+
+{% include 'shopping/partials/product_order_details.html' %}
+
+<div class="container-fluid px-0 my-3">
+    <div class="row g-3">
+        <div class="col-12 col-xl-4">
+            <div class="d-grid gap-3">
+                <section class="shopping-order-panel rounded border border-secondary-subtle bg-body p-3 shadow-sm">
+                    <h2 class="section-title text-uppercase fw-semibold text-body mb-2">Inventarios</h2>
+                    <div class="table-responsive shopping-order-table-wrap rounded border border-secondary-subtle">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Deposito</th>
+                                    <th scope="col" class="text-end">Inventario</th>
+                                    <th scope="col" class="text-end">Minimo</th>
+                                    <th scope="col" class="text-end">Maximo</th>
+                                    <th scope="col">Parametro</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Inventario total</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-body-secondary">General</td>
+                                </tr>
+                                <tr>
+                                    <td>Deposito principal</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td><a href="#" class="link-primary fw-semibold text-decoration-none">Cambiar</a></td>
+                                </tr>
+                                <tr>
+                                    <td>Deposito secundario</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td><a href="#" class="link-primary fw-semibold text-decoration-none">Cambiar</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="shopping-order-panel rounded border border-secondary-subtle bg-body p-3 shadow-sm">
+                    <h2 class="section-title text-uppercase fw-semibold text-body mb-2">Compras</h2>
+                    <div class="table-responsive rounded border border-secondary-subtle">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Fecha</th>
+                                    <th scope="col">RIF</th>
+                                    <th scope="col">Proveedor</th>
+                                    <th scope="col" class="text-end">Cantidad</th>
+                                    <th scope="col">Unidad</th>
+                                    <th scope="col" class="text-end">Precio</th>
+                                    <th scope="col" class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-body-secondary">-</td>
+                                    <td class="text-body-secondary">-</td>
+                                    <td>Ultima compra</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-body-secondary">-</td>
+                                    <td class="text-body-secondary">-</td>
+                                    <td>Proveedor anterior</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                    <td class="text-end text-body-secondary">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            <section class="rounded border border-secondary-subtle bg-body p-3 shadow-sm h-100">
+                <h2 class="section-title text-uppercase fw-semibold text-body text-center mb-2">Ventas</h2>
+                <div class="rounded border border-secondary-subtle bg-body-tertiary p-3">
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label mb-1 text-body-secondary fw-semibold">Desde</label>
+                            <input type="date" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label mb-1 text-body-secondary fw-semibold">Hasta</label>
+                            <input type="date" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary w-100 shadow-sm">Filtrar</button>
+                        </div>
+                    </div>
+
+                    <div class="shopping-order-chart rounded border border-secondary-subtle bg-body d-flex align-items-center justify-content-center text-body-secondary mb-3">
+                        Mostrar grafica
+                    </div>
+
+                    <p class="fw-semibold mb-2">Esta grafica tiene que mostrar por:</p>
+                    <ul class="mb-0 ps-3 text-body-secondary">
+                        <li>Total ventas generales</li>
+                        <li>Ventas por depositos</li>
+                        <li>Ventas por usuarios</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+</div>
+
+
+
+{% endif %}
+{% endblock %}

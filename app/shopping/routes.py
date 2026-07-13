@@ -4,6 +4,14 @@ from flask_login import login_required
 from app.shopping import shopping_bp
 from app.shopping.services import shopping_service as service
 
+@shopping_bp.route('/product_order_details')
+@login_required
+def product_order_details():
+    code = (request.args.get('code') or '').strip()
+    product = service.get_product_order_details(code)
+    return render_template('shopping/partials/product_order_details.html', product=product)
+
+
 
 @shopping_bp.route('/')
 @login_required
@@ -13,21 +21,21 @@ def index():
 
 
 #menu de orden de compras sin lista previa de productos
-@shopping_bp.route('/no_list_order')
+@shopping_bp.route('/order')
 @login_required 
-def no_list_order():
+def order():
     code_provider = (request.args.get('code_provider') or '').strip()
 
 
     if not code_provider:
-        return render_template('shopping/no_list_order.html', provider=None, selected_provider_code='')
+        return render_template('shopping/order.html', provider=None, selected_provider_code='')
 
     provider = service.get_provider_by_code(code_provider)
     if not provider:
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
-        return render_template('shopping/no_list_order.html', provider=None, selected_provider_code=code_provider)
+        return render_template('shopping/order.html', provider=None, selected_provider_code=code_provider)
     
-    return render_template('shopping/no_list_order.html', provider=provider)
+    return render_template('shopping/order.html', provider=provider)
 
 
 @shopping_bp.route('/selected_provider_details')
@@ -83,6 +91,63 @@ def providers_list():
         providers=providers,
         query=query,
         total_providers=total_providers,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
+
+
+@shopping_bp.route('/products_modal')
+@login_required
+def products_modal():
+    query = (request.args.get('q') or '').strip()
+    mark_codes = request.args.getlist('mark_codes')
+    department_codes = request.args.getlist('department_codes')
+    page = request.args.get('page', 1, type=int)
+    products, total_products, total_pages, current_page = service.search_products(
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        page=page,
+        per_page=10,
+    )
+    marks, departments = service.get_product_filter_options()
+
+    return render_template(
+        'shopping/partials/modal_products.html',
+        products=products,
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        marks=marks,
+        departments=departments,
+        total_products=total_products,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
+
+
+@shopping_bp.route('/products_list')
+@login_required
+def products_list():
+    query = (request.args.get('q') or '').strip()
+    mark_codes = request.args.getlist('mark_codes')
+    department_codes = request.args.getlist('department_codes')
+    page = request.args.get('page', 1, type=int)
+    products, total_products, total_pages, current_page = service.search_products(
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        page=page,
+        per_page=10,
+    )
+
+    return render_template(
+        'shopping/partials/products_list.html',
+        products=products,
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,
     )

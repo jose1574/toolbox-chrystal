@@ -1,0 +1,171 @@
+<div class="modal fade" id="productsModal" tabindex="-1" aria-labelledby="productsModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-fullscreen-xl-down modal-xl modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div>
+					<h2 class="modal-title h5" id="productsModalLabel">Seleccionar producto</h2>
+					<p class="small text-body-secondary mb-0">Filtra por codigo, nombre o referencia. Puedes usar * como comodin.</p>
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row g-2 align-items-end mb-3">
+					<div class="col-12 col-lg-5">
+						<label for="product-modal-search" class="form-label small fw-semibold text-body-secondary">Buscar producto</label>
+						<input type="search" class="form-control form-control-sm" id="product-modal-search" name="q"
+							value="{{ query }}" placeholder="Codigo, nombre o referencia" autocomplete="off"
+							hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="keyup changed delay:300ms"
+							hx-include="#product-modal-search, #product-modal-filters"
+							hx-target="#products-list-content" hx-swap="outerHTML">
+					</div>
+					<div class="col-12 col-lg-7" id="product-modal-filters">
+						<div class="d-flex flex-column flex-md-row gap-2">
+							<div class="dropdown flex-fill">
+								<label class="form-label small fw-semibold text-body-secondary mb-1">Marca</label>
+								<button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+									data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+									<span data-filter-label="mark">{{ mark_codes|length if mark_codes else 'Todas' }}{% if mark_codes %} seleccionadas{% endif %}</span>
+								</button>
+								<div class="dropdown-menu w-100 p-2 overflow-auto" style="max-height: 16rem;">
+									{% for mark in marks %}
+									<label class="dropdown-item d-flex align-items-start gap-2 small text-wrap">
+										<input class="form-check-input mt-0 product-filter-checkbox" type="checkbox" name="mark_codes"
+											value="{{ mark.code }}" {% if mark.code in mark_codes %}checked{% endif %}
+											hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="change"
+											hx-include="#product-modal-search, #product-modal-filters"
+											hx-target="#products-list-content" hx-swap="outerHTML">
+										<span>{{ mark.description or mark.code }}</span>
+									</label>
+									{% endfor %}
+								</div>
+							</div>
+							<div class="dropdown flex-fill">
+								<label class="form-label small fw-semibold text-body-secondary mb-1">Departamento</label>
+								<button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+									data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+									<span data-filter-label="department">{{ department_codes|length if department_codes else 'Todos' }}{% if department_codes %} seleccionados{% endif %}</span>
+								</button>
+								<div class="dropdown-menu w-100 p-2 overflow-auto" style="max-height: 16rem;">
+									{% for department in departments %}
+									<label class="dropdown-item d-flex align-items-start gap-2 small text-wrap">
+										<input class="form-check-input mt-0 product-filter-checkbox" type="checkbox" name="department_codes"
+											value="{{ department.code }}" {% if department.code in department_codes %}checked{% endif %}
+											hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="change"
+											hx-include="#product-modal-search, #product-modal-filters"
+											hx-target="#products-list-content" hx-swap="outerHTML">
+										<span>{{ department.description or department.code }}</span>
+									</label>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{% include 'shopping/partials/products_list.html' %}
+			</div>
+			<div class="modal-footer justify-content-between">
+				<span class="small text-body-secondary">Usa flechas arriba/abajo y Enter para seleccionar.</span>
+				<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	(() => {
+		const modalElement = document.getElementById('productsModal');
+		if (!modalElement || modalElement.dataset.ready === 'true') {
+			return;
+		}
+
+		modalElement.dataset.ready = 'true';
+		const productsModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+		const searchInput = modalElement.querySelector('#product-modal-search');
+
+		const getOptions = () => Array.from(modalElement.querySelectorAll('[data-product-option]'));
+
+		const selectProduct = (option) => {
+			const productCode = option.dataset.productCode;
+			const productInput = document.getElementById('product-code-input');
+
+			if (productInput) {
+				productInput.value = productCode;
+			}
+
+			productsModal.hide();
+
+			if (window.htmx) {
+				htmx.ajax('GET', `{{ url_for('shopping.product_order_details') }}?code=${encodeURIComponent(productCode)}`, {
+					target: '#product-order-details-container',
+					swap: 'outerHTML',
+				});
+			}
+		};
+
+		modalElement.addEventListener('click', (event) => {
+			const addButton = event.target.closest('[data-product-add]');
+			const option = event.target.closest('[data-product-option]');
+			if (addButton && option) {
+				selectProduct(option);
+			}
+		});
+
+		modalElement.addEventListener('change', (event) => {
+			if (!event.target.matches('.product-filter-checkbox')) {
+				return;
+			}
+
+			const markCount = modalElement.querySelectorAll('input[name="mark_codes"]:checked').length;
+			const departmentCount = modalElement.querySelectorAll('input[name="department_codes"]:checked').length;
+			const markLabel = modalElement.querySelector('[data-filter-label="mark"]');
+			const departmentLabel = modalElement.querySelector('[data-filter-label="department"]');
+
+			if (markLabel) {
+				markLabel.textContent = markCount ? `${markCount} seleccionadas` : 'Todas';
+			}
+
+			if (departmentLabel) {
+				departmentLabel.textContent = departmentCount ? `${departmentCount} seleccionados` : 'Todos';
+			}
+		});
+
+		modalElement.addEventListener('keydown', (event) => {
+			if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
+				return;
+			}
+
+			const options = getOptions();
+			if (!options.length) {
+				return;
+			}
+
+			const activeOption = document.activeElement.closest('[data-product-option]');
+			const activeIndex = options.indexOf(activeOption);
+
+			if (event.key === 'Enter') {
+				if (activeOption) {
+					event.preventDefault();
+					selectProduct(activeOption);
+				}
+				return;
+			}
+
+			event.preventDefault();
+			const nextIndex = event.key === 'ArrowDown'
+				? Math.min(activeIndex + 1, options.length - 1)
+				: Math.max(activeIndex - 1, 0);
+			options[nextIndex >= 0 ? nextIndex : 0].focus();
+		});
+
+		modalElement.addEventListener('shown.bs.modal', () => {
+			searchInput?.focus();
+		});
+
+		modalElement.addEventListener('hidden.bs.modal', () => {
+			modalElement.remove();
+		});
+
+		productsModal.show();
+	})();
+</script>

@@ -1,0 +1,74 @@
+<div class="container-fluid px-0 my-2" id="product-order-details-container">
+    <section class="row g-2 rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
+        <div class="col-12 col-xl-2">
+            <div class="h-100 d-flex flex-column gap-2">
+                <label for="product-code-input" class="form-label mb-0 text-body-secondary fw-semibold">Ingrese codigo de producto</label>
+                <input type="text" class="form-control form-control-sm" id="product-code-input" name="code" value="{{ product.code if product else '' }}" autocomplete="off"
+                    hx-get="{{ url_for('shopping.product_order_details') }}" hx-trigger="keyup changed delay:500ms"
+                    hx-target="#product-order-details-container" hx-swap="outerHTML">
+                <div class="d-flex flex-column flex-sm-row gap-2 mt-1">
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
+                        hx-get="{{ url_for('shopping.products_modal') }}" hx-target="#products-modal-container"
+                        hx-swap="innerHTML">Abrir Catalogo</button>
+                    <button type="button" class="btn btn-sm btn-outline-success flex-fill">Nuevo Producto</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-5">
+            <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Atributos de un producto</h2>
+                    <a href="#" class="link-primary fw-semibold text-decoration-none">Editar</a>
+                </div>
+                <dl class="row mb-0 g-1">
+                    <dt class="col-5 fw-semibold text-body-secondary">Codigo:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">{{ product.code if product else '-' }}</dd>
+                    <dt class="col-5 fw-semibold text-body-secondary">Nombre del producto:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">{{ product.description if product else '-' }}</dd>
+                    <dt class="col-5 fw-semibold text-body-secondary">Departamento:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">{{ product.department_description or product.department if product else '-' }}</dd>
+                    <dt class="col-5 fw-semibold text-body-secondary">Referencia:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">{{ product.referenc if product else '-' }}</dd>
+                    <dt class="col-5 fw-semibold text-body-secondary">Marca:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">{{ product.mark_description or product.mark if product else '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Parametro de compra</h2>
+                    <a href="#" class="link-primary fw-semibold text-decoration-none">Editar</a>
+                </div>
+                <dl class="row mb-0 g-1">
+                    <dt class="col-5 fw-semibold text-body-secondary">Minima:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">-</dd>
+                    <dt class="col-5 fw-semibold text-body-secondary">Maxima:</dt>
+                    <dd class="col-7 mb-0 text-body-secondary">-</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-2">
+            <div class="h-100 d-flex flex-column gap-1 rounded border border-secondary-subtle bg-body p-2">
+                <h2 class="section-title text-uppercase fw-semibold text-body mb-0 text-xl-center">Agregar</h2>
+                <label for="product-quantity-input" class="form-label mb-0 text-body-secondary fw-semibold">Cantidad</label>
+                <input type="number" class="form-control form-control-sm" id="product-quantity-input" min="1">
+                <label for="product-unit-select" class="form-label mb-0 text-body-secondary fw-semibold">Unidad</label>
+                <select class="form-select form-select-sm" id="product-unit-select">
+                    <option selected>Unidad</option>
+                    <option>Caja</option>
+                    <option>Bulto</option>
+                </select>
+                <div class="d-flex flex-column flex-sm-row gap-2 mt-auto pt-1">
+                    <button type="button" class="btn btn-sm btn-success flex-fill">Agregar</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger flex-fill">Rechazar</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="products-modal-container"></div>
+</div>

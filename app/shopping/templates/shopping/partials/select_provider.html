@@ -20,10 +20,9 @@
 
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-lg-6">
-                <form 
-                 hx-get="{{ url_for('shopping.selected_provider_details') }}" hx-target="#provider-details-container"
-                        hx-include="#code-provider-input" hx-swap="innerHTML"
-                >
+                <form hx-get="{{ url_for('shopping.selected_provider_details') }}" hx-target="#provider-details-container"
+                    hx-include="#code-provider-input" hx-trigger="submit, keyup changed delay:500ms from:#code-provider-input"
+                    hx-swap="innerHTML">
                     <label for="code-provider-input" class="form-label small fw-semibold text-body-secondary">Ingrese
                         codigo del proveedor</label>
                     <input type="text" class="form-control" placeholder="Ej: J402502796" id="code-provider-input"

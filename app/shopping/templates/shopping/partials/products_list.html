@@ -1,0 +1,66 @@
+<div id="products-list-content">
+    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-3 small text-body-secondary">
+        <span>{{ total_products }} productos encontrados</span>
+        <span>Pagina {{ current_page }} de {{ total_pages }}</span>
+    </div>
+
+    <div class="table-responsive rounded border border-secondary-subtle">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light small text-uppercase">
+                <tr>
+                    <th scope="col">Codigo / nombre</th>
+                    <th scope="col">Unidad</th>
+                    <th scope="col">Marca</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Minimo de compra</th>
+                    <th scope="col">Maximo de compra</th>
+                    <th scope="col">Sugerido</th>
+                    <th scope="col">Opciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr tabindex="0" data-product-option data-product-code="{{ product.code }}">
+                    <td>
+                        <div class="fw-semibold text-body">{{ product.code }}</div>
+                        <div class="small text-body-secondary">{{ product.description or 'Producto sin nombre' }}</div>
+                    </td>
+                    <td>{{ product.unit_description or '-' }}</td>
+                    <td>{{ product.mark_description or '-' }}</td>
+                    <td>{{ product.department_description or '-' }}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-success" data-product-add>Agregar</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page <= 1 %}disabled{% else %}
+            hx-get="{{ url_for('shopping.products_list', q=query, page=current_page - 1) }}"
+            hx-include="#product-modal-filters"
+            hx-target="#products-list-content" hx-swap="outerHTML"
+            {% endif %}>
+            Anterior
+        </button>
+        <span class="small text-body-secondary">Mostrando hasta 10 productos por pagina</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page >= total_pages %}disabled{% else %}
+            hx-get="{{ url_for('shopping.products_list', q=query, page=current_page + 1) }}"
+            hx-include="#product-modal-filters"
+            hx-target="#products-list-content" hx-swap="outerHTML"
+            {% endif %}>
+            Siguiente
+        </button>
+    </div>
+</div>
