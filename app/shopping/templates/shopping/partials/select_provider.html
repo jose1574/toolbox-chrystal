@@ -1,0 +1,53 @@
+<div class="container-fluid py-4 px-3 px-lg-4">
+    <div class="d-flex flex-column gap-4">
+        <section class="rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+            <h1 class="h4 fw-bold text-body mb-3">Seleccionar proveedor</h1>
+
+            <div id="select-provider-flashes">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-3 d-grid gap-2">
+                {% for category, message in messages %}
+                <div class="px-3 py-2 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-body-tertiary text-body border-secondary-subtle{% endif %}"
+                    role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-6">
+                <form 
+                 hx-get="{{ url_for('shopping.selected_provider_details') }}" hx-target="#provider-details-container"
+                        hx-include="#code-provider-input" hx-swap="innerHTML"
+                >
+                    <label for="code-provider-input" class="form-label small fw-semibold text-body-secondary">Ingrese
+                        codigo del proveedor</label>
+                    <input type="text" class="form-control" placeholder="Ej: J402502796" id="code-provider-input"
+                        name="code_provider" value="{{ selected_provider_code|default('') }}" autocomplete="off" required>                
+                </form>
+                </div>
+                <div class="col-12 col-sm-auto">
+                    <button type="button" class="btn btn-primary px-4 w-100"
+                        hx-get="{{ url_for('shopping.providers_modal') }}" hx-target="#providers-modal-container"
+                        hx-swap="innerHTML">
+                        Ver todos
+                    </button>
+                </div>
+                <div
+                    class="col-12 col-lg d-flex flex-column flex-sm-row flex-lg-column align-items-start gap-2 ms-lg-auto">
+                    <a href="#suggested-products" class="link-body-emphasis small">Ver lista de productos sugerida por
+                        el proveedor</a>
+                    <a href="#failed-products" class="link-body-emphasis small">Ver lista de productos del proveedor en
+                        falla</a>
+                </div>
+            </div>
+        </section>
+
+        <div id="provider-details-container"></div>
+        <div id="providers-modal-container"></div>
+    </div>
+</div>

@@ -3,23 +3,87 @@
 {% block title %}Compras | Toolbox{% endblock %}
 
 {% block content %}
+<style>
+  :root {
+    --shopping-panel-hero-radial: rgba(255, 193, 7, 0.16);
+    --shopping-panel-hero-start: rgba(255, 255, 255, 0.9);
+    --shopping-panel-hero-end: rgba(248, 249, 250, 0.96);
+    --shopping-panel-card-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.05);
+  }
+
+  [data-bs-theme="dark"] {
+    --shopping-panel-hero-radial: rgba(255, 193, 7, 0.22);
+    --shopping-panel-hero-start: rgba(35, 29, 17, 0.94);
+    --shopping-panel-hero-end: rgba(24, 22, 18, 0.98);
+    --shopping-panel-card-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.38);
+  }
+
+  .shopping-panel-hero {
+    background:
+      radial-gradient(circle at top right, var(--shopping-panel-hero-radial), transparent 36%),
+      linear-gradient(180deg, var(--shopping-panel-hero-start), var(--shopping-panel-hero-end));
+  }
+
+  .shopping-panel-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .shopping-panel-card:hover,
+  .shopping-panel-card:focus-within {
+    box-shadow: var(--shopping-panel-card-shadow);
+    transform: translateY(-2px);
+  }
+</style>
+
 <div class="container-fluid py-4 px-3 px-lg-4">
   <section>
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-4 p-lg-5">
-             <h2 class="h3 fw-semibold text-body">Operaciones de Compras</h2>
+    <div class="card border border-secondary-subtle shadow-sm shopping-panel-hero">
+      <div class="card-body p-4 p-lg-5">
+        <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle mb-3">Compras</span>
+        <h2 class="h3 fw-semibold text-body">Operaciones de compras</h2>
+        <p class="text-body-secondary mb-0" style="max-width: 58rem;">Accede a los flujos de carga, revision y planificacion de compras.</p>
 
-        <div class="row g-3 mt-1">
+        <div class="row g-3 mt-3">
           <div class="col-12 col-md-6 col-xl-3">
-            <div class="card h-100 border-info-subtle bg-info-subtle">
+            <div class="card h-100 border-info-subtle bg-info-subtle shopping-panel-card">
               <div class="card-body d-flex flex-column">
-                <h5 class="card-title">Orden de Compras manual</h5>
-                <p class="card-text text-body-secondary flex-grow-1">Selecciona depósitos y productos para generar una orden de compra</p>
+                <h5 class="card-title">Ingresar sin lista previa de productos</h5>
+                <p class="card-text text-body-secondary flex-grow-1">Agrega productos manualmente uno por uno sin partir de una lista previa.</p>
+                <a href="{{ url_for('shopping.no_list_order') }}" class="btn btn-primary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-warning-subtle bg-warning-subtle shopping-panel-card">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Lista para revisar de proveedores</h5>
+                <p class="card-text text-body-secondary flex-grow-1">Revisa productos propuestos por proveedores segun ofertas y fallas detectadas.</p>
+                <a href="#" class="btn btn-primary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-success-subtle bg-success-subtle shopping-panel-card">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Lista segun parametros de compras</h5>
+                <p class="card-text text-body-secondary flex-grow-1">Genera una lista basada en parametros definidos para planificar reposiciones.</p>
+                <a href="#" class="btn btn-primary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-success-subtle bg-success-subtle shopping-panel-card">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Parametros de compras</h5>
+                <p class="card-text text-body-secondary flex-grow-1">Configura los parametros utilizados para generar listas de compras segun fallas detectadas.</p>
                 <a href="#" class="btn btn-primary btn-sm align-self-start">Abrir</a>
               </div>
             </div>
           </div>
         </div>
+      </div>
     </div>
   </section>
 </div>

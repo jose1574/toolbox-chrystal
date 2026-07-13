@@ -1,0 +1,132 @@
+<div id="select-provider-flashes" hx-swap-oob="true">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-3 d-grid gap-2">
+        {% for category, message in messages %}
+        <div class="px-3 py-2 rounded border small {% if category == 'success' %}bg-success-subtle text-success-emphasis border-success-subtle{% elif category == 'warning' %}bg-warning-subtle text-warning-emphasis border-warning-subtle{% elif category == 'error' %}bg-danger-subtle text-danger-emphasis border-danger-subtle{% else %}bg-body-tertiary text-body border-secondary-subtle{% endif %}"
+            role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+</div>
+
+{% if provider %}
+<section class="row g-4 align-items-stretch" id="provider-preview-section">
+    <div class="col-12">
+        <div class="rounded border border-info-subtle bg-info-subtle text-info-emphasis p-3 shadow-sm">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div>
+                    <div class="small text-uppercase fw-semibold">Proveedor seleccionado</div>
+                    <div class="d-flex flex-column flex-md-row gap-2 gap-md-4 mt-1">
+                        <strong>{{ provider.description or 'Proveedor sin nombre' }}</strong>
+                        <span>{{ provider.code }}</span>
+                        <span>{{ provider.status or 'Estatus no definido' }}</span>
+                    </div>
+                </div>
+                <form action="{{ url_for('shopping.no_list_order') }}" method="get" class="m-0">
+                    <input type="hidden" name="code_provider" value="{{ provider.code }}">
+                    <button type="submit" class="btn btn-primary px-4 align-self-start align-self-lg-center">
+                        Siguiente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="h-100 rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+            <h2 class="h6 text-uppercase fw-bold mb-3">Listado de compras a este proveedor</h2>
+            <div class="d-grid gap-3">
+                <div>
+                    <div class="small text-body-secondary">Compras registradas</div>
+                    <div class="fs-4 fw-semibold" data-provider-field="purchaseCount">18</div>
+                </div>
+                <div>
+                    <div class="small text-body-secondary">Ultima compra</div>
+                    <div class="fw-semibold" data-provider-field="lastPurchaseDate">08/07/2026</div>
+                </div>
+                <div>
+                    <div class="small text-body-secondary">Monto acumulado</div>
+                    <div class="fw-semibold" data-provider-field="totalPurchaseAmount">$ 8,430.75</div>
+                </div>
+            </div>
+            <hr>
+            <ul class="list-group list-group-flush" id="provider-purchase-list">
+                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
+                    <span>OC-2026-0418</span>
+                    <span class="fw-semibold">$ 1,245.20</span>
+                </li>
+                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
+                    <span>OC-2026-0389</span>
+                    <span class="fw-semibold">$ 980.00</span>
+                </li>
+                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
+                    <span>OC-2026-0362</span>
+                    <span class="fw-semibold">$ 2,104.35</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="h-100 rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+            <h2 class="h6 text-uppercase text-center fw-bold mb-3">Inventarios</h2>
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <div class="rounded bg-success-subtle text-success-emphasis p-3 h-100">
+                        <div class="small">Con inventario</div>
+                        <div class="fs-4 fw-semibold" data-provider-field="withInventory">126</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="rounded bg-danger-subtle text-danger-emphasis p-3 h-100">
+                        <div class="small">Sin inventario</div>
+                        <div class="fs-4 fw-semibold" data-provider-field="withoutInventory">34</div>
+                    </div>
+                </div>
+            </div>
+            <ul class="list-unstyled small mb-0 d-grid gap-2">
+                <li class="d-flex justify-content-between gap-3">
+                    <span>Productos comprados a este proveedor</span>
+                    <strong data-provider-field="purchasedProductCount">160</strong>
+                </li>
+                <li class="d-flex justify-content-between gap-3">
+                    <span>Cantidad total de productos comprados</span>
+                    <strong data-provider-field="totalProductUnits">4,820</strong>
+                </li>
+                <li class="d-flex justify-content-between gap-3">
+                    <span>Actualmente con inventario</span>
+                    <strong data-provider-field="withInventoryPercent">78.7%</strong>
+                </li>
+                <li class="d-flex justify-content-between gap-3">
+                    <span>Actualmente sin inventario</span>
+                    <strong data-provider-field="withoutInventoryPercent">21.3%</strong>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="h-100 rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+            <h2 class="h6 fw-bold mb-3">Ventas que generan los productos de este vendedor</h2>
+            <div class="d-grid gap-3">
+                <div class="rounded border border-secondary-subtle p-3">
+                    <div class="small text-body-secondary">Compra mensual estimada</div>
+                    <div class="fs-5 fw-semibold" data-provider-field="monthlyPurchaseAmount">$ 3,920.40</div>
+                </div>
+                <div class="rounded border border-secondary-subtle p-3">
+                    <div class="small text-body-secondary">Compra mensual de este proveedor</div>
+                    <div class="fs-5 fw-semibold" data-provider-field="providerMonthlyPurchaseAmount">$ 1,875.90</div>
+                </div>
+                <div class="rounded border border-secondary-subtle p-3">
+                    <div class="small text-body-secondary">Utilidad generada</div>
+                    <div class="fs-5 fw-semibold text-success" data-provider-field="profitAmount">$ 612.80</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}

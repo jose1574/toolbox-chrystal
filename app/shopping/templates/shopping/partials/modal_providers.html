@@ -1,0 +1,114 @@
+<div class="modal fade" id="providersModal" tabindex="-1" aria-labelledby="providersModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div>
+					<h2 class="modal-title h5" id="providersModalLabel">Seleccionar proveedor</h2>
+					<p class="small text-body-secondary mb-0">Filtra por codigo o nombre y selecciona una linea.</p>
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label for="provider-modal-search" class="form-label small fw-semibold text-body-secondary">
+						Buscar proveedor
+					</label>
+					<input type="search" class="form-control" id="provider-modal-search" name="q"
+						value="{{ query }}" placeholder="Codigo o nombre del proveedor" autocomplete="off"
+						hx-get="{{ url_for('shopping.providers_list') }}" hx-trigger="keyup changed delay:300ms"
+						hx-target="#providers-list-content" hx-swap="outerHTML">
+				</div>
+
+				<div class="row g-2 px-3 py-2 border rounded-top bg-body-tertiary small fw-semibold text-body-secondary d-none d-md-flex">
+					<div class="col-md-3">Codigo</div>
+					<div class="col-md-4">Contacto</div>
+					<div class="col-md-5">Nombre o descripcion</div>
+				</div>
+
+				{% include 'shopping/partials/providers_list.html' %}
+			</div>
+			<div class="modal-footer justify-content-between">
+				<span class="small text-body-secondary">Usa flechas arriba/abajo y Enter para seleccionar.</span>
+				<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	(() => {
+		const modalElement = document.getElementById('providersModal');
+		if (!modalElement || modalElement.dataset.ready === 'true') {
+			return;
+		}
+
+		modalElement.dataset.ready = 'true';
+		const providerModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+		const searchInput = modalElement.querySelector('#provider-modal-search');
+
+		const getOptions = () => Array.from(modalElement.querySelectorAll('[data-provider-option]'));
+
+		const selectProvider = (option) => {
+			const providerCode = option.dataset.providerCode;
+			const providerInput = document.getElementById('code-provider-input');
+
+			if (providerInput) {
+				providerInput.value = providerCode;
+			}
+
+			providerModal.hide();
+
+			if (window.htmx) {
+				htmx.ajax('GET', `{{ url_for('shopping.selected_provider_details') }}?code_provider=${encodeURIComponent(providerCode)}`, {
+					target: '#provider-details-container',
+					swap: 'innerHTML',
+				});
+			}
+		};
+
+		modalElement.addEventListener('click', (event) => {
+			const option = event.target.closest('[data-provider-option]');
+			if (option) {
+				selectProvider(option);
+			}
+		});
+
+		modalElement.addEventListener('keydown', (event) => {
+			if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
+				return;
+			}
+
+			const options = getOptions();
+			if (!options.length) {
+				return;
+			}
+
+			const activeOption = document.activeElement.closest('[data-provider-option]');
+			const activeIndex = options.indexOf(activeOption);
+
+			if (event.key === 'Enter') {
+				if (activeOption) {
+					event.preventDefault();
+					selectProvider(activeOption);
+				}
+				return;
+			}
+
+			event.preventDefault();
+			const nextIndex = event.key === 'ArrowDown'
+				? Math.min(activeIndex + 1, options.length - 1)
+				: Math.max(activeIndex - 1, 0);
+			options[nextIndex >= 0 ? nextIndex : 0].focus();
+		});
+
+		modalElement.addEventListener('shown.bs.modal', () => {
+			searchInput?.focus();
+		});
+
+		modalElement.addEventListener('hidden.bs.modal', () => {
+			modalElement.remove();
+		});
+
+		providerModal.show();
+	})();
+</script>

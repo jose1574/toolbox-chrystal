@@ -1,0 +1,44 @@
+<div id="providers-list-content">
+    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-3 small text-body-secondary">
+        <span>{{ total_providers }} proveedores encontrados</span>
+        <span>Pagina {{ current_page }} de {{ total_pages }}</span>
+    </div>
+
+    <div class="list-group" id="providers-listbox" role="listbox" aria-label="Lista de proveedores">
+        {% for provider in providers %}
+        <button type="button"
+            class="list-group-item list-group-item-action provider-option"
+            data-provider-option
+            data-provider-code="{{ provider.code }}"
+            data-provider-description="{{ provider.description or '' }}">
+            <span class="row g-2 align-items-center text-start">
+                <span class="col-12 col-md-3 fw-semibold text-body">{{ provider.code }}</span>
+                <span class="col-12 col-md-4 text-body-secondary">{{ provider.contact or 'Sin contacto' }}</span>
+                <span class="col-12 col-md-5 text-body">{{ provider.description or 'Proveedor sin descripcion' }}</span>
+            </span>
+        </button>
+        {% else %}
+        <div class="rounded border border-warning-subtle bg-warning-subtle text-warning-emphasis p-3" role="alert">
+            No se encontraron proveedores con ese filtro.
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page <= 1 %}disabled{% else %}
+            hx-get="{{ url_for('shopping.providers_list', q=query, page=current_page - 1) }}"
+            hx-target="#providers-list-content" hx-swap="outerHTML"
+            {% endif %}>
+            Anterior
+        </button>
+        <span class="small text-body-secondary">Mostrando hasta 10 proveedores por pagina</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page >= total_pages %}disabled{% else %}
+            hx-get="{{ url_for('shopping.providers_list', q=query, page=current_page + 1) }}"
+            hx-target="#providers-list-content" hx-swap="outerHTML"
+            {% endif %}>
+            Siguiente
+        </button>
+    </div>
+</div>
