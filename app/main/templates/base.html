@@ -527,19 +527,6 @@
             });
 
             dropdownButtons.forEach((button) => {
-                const menuItem = button.closest('li');
-
-                if (menuItem) {
-                    menuItem.addEventListener('mouseenter', () => {
-                        if (window.innerWidth < 1024) return;
-                        if (!expanded) {
-                            hoverExpanded = true;
-                            setExpandedState(true, false);
-                        }
-                        openDropdown(button);
-                    });
-                }
-
                 button.addEventListener('click', (event) => {
                     if (!expanded) return;
                     event.preventDefault();
