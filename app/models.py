@@ -9504,3 +9504,61 @@ class InventoryOperationReceptionProgress(db.Model):
         primaryjoin="InventoryOperationReceptionProgress.product_code == Product.code",
         backref="inventory_operation_reception_progress_entries",
     )
+
+
+class ShoppingProductsParam(db.Model):
+    __tablename__ = "shopping_products_params"
+    __table_args__ = {"schema": "toolbox"}
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    minimum_stock = db.Column("min_shopping", db.Double(53), nullable=False)
+    maximum_stock = db.Column("max_shopping", db.Double(53), nullable=False)
+    update_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    product = db.relationship(
+        "Product",
+        primaryjoin="ShoppingProductsParam.code == Product.code",
+        backref="shopping_products_params",
+    )
+
+
+class ShoppingProductsParamsHistory(db.Model):
+    __tablename__ = "shopping_products_params_history"
+    __table_args__ = {"schema": "toolbox"}
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    main_correlative = db.Column(
+        db.ForeignKey(
+            "toolbox.shopping_products_params.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    )
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    register_date = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    shopping_products_param = db.relationship(
+        "ShoppingProductsParam",
+        primaryjoin="ShoppingProductsParamsHistory.main_correlative == ShoppingProductsParam.correlative",
+        backref="history_entries",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="ShoppingProductsParamsHistory.user_code == User.code",
+        backref="shopping_products_params_history_entries",
+    )

@@ -1,5 +1,5 @@
 from flask import render_template, request, flash
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.shopping import shopping_bp
 from app.shopping.services import shopping_service as service
@@ -151,3 +151,84 @@ def products_list():
         total_pages=total_pages,
         current_page=current_page,
     )
+
+
+@shopping_bp.route('/products_params')
+@login_required
+def products_params():
+    code = (request.args.get('code') or '').strip()
+    context = service.build_products_params_context(code)
+    if code and not context.get('product'):
+        flash(f'No se encontró un producto con el código {code}.', 'error')
+    return render_template('shopping/shopping_products_params.html', **context)
+
+
+@shopping_bp.route('/products_params_modal')
+@login_required
+def products_params_modal():
+    query = (request.args.get('q') or '').strip()
+    mark_codes = request.args.getlist('mark_codes')
+    department_codes = request.args.getlist('department_codes')
+    page = request.args.get('page', 1, type=int)
+    products, total_products, total_pages, current_page = service.search_products_for_params(
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        page=page,
+        per_page=10,
+    )
+    marks, departments = service.get_product_filter_options()
+
+    return render_template(
+        'shopping/partials/products_params_modal.html',
+        products=products,
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        marks=marks,
+        departments=departments,
+        total_products=total_products,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
+
+
+@shopping_bp.route('/products_params_list')
+@login_required
+def products_params_list():
+    query = (request.args.get('q') or '').strip()
+    mark_codes = request.args.getlist('mark_codes')
+    department_codes = request.args.getlist('department_codes')
+    page = request.args.get('page', 1, type=int)
+    products, total_products, total_pages, current_page = service.search_products_for_params(
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        page=page,
+        per_page=10,
+    )
+
+    return render_template(
+        'shopping/partials/products_params_list.html',
+        products=products,
+        query=query,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
+        total_products=total_products,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
+
+
+
+# guardar parametros de compra
+@shopping_bp.route('/save_products_params', methods=['POST'])
+@login_required
+def save_products_params():
+    params = request.form.to_dict()
+    success, message, context = service.save_products_params(params, current_user.get_id())
+    if success:
+        flash(message, 'success')
+    else:
+        flash(message, 'error')
+    return render_template('shopping/shopping_products_params.html', **context)

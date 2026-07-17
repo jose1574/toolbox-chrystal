@@ -1,0 +1,66 @@
+<div id="shopping-products-params-list-content">
+	<div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-3 small text-body-secondary">
+		<span>{{ total_products }} productos encontrados</span>
+		<span>Página {{ current_page }} de {{ total_pages }}</span>
+	</div>
+
+	<div class="table-responsive rounded border border-secondary-subtle">
+		<table class="table table-sm align-middle mb-0">
+			<thead class="table-light small text-uppercase">
+				<tr>
+					<th scope="col">Código / nombre</th>
+					<th scope="col">Unidad</th>
+					<th scope="col">Marca</th>
+					<th scope="col">Departamento</th>
+					<th scope="col" class="text-end">Mínimo compra</th>
+					<th scope="col" class="text-end">Máximo compra</th>
+					<th scope="col">Actualizado</th>
+					<th scope="col" class="text-end">Opciones</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for product in products %}
+				<tr tabindex="0" data-shopping-products-param-option data-product-code="{{ product.code }}">
+					<td>
+						<div class="fw-semibold text-body">{{ product.code }}</div>
+						<div class="small text-body-secondary">{{ product.description or 'Producto sin nombre' }}</div>
+					</td>
+					<td>{{ product.unit_description or '-' }}</td>
+					<td>{{ product.mark_description or '-' }}</td>
+					<td>{{ product.department_description or '-' }}</td>
+					<td class="text-end">{{ product.shopping_minimum_stock if product.shopping_minimum_stock is not none else '-' }}</td>
+					<td class="text-end">{{ product.shopping_maximum_stock if product.shopping_maximum_stock is not none else '-' }}</td>
+					<td>{{ product.shopping_update_at if product.shopping_update_at else '-' }}</td>
+					<td class="text-end">
+						<button type="button" class="btn btn-sm btn-success" data-shopping-products-param-select>Seleccionar</button>
+					</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td colspan="8" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+		<button type="button" class="btn btn-outline-secondary btn-sm"
+			{% if current_page <= 1 %}disabled{% else %}
+			hx-get="{{ url_for('shopping.products_params_list', q=query, page=current_page - 1) }}"
+			hx-include="#shopping-products-params-modal-filters"
+			hx-target="#shopping-products-params-list-content" hx-swap="outerHTML"
+			{% endif %}>
+			Anterior
+		</button>
+		<span class="small text-body-secondary">Mostrando hasta 10 productos por página</span>
+		<button type="button" class="btn btn-outline-secondary btn-sm"
+			{% if current_page >= total_pages %}disabled{% else %}
+			hx-get="{{ url_for('shopping.products_params_list', q=query, page=current_page + 1) }}"
+			hx-include="#shopping-products-params-modal-filters"
+			hx-target="#shopping-products-params-list-content" hx-swap="outerHTML"
+			{% endif %}>
+			Siguiente
+		</button>
+	</div>
+</div>
