@@ -67,6 +67,10 @@
 	.transfer-reception-table tr.row-diff > * {
 		background-color: var(--transfer-reception-diff-bg) !important;
 	}
+
+	.transfer-reception-table tr.row-not-arrived > * {
+		background-color: var(--bs-danger-bg-subtle) !important;
+	}
 </style>
 
 <div class="container-fluid py-4 px-3 px-lg-4">
@@ -209,6 +213,9 @@
 						<th class="px-3 py-3 fw-bold text-center">Cant. Esperada</th>
 						<th class="px-3 py-3 fw-bold text-center">Cant. Contada</th>
 						<th class="px-3 py-3 fw-bold text-center">Diferencia</th>
+						{% if flow_status == 'IN_TRANSIT' %}
+						<th class="px-3 py-3 fw-bold text-center">No recibido</th>
+						{% endif %}
 					</tr>
 				</thead>
 				<tbody id="products-table" data-tour="transfer-reception-products-table">
@@ -220,8 +227,9 @@
 					{% set difference_display = reception_difference.difference if reception_difference else ((counted_display - expected_amount) if counted_display is not none else none) %}
 					{% set has_counted = (counted_display is not none) %}
 					{% set has_diff = has_counted and difference_display != 0 %}
+					{% set not_arrived = has_counted and counted_display == 0 and expected_amount > 0 %}
 					{% set must_hide = has_counted and not has_diff %}
-					<tr id="row-{{ detail.code_product }}" data-counted="{% if has_counted %}true{% else %}false{% endif %}" class="{% if has_diff %}row-diff{% endif %}{% if has_diff and must_hide %} {% endif %}{% if must_hide %}d-none{% endif %}">
+					<tr id="row-{{ detail.code_product }}" data-counted="{% if has_counted %}true{% else %}false{% endif %}" data-reception-status="{% if not_arrived %}not-arrived{% elif has_counted %}counted{% else %}pending{% endif %}" class="{% if not_arrived %}row-not-arrived{% elif has_diff %}row-diff{% endif %}{% if must_hide %} d-none{% endif %}">
 						<td class="px-3 py-3 text-nowrap small fw-semibold text-body{% if has_diff %} text-warning-emphasis{% endif %}">
 							<input type="hidden" id="row-hidden-{{ detail.code_product }}" value="{% if must_hide %}1{% else %}0{% endif %}">
 							{{ detail.code_product }}
@@ -234,10 +242,40 @@
 						</td>
 						<td class="px-3 py-3 text-nowrap small text-center text-body-secondary{% if has_diff %} text-warning-emphasis{% endif %}" id="diff-{{ detail.code_product }}">
 							{% if has_counted %}{{ difference_display }}{% else %}--{% endif %}
-							{% if has_diff %}
+							{% if not_arrived %}
+							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-danger-subtle px-2 py-0 small fw-semibold text-danger-emphasis">No llegó</span>
+							{% elif has_diff %}
 							<span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>
 							{% endif %}
 						</td>
+						{% if flow_status == 'IN_TRANSIT' %}
+						<td class="px-3 py-3 text-center">
+							{% set not_arrived_url = url_for('inventory.mark_transfer_product_not_arrived', operation_id=operation.correlative, product_code=detail.code_product) %}
+							{% set arrived_url = url_for('inventory.reverse_transfer_product_not_arrived', operation_id=operation.correlative, product_code=detail.code_product) %}
+							{% set not_arrived_confirm = "¿Está seguro de confirmar que el producto " ~ detail.code_product ~ " no llegó? Esta acción lo registrará con cantidad recibida 0." %}
+							{% set arrived_confirm = "¿Confirma que el producto " ~ detail.code_product ~ " sí llegó? El producto volverá a quedar pendiente para contarlo." %}
+							<form class="not-arrived-form {% if not_arrived %}d-none{% endif %}"
+								hx-post="{{ not_arrived_url }}"
+								hx-target="#products-table"
+								hx-swap="none"
+								hx-confirm="{{ not_arrived_confirm }}">
+								<button type="submit"
+									class="btn btn-sm {% if has_counted and not not_arrived %}btn-outline-secondary{% else %}btn-outline-danger{% endif %}"
+									{% if has_counted and not not_arrived %}disabled{% endif %}>
+									{% if has_counted and not not_arrived %}Contado{% else %}No llegó{% endif %}
+								</button>
+							</form>
+							<form class="arrived-form {% if not not_arrived %}d-none{% endif %}"
+								hx-post="{{ arrived_url }}"
+								hx-target="#products-table"
+								hx-swap="none"
+								hx-confirm="{{ arrived_confirm }}">
+								<button type="submit" class="btn btn-sm btn-outline-success">
+									Sí llegó
+								</button>
+							</form>
+						</td>
+						{% endif %}
 					</tr>
 					{% endfor %}
 				</tbody>
@@ -313,7 +351,7 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 
 	function allRowsCounted() {
 		const totalProducts = parseInt((totalProductsCountInput && totalProductsCountInput.value) || '0', 10);
-		return totalProducts > 0;
+		return totalProducts > 0 && countedCodesSet.size >= totalProducts;
 	}
 
 	function getPendingProductsCount() {
@@ -324,9 +362,8 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 	function confirmReceiveOperation() {
 		const pendingProducts = getPendingProductsCount();
 		if (pendingProducts > 0) {
-			return confirm(
-				`Quedan ${pendingProducts} producto(s) sin contar. Al cerrar la recepción se registrarán como diferencias con cantidad recibida 0. ¿Desea cerrar, recepcionar y procesar inventario?`
-			);
+			alert(`No puede cerrar la recepción. Quedan ${pendingProducts} producto(s) sin contar o sin confirmar como no recibido(s).`);
+			return false;
 		}
 
 		return confirm('¿Cerrar, recepcionar y procesar inventario para este traslado?');
@@ -363,6 +400,58 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		}
 	});
 
+	document.addEventListener('transfer-counted-reset', function(event) {
+		const detail = event.detail || {};
+		const code = (detail.code_product || '').trim();
+		if (!code) {
+			return;
+		}
+
+		countedCodesSet.delete(code);
+		const row = document.getElementById('row-' + code);
+		if (row) {
+			row.setAttribute('data-counted', 'false');
+			row.setAttribute('data-reception-status', 'arrived-pending');
+			row.classList.remove('row-not-arrived', 'row-diff', 'row-arrived-pending', 'd-none');
+			row.style.backgroundColor = '';
+			row.querySelectorAll('.text-warning-emphasis, .text-danger-emphasis').forEach(function(cell) {
+				cell.classList.remove('text-warning-emphasis', 'text-danger-emphasis');
+			});
+
+			const countedCell = document.getElementById('counted-' + code);
+			const diffCell = document.getElementById('diff-' + code);
+			const hiddenFlag = document.getElementById('row-hidden-' + code);
+			const notArrivedForm = row.querySelector('.not-arrived-form');
+			const arrivedForm = row.querySelector('.arrived-form');
+
+			if (countedCell) {
+				countedCell.textContent = '--';
+			}
+			if (diffCell) {
+				diffCell.innerHTML = '<span class="d-inline-flex align-items-center rounded-pill bg-success-subtle px-2 py-0 small fw-semibold text-success-emphasis">Sí llegó / pendiente</span>';
+			}
+			if (hiddenFlag) {
+				hiddenFlag.value = '0';
+			}
+			if (notArrivedForm) {
+				notArrivedForm.classList.remove('d-none');
+				const actionButton = notArrivedForm.querySelector('button[type="submit"]');
+				if (actionButton) {
+					actionButton.disabled = false;
+					actionButton.textContent = 'No llegó';
+					actionButton.classList.remove('btn-danger', 'btn-outline-success', 'btn-outline-secondary');
+					actionButton.classList.add('btn-outline-danger');
+				}
+			}
+			if (arrivedForm) {
+				arrivedForm.classList.add('d-none');
+			}
+		}
+
+		updateCountedCodesInput();
+		updateReceiveButton();
+	});
+
 	document.addEventListener('transfer-counted-updated', function(event) {
 		const detail = event.detail || {};
 		const code = (detail.code_product || '').trim();
@@ -374,20 +463,27 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 		const expectedAmount = parseFloat(detail.expected_amount || 0);
 		const differenceAmount = parseFloat(detail.difference_amount || 0);
 		const hasDiff = Math.abs(differenceAmount) > 1e-9;
+		const notArrived = detail.not_arrived === true || (countedAmount === 0 && expectedAmount > 0);
 
 		countedCodesSet.add(code);
 		const row = document.getElementById('row-' + code);
 		if (row) {
 			row.setAttribute('data-counted', 'true');
+			row.setAttribute('data-reception-status', notArrived ? 'not-arrived' : 'counted');
+			row.classList.remove('row-arrived-pending');
 			const countedCell = document.getElementById('counted-' + code);
 			const diffCell = document.getElementById('diff-' + code);
 			if (countedCell) {
 				countedCell.textContent = countedAmount.toFixed(2);
 			}
 			if (diffCell) {
-				diffCell.innerHTML = hasDiff
-					? `${differenceAmount.toFixed(2)} <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>`
-					: differenceAmount.toFixed(2);
+				if (notArrived) {
+					diffCell.innerHTML = `${differenceAmount.toFixed(2)} <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-danger-subtle px-2 py-0 small fw-semibold text-danger-emphasis">No llegó</span>`;
+				} else {
+					diffCell.innerHTML = hasDiff
+						? `${differenceAmount.toFixed(2)} <span class="ms-1 d-inline-flex align-items-center rounded-pill bg-warning-subtle px-2 py-0 small fw-semibold text-warning-emphasis">Dif.</span>`
+						: differenceAmount.toFixed(2);
+				}
 			}
 
 			const hiddenFlag = document.getElementById('row-hidden-' + code);
@@ -395,11 +491,33 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 				hiddenFlag.value = hasDiff ? '0' : '1';
 			}
 
+			const notArrivedForm = row.querySelector('.not-arrived-form');
+			const arrivedForm = row.querySelector('.arrived-form');
+			if (notArrivedForm) {
+				const actionButton = notArrivedForm.querySelector('button[type="submit"]');
+				if (notArrived) {
+					notArrivedForm.classList.add('d-none');
+				} else {
+					notArrivedForm.classList.remove('d-none');
+				}
+				if (actionButton) {
+					actionButton.disabled = true;
+					actionButton.textContent = 'Contado';
+					actionButton.classList.remove('btn-danger', 'btn-outline-danger', 'btn-outline-success', 'btn-outline-secondary');
+					actionButton.classList.add('btn-outline-secondary');
+				}
+			}
+			if (arrivedForm) {
+				arrivedForm.classList.toggle('d-none', !notArrived);
+			}
+
+			row.classList.toggle('row-not-arrived', notArrived);
 			if (hasDiff) {
 				row.classList.remove('d-none');
-				row.classList.add('row-diff');
+				row.classList.toggle('row-diff', !notArrived);
 			} else {
 				row.classList.remove('row-diff');
+				row.classList.remove('row-not-arrived');
 				row.style.backgroundColor = '';
 				row.classList.add('d-none');
 			}
@@ -410,7 +528,24 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 	});
 
 	if (receiveForm) {
+		receiveForm.addEventListener('htmx:beforeRequest', function(event) {
+			const requestElement = event.detail && event.detail.elt;
+			if (requestElement && requestElement !== receiveForm) {
+				return;
+			}
+
+			if (!confirmReceiveOperation()) {
+				event.preventDefault();
+				return;
+			}
+			updateCountedCodesInput();
+		});
+
 		receiveForm.addEventListener('submit', function(event) {
+			if (window.htmx) {
+				return;
+			}
+
 			if (!confirmReceiveOperation()) {
 				event.preventDefault();
 				return;

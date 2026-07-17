@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Chequeo de Traslado #{{ order.correlative }}</title>
+    <title>{{ title or 'Chequeo de Traslado' }}</title>
     <style>
         :root {
             --text: #000;
@@ -254,15 +254,11 @@
         }
 
         .col-description {
-            width: 46%;
+            width: 60%;
         }
 
         .col-unit {
             width: 12%;
-        }
-
-        .col-location {
-            width: 14%;
         }
 
         .col-qty {
@@ -360,11 +356,11 @@
                     <span class="brand-mark">T</span>
                     <span class="brand-text">
                         <span class="brand-title">Toolbox</span><br>
-                        <span class="brand-subtitle">Chequeo de traslado de inventario</span>
+                        <span class="brand-subtitle">{{ report_title or 'Chequeo de traslado de inventario' }}</span>
                     </span>
                 </td>
                 <td class="document-title-block">
-                    <div class="document-title">Traslado</div>
+                    <div class="document-title">{{ report_document_title or 'Traslado' }}</div>
                     <table class="document-meta">
                         <tr>
                             <td class="meta-label">Correlativo</td>
@@ -376,6 +372,12 @@
                             <td class="meta-label">Fecha</td>
                             <td class="document-date">{{ order.emission_date.strftime('%d/%m/%Y') }}</td>
                         </tr>
+                        {% if status_label %}
+                        <tr>
+                            <td class="meta-label">Estado</td>
+                            <td class="document-date">{{ status_label }}</td>
+                        </tr>
+                        {% endif %}
                     </table>
                 </td>
             </tr>
@@ -398,7 +400,7 @@
                                 <span class="detail-label">Descripción:</span> {{ order.description or '-' }}
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Chequeado por:</span> {{ user.description if user else 'Sistema' }}
+                                <span class="detail-label">{{ report_user_label or 'Chequeado por' }}:</span> {{ user.description if user else 'Sistema' }}
                             </div>
                         </div>
                     </div>
@@ -416,7 +418,7 @@
                             </div>
                             <div class="signature-box">
                                 <div class="signature-line"></div>
-                                <span class="signature-label">Responsable Recolección / Firma</span>
+                                <span class="signature-label">{{ report_signature_label or 'Responsable Recolección / Firma' }}</span>
                             </div>
                         </div>
                     </div>
@@ -424,13 +426,12 @@
             </tr>
         </table>
 
-        <div class="table-section-title">Detalle de productos</div>
+        <div class="table-section-title">{{ report_table_title or 'Detalle de productos' }}</div>
         <table class="table">
             <colgroup>
                 <col class="col-code">
                 <col class="col-description">
                 <col class="col-unit">
-                <col class="col-location">
                 <col class="col-qty">
             </colgroup>
             <thead>
@@ -438,7 +439,6 @@
                     <th>Código producto</th>
                     <th>Descripción producto</th>
                     <th>Unidad</th>
-                    <th>Ubicación</th>
                     <th class="text-end">Cantidad</th>
                 </tr>
             </thead>
@@ -450,7 +450,6 @@
                         detail.description_product }}</td>
                     <td>{{ detail.products_unit.unit1.description if detail.products_unit and detail.products_unit.unit1
                         else '-' }}</td>
-                    <td>{{ detail.failure_info.location if detail.failure_info else '-' }}</td>
                     <td class="text-end">{{ detail.amount }}</td>
                 </tr>
                 {% endfor %}

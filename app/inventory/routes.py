@@ -2248,12 +2248,32 @@ def receive_transfer_operation(operation_id):
     )
     counted_codes.update(persisted_counted)
 
-    try:
-        inventory_service.register_missing_reception_differences(
-            operation_id,
-            counted_codes,
-            current_user.code,
+    unconfirmed_products = inventory_service.get_unconfirmed_reception_product_codes(
+        operation_id,
+        counted_codes,
+    )
+    if unconfirmed_products:
+        preview = ", ".join(unconfirmed_products[:5])
+        extra = "" if len(unconfirmed_products) <= 5 else " ..."
+        message = (
+            "No se puede cerrar la recepción. Debe contar o confirmar que no llegó cada producto pendiente: "
+            + preview
+            + extra
         )
+        if request.headers.get("HX-Request"):
+            error_payload = {
+                "counted-error": {
+                    "message": message,
+                    "focus_id": "product_code",
+                }
+            }
+            return Response(
+                "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+            )
+        flash(message, "error")
+        return redirect(url_for("inventory.check_transfer_operation"))
+
+    try:
         inventory_service.register_flow_step4(operation_id, current_user.code)
         inventory_service.process_inventory_operation(operation_id)
         inventory_service.clear_transfer_reception_progress(operation_id)
@@ -2388,6 +2408,110 @@ def product_modal(operation_id, product_code):
         operation_id=operation_id,
         product_failure=failure_info,
         destination_store=detail.destination_store,
+    )
+
+
+@inventory_bp.route(
+    "/check_transfer_operation/not_arrived/<int:operation_id>/<path:product_code>",
+    methods=["POST"],
+)
+@login_required
+def mark_transfer_product_not_arrived(operation_id, product_code):
+    flow = inventory_service.get_inventory_operation_flow(operation_id)
+    if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
+        error_payload = {
+            "counted-error": {
+                "message": "La operación debe estar en tránsito para confirmar productos no recibidos.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response(
+            "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    payload, error_code = inventory_service.mark_transfer_product_not_arrived(
+        operation_id,
+        product_code,
+        current_user.code,
+    )
+
+    if error_code == "PRODUCT_NOT_FOUND":
+        error_payload = {
+            "counted-error": {
+                "message": "Producto no encontrado en esta operación.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    detail = payload["detail"]
+    trigger_payload = {
+        "transfer-counted-updated": {
+            "code_product": detail.code_product,
+            "counted_amount": float(payload["counted_amount"]),
+            "expected_amount": float(payload["expected_amount"]),
+            "difference_amount": float(payload["difference_amount"]),
+            "not_arrived": True,
+        }
+    }
+    return Response(
+        "",
+        status=204,
+        headers={"HX-Trigger": json.dumps(trigger_payload)},
+    )
+
+
+@inventory_bp.route(
+    "/check_transfer_operation/arrived/<int:operation_id>/<path:product_code>",
+    methods=["POST"],
+)
+@login_required
+def reverse_transfer_product_not_arrived(operation_id, product_code):
+    flow = inventory_service.get_inventory_operation_flow(operation_id)
+    if not flow or flow["current_status"] != FLOW_IN_TRANSIT:
+        error_payload = {
+            "counted-error": {
+                "message": "La operación debe estar en tránsito para reversar productos no recibidos.",
+                "focus_id": "product_code",
+            }
+        }
+        return Response(
+            "", status=409, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    payload, error_code = inventory_service.reverse_transfer_product_not_arrived(
+        operation_id,
+        product_code,
+        current_user.code,
+    )
+
+    if error_code:
+        message = "Producto no encontrado en esta operación."
+        if error_code == "NOT_MARKED_NOT_ARRIVED":
+            message = "Este producto no está marcado como no recibido."
+        error_payload = {
+            "counted-error": {
+                "message": message,
+                "focus_id": "product_code",
+            }
+        }
+        return Response(
+            "", status=422, headers={"HX-Trigger": json.dumps(error_payload)}
+        )
+
+    detail = payload["detail"]
+    trigger_payload = {
+        "transfer-counted-reset": {
+            "code_product": detail.code_product,
+            "expected_amount": float(payload["expected_amount"]),
+        }
+    }
+    return Response(
+        "",
+        status=204,
+        headers={"HX-Trigger": json.dumps(trigger_payload)},
     )
 
 
@@ -2658,6 +2782,26 @@ def transfer_operation_report(order_id):
     user = current_user
     order = inventory_service.get_transfer_operation_report_data(order_id)
     sorted_details = inventory_service.sort_details_by_location(order.inventory_operation_details)
+    flow = inventory_service.get_inventory_operation_flow(order_id)
+    current_status = flow.get("current_status") if flow else None
+    is_received = current_status == FLOW_RECEIVED
+    report_title = (
+        "Traslado chequeado en recepción y recibido"
+        if is_received
+        else "Chequeo de recepción de traslado"
+    )
+    report_document_title = "Recibido" if is_received else "Traslado"
+    report_table_title = (
+        "Detalle de productos recibidos"
+        if is_received
+        else "Detalle de productos"
+    )
+    report_user_label = "Recibido por" if is_received else "Chequeado por"
+    report_signature_label = (
+        "Responsable recepción / firma"
+        if is_received
+        else "Responsable recolección / firma"
+    )
 
     barcode_base64 = generate_barcode(order.correlative)
 
@@ -2666,7 +2810,13 @@ def transfer_operation_report(order_id):
             "reports/transfer_operation_pdf.html",
             {
                 "order": order,
-                "title": f"chequeo de recepción de traslado {order.correlative}",
+                "title": f"{report_title} {order.correlative}",
+                "report_title": report_title,
+                "report_document_title": report_document_title,
+                "report_table_title": report_table_title,
+                "report_user_label": report_user_label,
+                "report_signature_label": report_signature_label,
+                "status_label": TRANSFER_STATUS_LABELS.get(current_status),
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,
                 "user": user,
@@ -2677,7 +2827,9 @@ def transfer_operation_report(order_id):
         ),
         mimetype="application/pdf",
         headers={
-            "Content-Disposition": f"inline; filename=chequeo_traslado_{order.correlative}.pdf"
+            "Content-Disposition": f"inline; filename=traslado_recibido_{order.correlative}.pdf"
+            if is_received
+            else f"inline; filename=chequeo_traslado_{order.correlative}.pdf"
         },
     )
 

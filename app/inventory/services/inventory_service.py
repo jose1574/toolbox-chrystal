@@ -2445,6 +2445,103 @@ def register_missing_reception_differences(operation_id, counted_codes, user_cod
   return created
 
 
+def get_unconfirmed_reception_product_codes(operation_id, counted_codes):
+  counted_set = {normalize_code(code) for code in (counted_codes or set()) if code}
+  details = InventoryOperationDetail.query.filter_by(main_correlative=operation_id).all()
+  return [
+    normalize_code(detail.code_product)
+    for detail in details
+    if normalize_code(detail.code_product) not in counted_set
+  ]
+
+
+def mark_transfer_product_not_arrived(operation_id, product_code, user_code):
+  normalized_code = normalize_code(product_code)
+  detail = InventoryOperationDetail.query.filter(
+    InventoryOperationDetail.main_correlative == operation_id,
+    func.upper(func.trim(InventoryOperationDetail.code_product)) == normalized_code,
+  ).first()
+
+  if not detail:
+    return None, "PRODUCT_NOT_FOUND"
+
+  existing_difference = get_reception_difference(operation_id, detail.line)
+  original_amount = (
+    float(existing_difference.original_amount)
+    if existing_difference
+    else float(detail.amount or 0.0)
+  )
+  difference_amount = -original_amount
+
+  if not existing_difference:
+    existing_difference = InventoryOperationReceptionDifference(
+      operation_correlative=operation_id,
+      detail_line=detail.line,
+      product_code=detail.code_product,
+      original_amount=original_amount,
+      counted_amount=0.0,
+      difference=difference_amount,
+      user_code=user_code,
+    )
+    db.session.add(existing_difference)
+  else:
+    existing_difference.counted_amount = 0.0
+    existing_difference.difference = difference_amount
+    existing_difference.user_code = user_code
+    existing_difference.updated_at = datetime.now()
+    existing_difference.resolution_status = DIFFERENCE_PENDING
+    existing_difference.resolution_note = None
+    existing_difference.resolved_user_code = None
+    existing_difference.resolved_at = None
+
+  detail.amount = 0.0
+  upsert_user_transfer_reception_progress(
+    operation_id,
+    user_code,
+    detail.code_product,
+    0.0,
+  )
+
+  db.session.commit()
+  return {
+    "detail": detail,
+    "counted_amount": 0.0,
+    "expected_amount": original_amount,
+    "difference_amount": difference_amount,
+  }, None
+
+
+def reverse_transfer_product_not_arrived(operation_id, product_code, user_code):
+  normalized_code = normalize_code(product_code)
+  detail = InventoryOperationDetail.query.filter(
+    InventoryOperationDetail.main_correlative == operation_id,
+    func.upper(func.trim(InventoryOperationDetail.code_product)) == normalized_code,
+  ).first()
+
+  if not detail:
+    return None, "PRODUCT_NOT_FOUND"
+
+  existing_difference = get_reception_difference(operation_id, detail.line)
+  if not existing_difference or float(existing_difference.counted_amount or 0.0) != 0.0:
+    return None, "NOT_MARKED_NOT_ARRIVED"
+
+  original_amount = float(existing_difference.original_amount or 0.0)
+  detail.amount = original_amount
+  db.session.delete(existing_difference)
+
+  InventoryOperationReceptionProgress.query.filter_by(
+    operation_correlative=operation_id,
+    user_code=user_code,
+    product_code=normalized_code,
+  ).delete(synchronize_session=False)
+
+  db.session.commit()
+  return {
+    "detail": detail,
+    "expected_amount": original_amount,
+  }, None
+
+
 def get_user_transfer_reception_progress_map(operation_id, user_code):
   if not operation_id or not user_code:
     return {}
