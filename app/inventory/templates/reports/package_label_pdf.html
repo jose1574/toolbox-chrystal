@@ -14,6 +14,8 @@
             --text: #111;
             --muted: #444;
             --border: #000;
+            --light: #f2f2f2;
+            --dark: #1f1f1f;
         }
 
         * {
@@ -35,11 +37,13 @@
             font-family: Arial, sans-serif;
             font-size: 11px;
             color: var(--text);
+            letter-spacing: 0.6px;
+            line-height: 1.3;
         }
 
         .label {
-            border: 1px solid var(--border);
-            padding: 0.8mm;
+            border: 2px solid var(--border);
+            padding: 1mm;
             width: 77mm;
             min-width: 77mm;
             max-width: 77mm;
@@ -48,26 +52,52 @@
         }
 
         .title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             text-transform: uppercase;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
-            margin-bottom: 6px;
+            background: var(--dark);
+            color: #fff;
+            border: 1px solid var(--border);
+            padding: 4px 5px;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+            text-align: center;
         }
 
         .meta {
-            margin: 2px 0;
+            margin: 0;
+            padding: 3px 4px;
+            border: 1px solid var(--border);
+            border-bottom: 0;
+            letter-spacing: 0.8px;
         }
 
         .meta span {
             font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .package-number {
+            margin-bottom: 0;
+            padding: 5px 4px;
+            border: 2px solid var(--border);
+            background: var(--light);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .package-number strong {
+            font-size: 16px;
+            letter-spacing: 3px;
         }
 
         .barcode {
-            margin: 6px 0;
+            margin: 5px 0;
             text-align: center;
-            border: 1px dashed #999;
+            border: 1px solid var(--border);
             padding: 4px;
         }
 
@@ -95,14 +125,27 @@
         th {
             text-transform: uppercase;
             font-size: 9px;
-            background: #efefef;
-            text-align: left;
+            background: var(--light);
+            text-align: center;
+            letter-spacing: 1px;
+            border: 2px solid var(--border);
         }
 
         td {
             font-size: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: 400;
+            letter-spacing: 1px;
+            line-height: 1.3;
             word-break: break-word;
             overflow-wrap: anywhere;
+        }
+
+        .product-code {
+            font-family: Arial, sans-serif;
+            font-weight: 600;
+            letter-spacing: 2px;
+            line-height: 1.35;
         }
 
         tr,
@@ -133,6 +176,9 @@
             margin-top: 6px;
             font-size: 9px;
             color: var(--muted);
+            letter-spacing: 0.8px;
+            border-top: 1px solid var(--border);
+            padding-top: 4px;
         }
     </style>
 </head>
@@ -140,6 +186,8 @@
 <body>
     <div class="label">
         <div class="title">Bulto {{ package.package_number }}</div>
+
+        <div class="package-number">Número de bulto: <strong>{{ package.package_number }}</strong></div>
 
         <div class="meta"><span>Traslado:</span> {{ order.correlative }}</div>
         <div class="meta"><span>Documento:</span> {{ order.document_no or '-' }}</div>
@@ -160,15 +208,15 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th>Codigo</th>
-                    <th>Descripcion</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
                     <th class="qty">Cantidad</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in package.package_details %}
                 <tr>
-                    <td>{{ item.product_code }}</td>
+                    <td class="product-code">{{ item.product_code }}</td>
                     <td>{{ item.product.description if item.product else '-' }}</td>
                     <td class="qty">{{ '%.2f'|format(item.packed_amount or 0) }}</td>
                 </tr>

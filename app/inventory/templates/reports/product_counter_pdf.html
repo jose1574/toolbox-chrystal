@@ -4,79 +4,138 @@
 	<meta charset="UTF-8">
 	<title>{{ title }}</title>
 	<style>
+		:root {
+			--text: #000;
+			--muted: #333;
+			--border: #000;
+			--light: #f2f2f2;
+			--dark: #1f1f1f;
+		}
+
 		* { box-sizing: border-box; }
 		body {
-			font-family: "Segoe UI", Arial, sans-serif;
-			color: #111827;
+			font-family: Arial, sans-serif;
+			color: var(--text);
 			margin: 0;
-			padding: 24px;
-			font-size: 15px;
+			padding: 18px 20px;
+			font-size: 11px;
+			line-height: 1.4;
+			letter-spacing: 0.8px;
 		}
+		.sheet {
+			border: 2px solid var(--border);
+			padding: 18px 20px;
+		}
+		.top-rule,
+		.bottom-rule {
+			height: 6px;
+			background: var(--dark);
+			border: 1px solid var(--border);
+		}
+		.top-rule { margin-bottom: 10px; }
+		.bottom-rule { margin-top: 14px; }
 		.header {
-			margin-bottom: 18px;
+			margin-bottom: 12px;
+			border: 2px solid var(--border);
 		}
 		.title {
-			font-size: 20px;
+			font-size: 18px;
 			font-weight: 700;
-			margin-bottom: 4px;
+			padding: 7px 9px;
+			margin: 0;
+			background: var(--dark);
+			color: #fff;
+			letter-spacing: 2px;
+			text-transform: uppercase;
+			text-align: center;
 		}
 		.subtitle {
-			font-size: 15px;
-			color: #6b7280;
+			font-size: 10px;
+			color: var(--muted);
+			padding: 6px 9px 0;
+			letter-spacing: 1.4px;
 		}
 		.meta {
-			margin-top: 8px;
-			font-size: 15px;
-			color: #374151;
+			padding: 6px 9px 9px;
+			font-size: 11px;
+			color: var(--text);
+			letter-spacing: 1.4px;
 		}
 		.meta span {
 			display: inline-block;
 			margin-right: 12px;
+			padding: 3px 0;
 		}
 		.table {
 			width: 100%;
 			border-collapse: collapse;
 			margin-top: 8px;
+			table-layout: fixed;
 		}
 		h2 {
-			font-size: 15px;
-			margin: 14px 0 6px 0;
+			font-size: 10px;
+			margin: 12px 0 0;
+			padding: 8px 10px;
+			border: 2px solid var(--border);
+			border-bottom: 0;
+			background: var(--light);
+			letter-spacing: 2px;
+			text-transform: uppercase;
 		}
 		.table thead {
-			background: #f3f4f6;
+			background: var(--light);
 		}
 		.table th, .table td {
-			border: 1px solid #e5e7eb;
-			padding: 5px 6px;
+			border: 1px solid #333;
+			padding: 7px 8px;
 			text-align: left;
+			font-family: Arial, sans-serif;
+			font-weight: 400;
+			letter-spacing: 1.8px;
+			line-height: 1.45;
 		}
 		.table th {
 			text-transform: uppercase;
-			font-size: 15px;
-			letter-spacing: 0.03em;
-			color: #374151;
+			font-size: 10px;
+			letter-spacing: 1.2px;
+			color: #000;
+			font-weight: 700;
+			text-align: center;
+			border: 2px solid var(--border);
 		}
 		.text-end {
 			text-align: right;
 			font-variant-numeric: tabular-nums;
 		}
-		.status-sobrante { color: #047857; font-weight: 600; }
-		.status-faltante { color: #b91c1c; font-weight: 600; }
-		.status-sin-dif { color: #6b7280; }
+		.product-code {
+			font-family: Arial, sans-serif;
+			font-weight: 600;
+			letter-spacing: 3px;
+			line-height: 1.45;
+			word-break: break-word;
+			overflow-wrap: anywhere;
+		}
+		.status-sobrante,
+		.status-faltante,
+		.status-sin-dif { color: #000; font-weight: 700; }
 		.footer {
 			margin-top: 14px;
-			font-size: 15px;
-			color: #6b7280;
+			font-size: 9px;
+			color: var(--muted);
+			letter-spacing: 1px;
+			text-align: center;
 		}
 		.section {
 			margin-top: 8px;
 		}
 		.operations-table td {
-			font-size: 15px;
+			font-size: 11px;
 		}
 	</style>
 </head>
 <body>
+	<div class="sheet">
+		<div class="top-rule"></div>
 	<div class="header">
 		<div class="title">{{ title }}</div>
 		<div class="subtitle">Generado el {{ now().strftime('%d/%m/%Y %H:%M') }}</div>
@@ -155,7 +214,7 @@
 			<tbody>
 				{% for h in items %}
 				<tr>
-					<td>{{ h.product.code }}</td>
+					<td class="product-code">{{ h.product.code }}</td>
 					<td>{{ h.product.description }}</td>
 					<td class="text-end">{{ '%.2f'|format(h.system_qty) }}</td>
 					<td class="text-end">{{ '%.2f'|format(h.counted_qty) }}</td>
@@ -181,6 +240,8 @@
 
 	<div class="footer">
 		Total de productos en el conteo: {{ items|length }}
+	</div>
+		<div class="bottom-rule"></div>
 	</div>
 </body>
 </html>

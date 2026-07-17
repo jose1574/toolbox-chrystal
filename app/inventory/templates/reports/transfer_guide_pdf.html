@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <title>Guia de traslados de inventario</title>
     <style>
+        :root {
+            --text: #000;
+            --muted: #333;
+            --border: #000;
+            --light: #f2f2f2;
+            --dark: #1f1f1f;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -12,43 +20,70 @@
             margin: 0;
             padding: 12px;
             font-family: Arial, sans-serif;
-            color: #111;
+            color: var(--text);
             font-size: 11px;
-            line-height: 1.35;
+            line-height: 1.4;
+            letter-spacing: 0.8px;
         }
 
         .sheet {
-            border: 1.5px solid #111;
-            padding: 12px;
+            border: 2px solid var(--border);
+            padding: 18px 20px;
+        }
+
+        .top-rule,
+        .bottom-rule {
+            height: 6px;
+            background: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .top-rule {
+            margin-bottom: 10px;
+        }
+
+        .bottom-rule {
+            margin-top: 14px;
         }
 
         .title {
-            margin: 0 0 4px;
-            font-size: 18px;
+            margin: 0;
+            padding: 7px 9px;
+            background: var(--dark);
+            color: #fff;
+            font-size: 16px;
             font-weight: 700;
+            letter-spacing: 2px;
+            text-align: center;
             text-transform: uppercase;
         }
 
         .subtitle {
             margin: 0 0 10px;
-            color: #333;
+            padding: 7px 9px;
+            border: 2px solid var(--border);
+            border-top: 0;
+            color: var(--muted);
             font-size: 11px;
+            letter-spacing: 1.2px;
         }
 
         .flow-row {
             margin: 0 0 14px;
             padding: 8px;
-            border: 1px solid #333;
-            background: #f4f4f4;
+            border: 2px solid var(--border);
+            background: var(--light);
         }
 
         .summary-row {
             margin: 0 0 12px;
             padding: 7px 8px;
-            border: 1px solid #333;
+            border: 2px solid var(--border);
             background: #fff;
             font-size: 10px;
             font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
         }
 
         .flow-item {
@@ -56,22 +91,24 @@
             margin-right: 10px;
             margin-bottom: 5px;
             padding: 3px 7px;
-            border: 1px solid #111;
+            border: 1px solid var(--border);
             font-size: 10px;
-            border-radius: 10px;
             background: #fff;
+            letter-spacing: 1px;
         }
 
         .step {
-            border: 1px solid #111;
+            border: 2px solid var(--border);
             margin-bottom: 10px;
         }
 
         .step-header {
-            background: #ececec;
+            background: var(--dark);
+            color: #fff;
             padding: 7px 8px;
             font-weight: 700;
             font-size: 11px;
+            letter-spacing: 1.8px;
             text-transform: uppercase;
         }
 
@@ -85,6 +122,7 @@
 
         .block-label {
             font-weight: 700;
+            text-transform: uppercase;
         }
 
         .checklist {
@@ -103,7 +141,7 @@
         }
 
         .signature-grid td {
-            border: 1px solid #111;
+            border: 2px solid var(--border);
             padding: 10px;
             height: 56px;
             vertical-align: bottom;
@@ -115,11 +153,12 @@
             margin-top: 10px;
             text-align: right;
             font-size: 9px;
-            color: #444;
+            color: var(--muted);
+            letter-spacing: 1px;
         }
 
         .empty-state {
-            border: 1px dashed #333;
+            border: 2px solid var(--border);
             padding: 12px;
             text-align: center;
             font-size: 11px;
@@ -129,6 +168,7 @@
 </head>
 <body>
     <div class="sheet">
+        <div class="top-rule"></div>
         <h1 class="title">Guia Operativa de Traslados Completados</h1>
         <p class="subtitle">
             Reporte de pasos marcados por el usuario en su guia de practica.
@@ -183,6 +223,8 @@
         <p class="footer">
             Generado por {{ generated_by.description if generated_by else 'Sistema' }} - {{ generated_at.strftime('%d/%m/%Y %H:%M:%S') }}
         </p>
+
+        <div class="bottom-rule"></div>
     </div>
 </body>
 </html>

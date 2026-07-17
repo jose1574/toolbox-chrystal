@@ -1172,7 +1172,9 @@ def save_manual_order_collection():
 @login_required
 def order_collection_report(order_id):
     flow = inventory_service.get_inventory_operation_flow(order_id)
-    is_checked = bool(flow and flow.get("current_status") == FLOW_RECOLLECTION_CHECKED)
+    current_status = flow.get("current_status") if flow else FLOW_RECOLLECTION_ISSUED
+    is_checked = current_status == FLOW_RECOLLECTION_CHECKED
+    is_in_transit = current_status == FLOW_IN_TRANSIT
 
     user = current_user
     order = inventory_service.get_order_for_report(order_id)
@@ -1181,15 +1183,48 @@ def order_collection_report(order_id):
 
     barcode_base64 = generate_barcode(order.correlative)
 
-    template_path = "reports/checked_order_collection_pdf.html" if is_checked else "reports/order_collection_pdf.html"
-    filename = f"orden_chequeada_{order.correlative}.pdf" if is_checked else f"orden_{order.correlative}.pdf"
+    uses_processed_collection_template = is_checked or is_in_transit
+    template_path = "reports/checked_order_collection_pdf.html" if uses_processed_collection_template else "reports/order_collection_pdf.html"
+
+    if is_in_transit:
+        filename = f"orden_en_transito_{order.correlative}.pdf"
+        report_title = f"Orden de Recolección en Tránsito {order.correlative}"
+        report_subtitle = "Orden de recolección en tránsito"
+        report_document_title = "En tránsito"
+        report_table_title = "Detalle de productos en tránsito"
+        report_user_label = "En tránsito por"
+        report_footer_label = "En tránsito por"
+    elif is_checked:
+        filename = f"orden_chequeada_{order.correlative}.pdf"
+        report_title = f"Orden de Recolección Chequeada {order.correlative}"
+        report_subtitle = "Orden de recolección chequeada"
+        report_document_title = "Chequeada"
+        report_table_title = "Detalle de productos chequeados"
+        report_user_label = "Chequeado por"
+        report_footer_label = "Chequeado por"
+    else:
+        filename = f"orden_{order.correlative}.pdf"
+        report_title = f"Orden de Recolección Automática {order.correlative}"
+        report_subtitle = "Orden de recolección de inventario"
+        report_document_title = "Orden"
+        report_table_title = "Detalle de productos"
+        report_user_label = "Emitida por"
+        report_footer_label = "Generado por"
 
     return Response(
         render_pdf(
             template_path,
             {
                 "order": order,
-                "title": f"Orden de Recolección Automatica {order.correlative}",
+                "title": report_title,
+                "report_subtitle": report_subtitle,
+                "report_document_title": report_document_title,
+                "report_table_title": report_table_title,
+                "report_user_label": report_user_label,
+                "report_footer_label": report_footer_label,
+                "flow": flow,
+                "current_status": current_status,
+                "status_label": TRANSFER_STATUS_LABELS.get(current_status, current_status),
                 "now": datetime.now(),
                 "barcode_base64": barcode_base64,
                 "user": user,

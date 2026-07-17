@@ -9,6 +9,8 @@
             --text: #000;
             --muted: #333;
             --border: #000;
+            --light: #f2f2f2;
+            --dark: #1f1f1f;
         }
 
         * {
@@ -26,169 +28,426 @@
             font-family: Arial, sans-serif;
             font-size: 11px;
             color: var(--text);
-            padding: 10px;
+            padding: 0;
+            line-height: 1.4;
+            letter-spacing: 0.8px;
+            background: #fff;
         }
 
         .main-container {
             border: 2px solid var(--border);
-            padding: 10px;
+            padding: 18px 20px;
             min-height: 98%;
+            position: relative;
+        }
+
+        .top-rule,
+        .bottom-rule {
+            height: 6px;
+            background: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .top-rule {
+            margin-bottom: 10px;
+        }
+
+        .bottom-rule {
+            margin-top: 18px;
+        }
+
+        .document-header {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .document-header td {
+            border: 0;
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .brand-block {
+            width: 56%;
+        }
+
+        .brand-mark {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            margin-right: 6px;
+            border: 2px solid var(--border);
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .brand-text {
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2.4px;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            margin-top: 0;
+            font-size: 9px;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--muted);
+            line-height: 1.1;
+        }
+
+        .document-title-block {
+            width: 44%;
+            text-align: right;
+        }
+
+        .document-title {
+            font-size: 22px;
+            font-weight: 400;
+            letter-spacing: 4.5px;
+            text-transform: uppercase;
+            line-height: 1.05;
+        }
+
+        .document-meta {
+            display: inline-table;
+            margin-top: 5px;
+            border-collapse: collapse;
+            font-size: 11px;
+            letter-spacing: 1.4px;
+            text-align: left;
+            border: 2px solid var(--border);
+        }
+
+        .document-meta td {
+            padding: 5px 9px;
+            border: 2px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .document-meta .meta-label {
+            background: var(--dark);
+            color: #fff;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.8px;
+        }
+
+        .document-number {
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .document-number-value {
+            display: block;
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 3px;
+        }
+
+        .document-date {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-align: center;
+        }
+
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            table-layout: fixed;
+        }
+
+        .info-grid td {
+            vertical-align: top;
+        }
+
+        .info-left {
+            width: 58%;
+            padding-right: 12px;
+        }
+
+        .info-right {
+            width: 42%;
+            padding-left: 12px;
+        }
+
+        .panel {
+            border: 2px solid var(--border);
+            min-height: 136px;
+        }
+
+        .panel-title {
+            margin: 0;
+            padding: 7px 9px;
+            background: var(--dark);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            line-height: 1.2;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .panel-body {
+            padding: 8px 9px;
         }
 
         .table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .table-section-title {
+            margin-top: 12px;
+            padding: 8px 10px;
+            border: 2px solid var(--border);
+            border-bottom: 0;
+            background: var(--light);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .table th {
-            background-color: #f0f0f0;
+            background-color: var(--light);
+            color: #000;
             font-weight: 700;
             text-transform: uppercase;
             font-size: 10px;
-            border: 1.5px solid var(--border) !important;
-            padding: 8px;
-            text-align: left;
+            border: 2px solid var(--border) !important;
+            padding: 9px 8px;
+            text-align: center;
+            letter-spacing: 1.2px;
+            line-height: 1.4;
         }
 
         .table td {
             border: 1px solid #333;
-            padding: 6px 8px;
+            padding: 7px 8px;
             text-align: left;
-        }
-
-        /* Tabla de Cabecera Estilo Diagrama */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-
-        .header-table td {
-            border: 1.5px solid var(--border) !important;
-            padding: 10px;
+            font-family: Arial, sans-serif;
+            font-weight: 400;
+            letter-spacing: 2px;
+            line-height: 1.45;
             vertical-align: top;
         }
 
-        .header-title {
-            text-align: center;
-            font-size: 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            background-color: #eee;
+        .col-code {
+            width: 18%;
         }
 
-        .checked-title {
-            margin-top: 4px;
-            font-size: 12px;
-            font-weight: 700;
+        .col-description {
+            width: 46%;
         }
 
-        .header-details {
-            width: 35%;
+        .col-unit {
+            width: 12%;
         }
 
-        .header-barcode {
-            width: 30%;
-            text-align: center;
-            vertical-align: middle !important;
+        .col-location {
+            width: 14%;
         }
 
-        .header-responsible {
-            width: 35%;
+        .col-qty {
+            width: 10%;
         }
 
         .detail-item {
-            margin-bottom: 4px;
+            padding: 5px 0;
+            border-bottom: 1px solid #555;
+            letter-spacing: 1.8px;
+        }
+
+        .detail-item:last-child {
+            border-bottom: 0;
         }
 
         .detail-label {
             font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .detail-pair {
+            display: inline-block;
+            width: 49%;
+            vertical-align: top;
         }
 
         .text-end {
             text-align: right;
         }
 
+        .product-code {
+            font-family: Arial, sans-serif;
+            font-weight: 600;
+            letter-spacing: 3px;
+            line-height: 1.45;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .product-description {
+            letter-spacing: 2.2px;
+            line-height: 1.5;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .barcode-box {
+            border: 1px solid #333;
+            padding: 10px 8px;
+            text-align: center;
+        }
+
+        .barcode-box img {
+            height: 70px;
+            max-width: 100%;
+        }
+
+        .signature-box {
+            border: 1px solid #333;
+            margin-top: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 2px solid #000;
+            width: 88%;
+            margin: 34px auto 4px;
+        }
+
+        .signature-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         .footer {
-            margin-top: 15px;
+            margin-top: 12px;
             font-size: 9px;
             color: var(--muted);
             text-align: center;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 
 <body>
     <div class="main-container">
-        <!-- Cabecera según diagrama -->
-        <table class="header-table">
+        <div class="top-rule"></div>
+
+        <table class="document-header">
             <tr>
-                <td colspan="3" class="header-title">
-                    Orden de Recolección #{{ order.correlative }}
+                <td class="brand-block">
+                    <span class="brand-mark">T</span>
+                    <span class="brand-text">
+                        <span class="brand-title">Toolbox</span><br>
+                        <span class="brand-subtitle">Orden de recolección de inventario</span>
+                    </span>
+                </td>
+                <td class="document-title-block">
+                    <div class="document-title">Orden</div>
+                    <table class="document-meta">
+                        <tr>
+                            <td class="meta-label">Correlativo.</td>
+                            <td class="document-number">
+                                <span class="document-number-value">{{ order.correlative }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Fecha</td>
+                            <td class="document-date">{{ order.emission_date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
+        </table>
+
+        <table class="info-grid">
             <tr>
-                <td class="header-details">
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Detalles Orden:
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Fecha:</span> {{ order.emission_date.strftime('%d/%m/%Y') }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Depósito Origen:</span> {{ order.store2.description }} ({{
-                        order.store }})
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Documento:</span> {{ order.document_no or '-' }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Descripción:</span> {{ order.description or '-' }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Depósito Destino:</span> {{ order.store1.description }} ({{
-                        order.destination_store }})
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Cantidad de Bultos:</span> {{ package_count }}
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">- Chequeado por:</span> {{ user.description if user else 'Sistema' }}
+                <td class="info-left">
+                    <div class="panel">
+                        <div class="panel-title">Detalles de la orden</div>
+                        <div class="panel-body">
+                            <div class="detail-item">
+                                <span class="detail-pair"><span class="detail-label">Dep. origen:</span> {{ order.store2.description }} ({{ order.store }})</span>
+                                <span class="detail-pair"><span class="detail-label">Dep. destino:</span> {{ order.store1.description }} ({{ order.destination_store }})</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Documento:</span> {{ order.document_no or '-' }}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Descripción:</span> {{ order.description or '-' }}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Emitida por:</span> {{ user.description if user else 'Sistema' }}
+                            </div>
+                        </div>
                     </div>
                 </td>
-                <td class="header-barcode">
-                    {% if barcode_base64 %}
-                    <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode"
-                        style="height: 70px; max-width: 100%;">
-                    {% else %}
-                    <span style="color: #ccc;">[Código de Barras]</span>
-                    {% endif %}
-                </td>
-                <td class="header-responsible">
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Responsable Recolección:</div>
-                    <div style="margin-top: 50px; text-align: center;">
-                        <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto; "></div>
-                        <span style="font-size: 9px; text-transform: uppercase; ">Firma</span>
+                <td class="info-right">
+                    <div class="panel">
+                        <div class="panel-title">Control</div>
+                        <div class="panel-body">
+                            <div class="barcode-box">
+                                {% if barcode_base64 %}
+                                <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode">
+                                {% else %}
+                                <span style="color: #777;">[Código de Barras]</span>
+                                {% endif %}
+                            </div>
+                            <div class="signature-box">
+                                <div class="signature-line"></div>
+                                <span class="signature-label">Responsable Recolección / Firma</span>
+                            </div>
+                        </div>
                     </div>
                 </td>
             </tr>
         </table>
 
         <!-- Tabla de productos -->
+        <div class="table-section-title">Detalle de productos</div>
         <table class="table">
+            <colgroup>
+                <col class="col-code">
+                <col class="col-description">
+                <col class="col-unit">
+                <col class="col-location">
+                <col class="col-qty">
+            </colgroup>
             <thead>
                 <tr>
-                    <th>Código</th>
-                    <th>Descripción</th>
+                    <th>Código producto</th>
+                    <th>Descripción producto</th>
                     <th>Unidad</th>
                     <th>Ubicación</th>
-                    <th class="text-end">Cant.</th>
+                    <th class="text-end">Cantidad</th>
                 </tr>
             </thead>
             <tbody>
                 {% for detail in sorted_details %}
                 <tr>
-                    <td>{{ detail.code_product }}</td>
-                    <td style="width: 40%;">{{ detail.product.description if detail.product else
+                    <td class="product-code">{{ detail.code_product }}</td>
+                    <td class="product-description">{{ detail.product.description if detail.product else
                         detail.description_product }}</td>
                     <td>{{ detail.products_unit.unit1.description if detail.products_unit and detail.products_unit.unit1
                         else '-' }}</td>
@@ -202,6 +461,8 @@
         <div class="footer">
             <p>Generado por: {{ user.description if user else 'Sistema' }} — {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
         </div>
+
+        <div class="bottom-rule"></div>
     </div>
 </body>
 
