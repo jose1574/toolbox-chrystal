@@ -1938,6 +1938,7 @@ def package_progress():
 @login_required
 def save_order_check():
     order_id = request.form.get("order_id", type=int)
+    operation_comments = (request.form.get("operation_comments") or "").strip()
     # Validar orden
     if not order_id:
         flash("ID de orden inválido.", "error")
@@ -1961,7 +1962,15 @@ def save_order_check():
         detail.amount = float(progress_map[code_product])
 
     if uncounted_products:
-        inventory_service.delete_details_from_order(order_id, uncounted_products)
+        preview = ", ".join(uncounted_products[:5])
+        extra = "" if len(uncounted_products) <= 5 else " ..."
+        flash(
+            "No se puede confirmar el chequeo porque quedan productos sin contar: "
+            + preview
+            + extra,
+            "error",
+        )
+        return redirect(url_for("inventory.check_order"))
 
     try:
         inventory_service.close_all_open_packages_for_operation(order_id, current_user.code)
@@ -2005,6 +2014,7 @@ def save_order_check():
         "CHEQUEADO "
         f"{origin_name} a destino {destination_name}"
     )
+    order.operation_comments = operation_comments or None
 
     try:
         inventory_service.register_flow_step2(order_id, current_user.code)

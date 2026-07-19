@@ -343,6 +343,30 @@
             text-align: center;
             letter-spacing: 1px;
         }
+
+        .comments-box {
+            margin-top: 12px;
+            border: 2px solid var(--border);
+        }
+
+        .comments-title {
+            margin: 0;
+            padding: 7px 9px;
+            background: var(--dark);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+        }
+
+        .comments-body {
+            min-height: 42px;
+            padding: 8px 9px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
     </style>
 </head>
 
@@ -457,6 +481,13 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        {% if order.operation_comments %}
+        <div class="comments-box">
+            <div class="comments-title">Comentario de la operación</div>
+            <div class="comments-body"><b>Comentario:</b> {{ order.operation_comments }}</div>
+        </div>
+        {% endif %}
 
         <div class="footer">
             <p>{{ report_footer_label or 'Chequeado por' }}: {{ user.description if user else 'Sistema' }} - {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
