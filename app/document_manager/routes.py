@@ -1,9 +1,28 @@
 from flask import jsonify, render_template, request
 from flask_login import login_required, current_user
 from app.document_manager import document_manager_bp 
+from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
-from app.models import InventoryOperation, InventoryOperationPackage
+from app.models import InventoryOperation, InventoryOperationFlow, InventoryOperationPackage
 from app import db
+
+
+FLOW_RECEIVED = "RECEIVED"
+
+TRANSFER_STATUS_LABELS = {
+    "RECOLLECTION_ISSUED": "Orden emitida",
+    "RECOLLECTION_CHECKED": "Orden chequeada",
+    "IN_TRANSIT": "En tránsito",
+    FLOW_RECEIVED: "Recepcionada",
+    "SIN_FLUJO": "Sin flujo",
+}
+
+TRANSFER_STATUS_OPTIONS = [
+    ("RECOLLECTION_ISSUED", TRANSFER_STATUS_LABELS["RECOLLECTION_ISSUED"]),
+    ("RECOLLECTION_CHECKED", TRANSFER_STATUS_LABELS["RECOLLECTION_CHECKED"]),
+    ("IN_TRANSIT", TRANSFER_STATUS_LABELS["IN_TRANSIT"]),
+    (FLOW_RECEIVED, TRANSFER_STATUS_LABELS[FLOW_RECEIVED]),
+]
 
 @document_manager_bp.route("/")
 @login_required
@@ -12,17 +31,37 @@ def index():
     if document_type not in {"order_report", "package_label"}:
         document_type = "order_report"
     package_order_id = request.args.get("package_order_id", type=int)
+    status = (request.args.get("status") or "").strip()
+    valid_statuses = {option[0] for option in TRANSFER_STATUS_OPTIONS}
+    if status and status not in valid_statuses:
+        status = ""
 
     transfer_operations = []
     packages = []
 
     if document_type == "order_report":
-        transfer_operations = (
-            InventoryOperation.query.filter_by(operation_type="TRANSFER", wait=True)
-            .options(joinedload(InventoryOperation.operation_flow))
+        transfer_query = (
+            InventoryOperation.query.outerjoin(InventoryOperation.operation_flow)
+            .filter(InventoryOperation.operation_type == "TRANSFER")
+            .filter(
+                or_(
+                    InventoryOperation.wait.is_(True),
+                    InventoryOperationFlow.current_status == FLOW_RECEIVED,
+                )
+            )
+            .options(
+                joinedload(InventoryOperation.operation_flow),
+                joinedload(InventoryOperation.store2),
+                joinedload(InventoryOperation.store1),
+            )
             .order_by(InventoryOperation.correlative.desc())
-            .all()
         )
+        if status:
+            transfer_query = transfer_query.filter(
+                InventoryOperationFlow.current_status == status
+            )
+
+        transfer_operations = transfer_query.all()
     else:
         packages_query = (
             InventoryOperationPackage.query.options(
@@ -52,6 +91,10 @@ def index():
         user=current_user,
         document_type=document_type,
         package_order_id=package_order_id,
+        status=status,
+        status_options=TRANSFER_STATUS_OPTIONS,
+        status_labels=TRANSFER_STATUS_LABELS,
+        received_status=FLOW_RECEIVED,
         transfer_operations=transfer_operations,
         packages=packages,
     )
@@ -106,12 +149,22 @@ def delete_transfers():
     try:
         for item in correlatives:
             correlative = int(item)
-
-            deleted_count += InventoryOperation.query.filter_by(
+            operation = InventoryOperation.query.options(
+                joinedload(InventoryOperation.operation_flow)
+            ).filter_by(
                 correlative=correlative,
                 operation_type="TRANSFER",
                 wait=True,
-            ).delete(synchronize_session=False)
+            ).first()
+
+            if not operation:
+                continue
+
+            if operation.operation_flow and operation.operation_flow.current_status == FLOW_RECEIVED:
+                continue
+
+            db.session.delete(operation)
+            deleted_count += 1
 
         db.session.commit()
         return jsonify({"status": "success", "message": f"Eliminadas {deleted_count} operaciones."}), 200

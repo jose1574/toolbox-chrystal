@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Orden de Recolección Recepcionada #{{ order.correlative }}</title>
+    <style>
+        :root {
+            --text: #000;
+            --muted: #333;
+            --border: #000;
+            --light: #f2f2f2;
+            --dark: #1f1f1f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: var(--text);
+            padding: 0;
+            line-height: 1.4;
+            letter-spacing: 0.8px;
+            background: #fff;
+        }
+
+        .main-container {
+            border: 2px solid var(--border);
+            padding: 18px 20px;
+            min-height: 98%;
+            position: relative;
+        }
+
+        .top-rule,
+        .bottom-rule {
+            height: 6px;
+            background: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .top-rule {
+            margin-bottom: 10px;
+        }
+
+        .bottom-rule {
+            margin-top: 18px;
+        }
+
+        .document-header {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .document-header td {
+            border: 0;
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .brand-block {
+            width: 56%;
+        }
+
+        .brand-mark {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            margin-right: 6px;
+            border: 2px solid var(--border);
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .brand-text {
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2.4px;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            margin-top: 0;
+            font-size: 9px;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--muted);
+            line-height: 1.1;
+        }
+
+        .document-title-block {
+            width: 44%;
+            text-align: right;
+        }
+
+        .document-title {
+            font-size: 22px;
+            font-weight: 400;
+            letter-spacing: 4.5px;
+            text-transform: uppercase;
+            line-height: 1.05;
+        }
+
+        .document-meta {
+            display: inline-table;
+            margin-top: 5px;
+            border-collapse: collapse;
+            font-size: 11px;
+            letter-spacing: 1.4px;
+            text-align: left;
+            border: 2px solid var(--border);
+        }
+
+        .document-meta td {
+            padding: 5px 9px;
+            border: 2px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .document-meta .meta-label {
+            background: var(--dark);
+            color: #fff;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.8px;
+        }
+
+        .document-number {
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .document-number-value {
+            display: block;
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 3px;
+        }
+
+        .document-date {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-align: center;
+        }
+
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+            table-layout: fixed;
+        }
+
+        .info-grid td {
+            vertical-align: top;
+        }
+
+        .info-left {
+            width: 58%;
+            padding-right: 12px;
+        }
+
+        .info-right {
+            width: 42%;
+            padding-left: 12px;
+        }
+
+        .panel {
+            border: 2px solid var(--border);
+            min-height: 136px;
+        }
+
+        .panel-title,
+        .table-section-title,
+        .comments-title {
+            margin: 0;
+            padding: 7px 9px;
+            background: var(--dark);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        .panel-body {
+            padding: 8px 9px;
+        }
+
+        .detail-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #555;
+            letter-spacing: 1.8px;
+        }
+
+        .detail-item:last-child {
+            border-bottom: 0;
+        }
+
+        .detail-label {
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .detail-pair {
+            display: inline-block;
+            width: 49%;
+            vertical-align: top;
+        }
+
+        .barcode-box {
+            border: 1px solid #333;
+            padding: 10px 8px;
+            text-align: center;
+        }
+
+        .barcode-box img {
+            height: 70px;
+            max-width: 100%;
+        }
+
+        .traceability-table,
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .traceability-table th,
+        .traceability-table td,
+        .table th,
+        .table td {
+            border: 1px solid #333;
+            padding: 7px 8px;
+            vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .traceability-table th,
+        .table th {
+            background-color: var(--light);
+            color: #000;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            border: 2px solid var(--border) !important;
+            text-align: center;
+            letter-spacing: 1.2px;
+            line-height: 1.4;
+        }
+
+        .traceability-table td,
+        .table td {
+            font-family: Arial, sans-serif;
+            font-weight: 400;
+            letter-spacing: 1.8px;
+            line-height: 1.45;
+        }
+
+        .table-section-title {
+            margin-top: 12px;
+            border: 2px solid var(--border);
+            border-bottom: 0;
+            background: var(--light);
+            color: #000;
+        }
+
+        .col-code {
+            width: 18%;
+        }
+
+        .col-description {
+            width: 46%;
+        }
+
+        .col-unit {
+            width: 12%;
+        }
+
+        .col-location {
+            width: 14%;
+        }
+
+        .col-qty {
+            width: 10%;
+        }
+
+        .text-end {
+            text-align: right;
+        }
+
+        .product-code {
+            font-weight: 600;
+            letter-spacing: 3px;
+        }
+
+        .product-description {
+            letter-spacing: 2.2px;
+            line-height: 1.5;
+        }
+
+        .comments-box {
+            margin-top: 12px;
+            border: 2px solid var(--border);
+        }
+
+        .comments-body {
+            min-height: 42px;
+            padding: 8px 9px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .footer {
+            margin-top: 12px;
+            font-size: 9px;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="top-rule"></div>
+
+        <table class="document-header">
+            <tr>
+                <td class="brand-block">
+                    <span class="brand-mark">T</span>
+                    <span class="brand-text">
+                        <span class="brand-title">Toolbox</span><br>
+                        <span class="brand-subtitle">{{ report_subtitle or 'Orden de recolección recepcionada' }}</span>
+                    </span>
+                </td>
+                <td class="document-title-block">
+                    <div class="document-title">{{ report_document_title or 'Recepcionada' }}</div>
+                    <table class="document-meta">
+                        <tr>
+                            <td class="meta-label">Correlativo</td>
+                            <td class="document-number">
+                                <span class="document-number-value">{{ order.correlative }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Fecha</td>
+                            <td class="document-date">{{ order.emission_date.strftime('%d/%m/%Y') if order.emission_date else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Estado</td>
+                            <td class="document-date">{{ status_label or 'Recepcionada' }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <table class="info-grid">
+            <tr>
+                <td class="info-left">
+                    <div class="panel">
+                        <div class="panel-title">Detalles de la orden</div>
+                        <div class="panel-body">
+                            <div class="detail-item">
+                                <span class="detail-pair"><span class="detail-label">Dep. origen:</span> {{ order.store2.description if order.store2 else order.store }} ({{ order.store }})</span>
+                                <span class="detail-pair"><span class="detail-label">Dep. destino:</span> {{ order.store1.description if order.store1 else order.destination_store }} ({{ order.destination_store }})</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-pair"><span class="detail-label">Documento:</span> {{ order.document_no or '-' }}</span>
+                                <span class="detail-pair"><span class="detail-label">Bultos:</span> {{ package_count }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Descripción:</span> {{ order.description or '-' }}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Creada por:</span> {{ flow.recollection_issued_user_name if flow and flow.recollection_issued_user_name else (order.user.description if order.user else 'Sistema') }}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="info-right">
+                    <div class="panel">
+                        <div class="panel-title">Control</div>
+                        <div class="panel-body">
+                            <div class="barcode-box">
+                                {% if barcode_base64 %}
+                                <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode">
+                                {% else %}
+                                <span style="color: #777;">[Código de Barras]</span>
+                                {% endif %}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Generado:</span> {{ now.strftime('%d/%m/%Y %H:%M:%S') }}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="table-section-title">Trazabilidad de responsables</div>
+        <table class="traceability-table">
+            <thead>
+                <tr>
+                    <th>Etapa</th>
+                    <th>Responsable</th>
+                    <th>Fecha y hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Creación de orden</td>
+                    <td>{{ flow.recollection_issued_user_name if flow and flow.recollection_issued_user_name else (order.user.description if order.user else '-') }}</td>
+                    <td>{{ flow.recollection_issued_at.strftime('%d/%m/%Y %H:%M:%S') if flow and flow.recollection_issued_at else '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Chequeo de orden</td>
+                    <td>{{ flow.checking_user_name if flow and flow.checking_user_name else '-' }}</td>
+                    <td>{{ flow.checked_at.strftime('%d/%m/%Y %H:%M:%S') if flow and flow.checked_at else '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Traslado</td>
+                    <td>{{ flow.in_transit_user_name if flow and flow.in_transit_user_name else '-' }}</td>
+                    <td>{{ flow.in_transit_at.strftime('%d/%m/%Y %H:%M:%S') if flow and flow.in_transit_at else '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Recepción</td>
+                    <td>{{ flow.receiving_user_name if flow and flow.receiving_user_name else '-' }}</td>
+                    <td>{{ flow.received_at.strftime('%d/%m/%Y %H:%M:%S') if flow and flow.received_at else '-' }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="table-section-title">{{ report_table_title or 'Detalle de productos recepcionados' }}</div>
+        <table class="table">
+            <colgroup>
+                <col class="col-code">
+                <col class="col-description">
+                <col class="col-unit">
+                <col class="col-location">
+                <col class="col-qty">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Código producto</th>
+                    <th>Descripción producto</th>
+                    <th>Unidad</th>
+                    <th>Ubicación</th>
+                    <th class="text-end">Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in sorted_details %}
+                <tr>
+                    <td class="product-code">{{ detail.code_product }}</td>
+                    <td class="product-description">{{ detail.product.description if detail.product else detail.description_product }}</td>
+                    <td>{{ detail.products_unit.unit1.description if detail.products_unit and detail.products_unit.unit1 else '-' }}</td>
+                    <td>{{ detail.failure_info.location if detail.failure_info else '-' }}</td>
+                    <td class="text-end">{{ detail.amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if order.operation_comments %}
+        <div class="comments-box">
+            <div class="comments-title">Comentario de la operación</div>
+            <div class="comments-body"><b>Comentario:</b> {{ order.operation_comments }}</div>
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            <p>{{ report_footer_label or 'Recepcionada por' }}: {{ flow.receiving_user_name if flow and flow.receiving_user_name else (user.description if user else 'Sistema') }} - {{ now.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+        </div>
+
+        <div class="bottom-rule"></div>
+    </div>
+</body>
+
+</html>

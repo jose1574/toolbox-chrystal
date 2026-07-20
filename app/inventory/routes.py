@@ -1175,6 +1175,7 @@ def order_collection_report(order_id):
     current_status = flow.get("current_status") if flow else FLOW_RECOLLECTION_ISSUED
     is_checked = current_status == FLOW_RECOLLECTION_CHECKED
     is_in_transit = current_status == FLOW_IN_TRANSIT
+    is_received = current_status == FLOW_RECEIVED
 
     user = current_user
     order = inventory_service.get_order_for_report(order_id)
@@ -1184,9 +1185,22 @@ def order_collection_report(order_id):
     barcode_base64 = generate_barcode(order.correlative)
 
     uses_processed_collection_template = is_checked or is_in_transit
-    template_path = "reports/checked_order_collection_pdf.html" if uses_processed_collection_template else "reports/order_collection_pdf.html"
+    if is_received:
+        template_path = "reports/received_order_collection_pdf.html"
+    elif uses_processed_collection_template:
+        template_path = "reports/checked_order_collection_pdf.html"
+    else:
+        template_path = "reports/order_collection_pdf.html"
 
-    if is_in_transit:
+    if is_received:
+        filename = f"orden_recepcionada_{order.correlative}.pdf"
+        report_title = f"Orden de Recolección Recepcionada {order.correlative}"
+        report_subtitle = "Orden de recolección recepcionada"
+        report_document_title = "Recepcionada"
+        report_table_title = "Detalle de productos recepcionados"
+        report_user_label = "Creada por"
+        report_footer_label = "Recepcionada por"
+    elif is_in_transit:
         filename = f"orden_en_transito_{order.correlative}.pdf"
         report_title = f"Orden de Recolección en Tránsito {order.correlative}"
         report_subtitle = "Orden de recolección en tránsito"

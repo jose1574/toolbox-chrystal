@@ -19,6 +19,22 @@
                     <option value="package_label" {% if document_type == 'package_label' %}selected{% endif %}>Etiqueta de bulto</option>
                 </select>
             </div>
+            {% if document_type == 'order_report' %}
+            <div class="col-12 col-md-4 col-lg-3">
+                <label for="status" class="form-label fw-semibold small mb-1">Estatus</label>
+                <select id="status" name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="" {% if not status %}selected{% endif %}>Todos los estatus</option>
+                    {% for status_value, status_label in status_options %}
+                    <option value="{{ status_value }}" {% if status == status_value %}selected{% endif %}>{{ status_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if status %}
+            <div class="col-12 col-md-auto">
+                <a href="{{ url_for('document_manager.index', document_type='order_report') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+            </div>
+            {% endif %}
+            {% endif %}
             {% if document_type == 'package_label' %}
             <div class="col-12 col-md-4 col-lg-3">
                 <label for="package_order_id" class="form-label fw-semibold small mb-1">Orden de recoleccion</label>
@@ -87,6 +103,8 @@
             <tbody>
             {% if document_type == 'order_report' %}
             {% for operation in transfer_operations %}
+                {% set operation_status = operation.operation_flow.current_status if operation.operation_flow else 'SIN_FLUJO' %}
+                {% set can_delete_operation = operation_status != received_status %}
                 <tr class="document-row"
                     style="cursor: pointer;"
                     data-report-url="{{ url_for('inventory.order_collection_report', order_id=operation.correlative) }}"
@@ -94,6 +112,7 @@
                     role="link"
                     aria-label="Abrir reporte de la operación {{ operation.correlative }}">
                     <td class="p-3" style="width: 2.5rem;">
+                        {% if can_delete_operation %}
                         <div class="form-check m-0 d-flex align-items-center">
                             <input type="checkbox"
                                    class="operation-checkbox form-check-input m-0"
@@ -102,11 +121,14 @@
                                    aria-label="Seleccionar operación {{ operation.correlative }}">
                             <label for="operation-{{ loop.index0 }}" class="visually-hidden">checkbox</label>
                         </div>
+                        {% else %}
+                        <span class="badge text-bg-light border" title="Las ordenes recepcionadas no se pueden eliminar">Bloqueada</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 fw-semibold text-body text-nowrap">{{ operation.correlative }}</td>
                     <td class="px-6 py-4 fw-semibold text-body text-nowrap">{{ operation.document_no }}</td>
                     <td class="px-6 py-4">
-                        {{ operation.operation_flow.current_status if operation.operation_flow else 'SIN_FLUJO' }}
+                        {{ status_labels.get(operation_status, operation_status) }}
                     </td>
                     <td class="px-6 py-4">{{ operation.description }}</td>
                     <td class="px-6 py-4 text-nowrap">{{ operation.emission_date.strftime('%d/%m/%Y') if operation.emission_date else '-' }}</td>

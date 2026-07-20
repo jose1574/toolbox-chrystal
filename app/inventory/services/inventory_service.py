@@ -179,17 +179,33 @@ def register_flow_step4(operation_correlative, user_code):
 def get_inventory_operation_flow(operation_correlative):
   sql = text(
     """
-    SELECT current_status,
-         recollection_issued_user,
-         recollection_issued_at,
-         checking_user,
-         checked_at,
-         in_transit_user,
-         in_transit_at,
-         receiving_user,
-         received_at
-      FROM toolbox.inventory_operation_flow
-     WHERE operation_correlative = :operation_correlative
+    SELECT f.current_status,
+         f.recollection_issued_user,
+         COALESCE(issued_user.description, order_user.description, f.recollection_issued_user, io.user_code) AS recollection_issued_user_name,
+         f.recollection_issued_at,
+         f.checking_user,
+         COALESCE(checking_user.description, f.checking_user) AS checking_user_name,
+         f.checked_at,
+         f.in_transit_user,
+         COALESCE(transit_user.description, f.in_transit_user) AS in_transit_user_name,
+         f.in_transit_at,
+         f.receiving_user,
+         COALESCE(receiving_user.description, f.receiving_user) AS receiving_user_name,
+         f.received_at
+      FROM toolbox.inventory_operation_flow f
+      LEFT JOIN public.inventory_operation io
+        ON io.correlative = f.operation_correlative
+      LEFT JOIN public.users order_user
+        ON order_user.code = io.user_code
+      LEFT JOIN public.users issued_user
+        ON issued_user.code = f.recollection_issued_user
+      LEFT JOIN public.users checking_user
+        ON checking_user.code = f.checking_user
+      LEFT JOIN public.users transit_user
+        ON transit_user.code = f.in_transit_user
+      LEFT JOIN public.users receiving_user
+        ON receiving_user.code = f.receiving_user
+     WHERE f.operation_correlative = :operation_correlative
     """
   )
   return db.session.execute(sql, {"operation_correlative": operation_correlative}).mappings().first()
@@ -1240,17 +1256,33 @@ def register_flow_step4(operation_correlative, user_code):
 def get_inventory_operation_flow(operation_correlative):
   sql = text(
     """
-    SELECT current_status,
-         recollection_issued_user,
-         recollection_issued_at,
-         checking_user,
-         checked_at,
-         in_transit_user,
-         in_transit_at,
-         receiving_user,
-         received_at
-      FROM toolbox.inventory_operation_flow
-     WHERE operation_correlative = :operation_correlative
+    SELECT f.current_status,
+         f.recollection_issued_user,
+         COALESCE(issued_user.description, order_user.description, f.recollection_issued_user, io.user_code) AS recollection_issued_user_name,
+         f.recollection_issued_at,
+         f.checking_user,
+         COALESCE(checking_user.description, f.checking_user) AS checking_user_name,
+         f.checked_at,
+         f.in_transit_user,
+         COALESCE(transit_user.description, f.in_transit_user) AS in_transit_user_name,
+         f.in_transit_at,
+         f.receiving_user,
+         COALESCE(receiving_user.description, f.receiving_user) AS receiving_user_name,
+         f.received_at
+      FROM toolbox.inventory_operation_flow f
+      LEFT JOIN public.inventory_operation io
+        ON io.correlative = f.operation_correlative
+      LEFT JOIN public.users order_user
+        ON order_user.code = io.user_code
+      LEFT JOIN public.users issued_user
+        ON issued_user.code = f.recollection_issued_user
+      LEFT JOIN public.users checking_user
+        ON checking_user.code = f.checking_user
+      LEFT JOIN public.users transit_user
+        ON transit_user.code = f.in_transit_user
+      LEFT JOIN public.users receiving_user
+        ON receiving_user.code = f.receiving_user
+     WHERE f.operation_correlative = :operation_correlative
     """
   )
   return db.session.execute(

@@ -89,7 +89,10 @@
                                 <div class="mt-2 small text-body-secondary d-grid gap-1">
                                     <div><span class="fw-semibold text-body">Origen:</span> {{ transfer.store_description or '-' }} ({{ transfer.store or '-' }})</div>
                                     <div><span class="fw-semibold text-body">Destino:</span> {{ transfer.destination_store_description or '-' }} ({{ transfer.destination_store or '-' }})</div>
-                                    <div><span class="fw-semibold text-body">Descripción:</span> {{ transfer.description or '-' }}</div>
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <span><span class="fw-semibold text-body">Descripción:</span> {{ transfer.description or '-' }}</span>
+                                        <a href="{{ url_for('inventory.order_collection_report', order_id=transfer.operation_correlative) }}" target="_blank" class="btn btn-outline-primary btn-sm flex-shrink-0">Ver</a>
+                                    </div>
                                 </div>
                             </td>
 
