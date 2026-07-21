@@ -72,3 +72,8 @@
 
     <div id="products-modal-container"></div>
 </div>
+{% if include_inventory_params_oob|default(false) %}
+<div id="product_inventory_params" hx-swap-oob="innerHTML">
+    {% include 'shopping/partials/product_inventory_params.html' %}
+</div>
+{% endif %}

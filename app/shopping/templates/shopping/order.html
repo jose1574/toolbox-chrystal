@@ -43,6 +43,35 @@
             linear-gradient(90deg, var(--bs-border-color-translucent) 1px, transparent 1px);
         background-size: 3rem 3rem;
     }
+
+    .product-review-banner {
+        min-height: 5rem;
+    }
+
+    .product-review-index {
+        font-size: 0.68rem;
+    }
+
+    .product-review-stage {
+        max-width: 28rem;
+        margin: 0 auto;
+    }
+
+    .product-review-controls {
+        display: grid;
+        grid-template-columns: minmax(4.8rem, 5.6rem) 1fr minmax(4.8rem, 5.6rem);
+        align-items: center;
+        gap: 1.75rem;
+    }
+
+    .product-review-title {
+        font-size: 1.45rem;
+        line-height: 1;
+    }
+
+    .product-review-actions {
+        font-size: 0.68rem;
+    }
 </style>
 
 <div class="container-fluid py-3 px-3 px-lg-4 shopping-order-workspace">
@@ -67,51 +96,62 @@
     </div>
 </div>
 
-{% include 'shopping/partials/product_order_details.html' %}
+<div>
+     {% include 'shopping/partials/product_order_details.html' %}
+</div>
+<div class="container-fluid px-0 my-2">
+    <section class="product-review-banner rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
+        {% set review_products = review_products|default([]) %}
+        {% if review_products %}
+        <div id="product-review-carousel" class="carousel slide product-review-stage text-center" data-bs-ride="false">
+            <div class="product-review-controls mb-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-target="#product-review-carousel" data-bs-slide="prev">Anterior</button>
+                <div class="product-review-title fw-semibold text-body">Ver</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-target="#product-review-carousel" data-bs-slide="next">Siguiente</button>
+            </div>
+
+            <div class="carousel-inner">
+                {% for product in review_products %}
+                <div class="carousel-item {% if loop.first %}active{% endif %}">
+                    <div class="product-review-index text-body-secondary">en falla por ver: {{ loop.length - loop.index + 1 }}</div>
+                    <p class="mb-0 fw-semibold text-body text-truncate">{{ product.description }}</p>
+                    <div class="product-review-actions d-flex flex-wrap justify-content-center gap-2 text-body-secondary">
+                        <a href="#" class="link-dark text-decoration-none">ver listado de productos a revisar para agregar en compras</a>
+                        <a href="#" class="link-dark text-decoration-none">Ver lista de productos por revisar</a>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2 mt-1">
+                        <button type="button" class="btn btn-sm btn-success">Agregar</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger">Rechazar</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="product-review-stage text-center">
+            <div class="product-review-controls mb-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Anterior</button>
+                <div class="product-review-title fw-semibold text-body">Ver</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Siguiente</button>
+            </div>
+            <div class="product-review-index text-body-secondary">en falla por ver: 0</div>
+            <div class="product-review-actions d-flex flex-wrap justify-content-center gap-2 text-body-secondary">
+                <a href="#" class="link-dark text-decoration-none">ver listado de productos a revisar para agregar en compras</a>
+                <a href="#" class="link-dark text-decoration-none">Ver lista de productos por revisar</a>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
 
 <div class="container-fluid px-0 my-3">
     <div class="row g-3">
         <div class="col-12 col-xl-4">
             <div class="d-grid gap-3">
-                <section class="shopping-order-panel rounded border border-secondary-subtle bg-body p-3 shadow-sm">
-                    <h2 class="section-title text-uppercase fw-semibold text-body mb-2">Inventarios</h2>
-                    <div class="table-responsive shopping-order-table-wrap rounded border border-secondary-subtle">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col">Deposito</th>
-                                    <th scope="col" class="text-end">Inventario</th>
-                                    <th scope="col" class="text-end">Minimo</th>
-                                    <th scope="col" class="text-end">Maximo</th>
-                                    <th scope="col">Parametro</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Inventario total</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-body-secondary">General</td>
-                                </tr>
-                                <tr>
-                                    <td>Deposito principal</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td><a href="#" class="link-primary fw-semibold text-decoration-none">Cambiar</a></td>
-                                </tr>
-                                <tr>
-                                    <td>Deposito secundario</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td class="text-end text-body-secondary">-</td>
-                                    <td><a href="#" class="link-primary fw-semibold text-decoration-none">Cambiar</a></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+            <div id="product_inventory_params">
+                {% include 'shopping/partials/product_inventory_params.html' %}
+            </div>
+                <div id="product-inventory-param-modal-container"></div>
 
                 <section class="shopping-order-panel rounded border border-secondary-subtle bg-body p-3 shadow-sm">
                     <h2 class="section-title text-uppercase fw-semibold text-body mb-2">Compras</h2>

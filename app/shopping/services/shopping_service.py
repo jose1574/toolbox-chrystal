@@ -8,11 +8,13 @@ from app.models import (
     Mark,
     Product,
     ProductsCode,
+    ProductsFailure,
     ProductsStock,
     ProductsUnit,
     Provider,
     ShoppingProductsParam,
     ShoppingProductsParamsHistory,
+    Store,
     Unit,
 )
 
@@ -127,6 +129,13 @@ def build_products_params_context(code=None):
 def _parse_stock_value(value):
     try:
         return float(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_inventory_param_value(value):
+    try:
+        return int(value or 0)
     except (TypeError, ValueError):
         return None
 
@@ -390,3 +399,163 @@ def search_providers(query='', page=1, per_page=10):
     providers = provider_query.limit(per_page).offset((page - 1) * per_page).all()
 
     return providers, total, total_pages, page
+
+
+def get_product_inventory_params(code):
+    main_code = _resolve_main_code(code)
+    if not main_code:
+        return []
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
+    if not product:
+        return []
+
+    stock_rows = (
+        db.session.query(
+            ProductsStock.store.label('store_code'),
+            Store.description.label('store_name'),
+            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock'),
+        )
+        .outerjoin(Store, Store.code == ProductsStock.store)
+        .filter(func.upper(func.trim(ProductsStock.product_code)) == main_code)
+        .group_by(ProductsStock.store, Store.description)
+        .all()
+    )
+    params_rows = (
+        db.session.query(
+            ProductsFailure.store_code.label('store_code'),
+            Store.description.label('store_name'),
+            ProductsFailure.minimal_stock.label('minimum_stock'),
+            ProductsFailure.maximum_stock.label('maximum_stock'),
+        )
+        .outerjoin(Store, Store.code == ProductsFailure.store_code)
+        .filter(func.upper(func.trim(ProductsFailure.product_code)) == main_code)
+        .all()
+    )
+
+    stores = {}
+    for row in stock_rows:
+        normalized_store = normalize_code(row.store_code)
+        stores[normalized_store] = {
+            'product_code': product.code,
+            'store_code': row.store_code,
+            'store_name': row.store_name or row.store_code,
+            'stock': float(row.stock or 0),
+            'minimum_stock': None,
+            'maximum_stock': None,
+            'is_total': False,
+        }
+
+    for row in params_rows:
+        normalized_store = normalize_code(row.store_code)
+        stores.setdefault(
+            normalized_store,
+            {
+                'product_code': product.code,
+                'store_code': row.store_code,
+                'store_name': row.store_name or row.store_code,
+                'stock': 0,
+                'minimum_stock': None,
+                'maximum_stock': None,
+                'is_total': False,
+            },
+        )
+        stores[normalized_store]['minimum_stock'] = row.minimum_stock
+        stores[normalized_store]['maximum_stock'] = row.maximum_stock
+
+    return sorted(stores.values(), key=lambda store: store['store_name'] or '')
+
+
+def get_product_inventory_param_form_context(code, store_code, errors=None):
+    main_code = _resolve_main_code(code)
+    normalized_store_code = normalize_code(store_code)
+    if not main_code or not normalized_store_code:
+        return None
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
+    store = Store.query.filter(func.upper(func.trim(Store.code)) == normalized_store_code).first()
+    if not product or not store:
+        return None
+
+    params = ProductsFailure.query.filter(
+        func.upper(func.trim(ProductsFailure.product_code)) == main_code,
+        func.upper(func.trim(ProductsFailure.store_code)) == normalized_store_code,
+    ).first()
+
+    stock = (
+        db.session.query(func.coalesce(func.sum(ProductsStock.stock), 0))
+        .filter(
+            func.upper(func.trim(ProductsStock.product_code)) == main_code,
+            func.upper(func.trim(ProductsStock.store)) == normalized_store_code,
+        )
+        .scalar()
+    )
+
+    return {
+        'product': product,
+        'store': store,
+        'stock': float(stock or 0),
+        'params': params,
+        'errors': errors or [],
+    }
+
+
+def save_product_inventory_param(params):
+    code = _resolve_main_code(params.get('code'))
+    store_code = normalize_code(params.get('store_code'))
+    minimum_stock = _parse_inventory_param_value(params.get('minimum_stock'))
+    maximum_stock = _parse_inventory_param_value(params.get('maximum_stock'))
+    errors = []
+
+    if not code:
+        errors.append('Debe indicar el producto.')
+    if not store_code:
+        errors.append('Debe indicar el depósito.')
+    if minimum_stock is None or maximum_stock is None:
+        errors.append('Los valores mínimo y máximo deben ser numéricos.')
+    elif minimum_stock < 0 or maximum_stock < 0:
+        errors.append('Los valores mínimo y máximo no pueden ser negativos.')
+    elif minimum_stock > maximum_stock:
+        errors.append('El mínimo no puede ser mayor que el máximo.')
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == code).first() if code else None
+    store = Store.query.filter(func.upper(func.trim(Store.code)) == store_code).first() if store_code else None
+    if code and not product:
+        errors.append('No se encontró el producto seleccionado.')
+    if store_code and not store:
+        errors.append('No se encontró el depósito seleccionado.')
+
+    if errors:
+        context = get_product_inventory_param_form_context(code, store_code, errors)
+        if context:
+            return False, errors, context
+        return False, errors, {
+            'product': product,
+            'store': store,
+            'stock': 0,
+            'params': None,
+            'errors': errors,
+        }
+
+    inventory_param = ProductsFailure.query.filter(
+        func.upper(func.trim(ProductsFailure.product_code)) == code,
+        func.upper(func.trim(ProductsFailure.store_code)) == store_code,
+    ).first()
+
+    if inventory_param:
+        inventory_param.minimal_stock = minimum_stock
+        inventory_param.maximum_stock = maximum_stock
+    else:
+        inventory_param = ProductsFailure(
+            product_code=code,
+            store_code=store_code,
+            minimal_stock=minimum_stock,
+            maximum_stock=maximum_stock,
+        )
+        db.session.add(inventory_param)
+
+    db.session.commit()
+    return True, [], {
+        'inventory_params': get_product_inventory_params(code),
+        'product_code': code,
+    }

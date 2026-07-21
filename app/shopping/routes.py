@@ -1,4 +1,4 @@
-from flask import render_template, request, flash
+from flask import make_response, render_template, request, flash
 from flask_login import current_user, login_required
 
 from app.shopping import shopping_bp
@@ -9,7 +9,44 @@ from app.shopping.services import shopping_service as service
 def product_order_details():
     code = (request.args.get('code') or '').strip()
     product = service.get_product_order_details(code)
-    return render_template('shopping/partials/product_order_details.html', product=product)
+    inventory_params = service.get_product_inventory_params(code)
+    return render_template(
+        'shopping/partials/product_order_details.html',
+        product=product,
+        inventory_params=inventory_params,
+        include_inventory_params_oob=True,
+    )
+
+
+@shopping_bp.route('/product_inventory_param_modal')
+@login_required
+def product_inventory_param_modal():
+    code = (request.args.get('code') or '').strip()
+    store_code = (request.args.get('store_code') or '').strip()
+    context = service.get_product_inventory_param_form_context(code, store_code)
+    if not context:
+        return render_template(
+            'shopping/partials/product_inventory_param_modal.html',
+            errors=['No se encontraron los datos para modificar el parámetro.'],
+            product=None,
+            store=None,
+            stock=0,
+            params=None,
+        )
+    return render_template('shopping/partials/product_inventory_param_modal.html', **context)
+
+
+@shopping_bp.route('/save_product_inventory_param', methods=['POST'])
+@login_required
+def save_product_inventory_param():
+    success, errors, context = service.save_product_inventory_param(request.form.to_dict())
+    if not success:
+        response = make_response(render_template('shopping/partials/product_inventory_param_modal.html', **context), 422)
+        response.headers['HX-Retarget'] = '#product-inventory-param-modal-container'
+        response.headers['HX-Reswap'] = 'innerHTML'
+        return response
+
+    return render_template('shopping/partials/product_inventory_params.html', inventory_params=context['inventory_params'])
 
 
 
@@ -35,7 +72,7 @@ def order():
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
         return render_template('shopping/order.html', provider=None, selected_provider_code=code_provider)
     
-    return render_template('shopping/order.html', provider=provider)
+    return render_template('shopping/order.html', provider=provider, inventory_params=[])
 
 
 @shopping_bp.route('/selected_provider_details')
