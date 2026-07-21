@@ -10,12 +10,42 @@ def product_order_details():
     code = (request.args.get('code') or '').strip()
     product = service.get_product_order_details(code)
     inventory_params = service.get_product_inventory_params(code)
+    shopping_params = service.get_product_shopping_param(code)
     return render_template(
         'shopping/partials/product_order_details.html',
         product=product,
         inventory_params=inventory_params,
+        shopping_params=shopping_params,
         include_inventory_params_oob=True,
     )
+
+
+@shopping_bp.route('/product_shopping_param_modal')
+@login_required
+def product_shopping_param_modal():
+    code = (request.args.get('code') or '').strip()
+    context = service.get_product_shopping_param_form_context(code)
+    if not context:
+        return render_template(
+            'shopping/partials/product_shopping_param_modal.html',
+            errors=['No se encontraron los datos para modificar el parámetro.'],
+            product=None,
+            shopping_params=None,
+        )
+    return render_template('shopping/partials/product_shopping_param_modal.html', **context)
+
+
+@shopping_bp.route('/save_product_shopping_param', methods=['POST'])
+@login_required
+def save_product_shopping_param():
+    success, errors, context = service.save_product_shopping_param(request.form.to_dict(), current_user.get_id())
+    if not success:
+        response = make_response(render_template('shopping/partials/product_shopping_param_modal.html', **context))
+        response.headers['HX-Retarget'] = '#product-shopping-param-modal-container'
+        response.headers['HX-Reswap'] = 'innerHTML'
+        return response
+
+    return render_template('shopping/partials/product_shopping_params.html', **context)
 
 
 @shopping_bp.route('/product_inventory_param_modal')

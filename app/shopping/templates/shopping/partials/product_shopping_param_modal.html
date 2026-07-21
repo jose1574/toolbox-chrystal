@@ -1,0 +1,80 @@
+<div class="modal fade" id="productShoppingParamModal" tabindex="-1" aria-labelledby="productShoppingParamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form hx-post="{{ url_for('shopping.save_product_shopping_param') }}" hx-target="#product-shopping-params" hx-swap="outerHTML"
+                hx-on::before-swap="if (event.detail.xhr.status === 422) { event.detail.shouldSwap = true; event.detail.isError = false; }"
+                hx-on::after-swap="if (event.detail.target.id !== 'product-shopping-param-modal-container' && window.cleanupProductShoppingParamModal) { window.cleanupProductShoppingParamModal(); }">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title h5" id="productShoppingParamModalLabel">Modificar parametro de compra</h2>
+                        <p class="small text-body-secondary mb-0">Ajusta el minimo y maximo de compra del producto.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    {% if errors|default([]) %}
+                    <div class="alert alert-danger py-2 small" role="alert">
+                        {% for error in errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if product %}
+                    <input type="hidden" name="code" value="{{ product.code }}">
+
+                    <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-3">
+                        <div class="fw-semibold text-body text-truncate">{{ product.description }}</div>
+                        <div class="small text-body-secondary">Codigo: {{ product.code }}</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            <label for="shopping-minimum-stock" class="form-label small fw-semibold text-body-secondary">Minimo</label>
+                            <input type="number" class="form-control form-control-sm" id="shopping-minimum-stock" name="minimum_stock" min="0" step="0.01" value="{{ form_values.minimum_stock if form_values|default({}) else shopping_params.minimum_stock if shopping_params else '' }}" required>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label for="shopping-maximum-stock" class="form-label small fw-semibold text-body-secondary">Maximo</label>
+                            <input type="number" class="form-control form-control-sm" id="shopping-maximum-stock" name="maximum_stock" min="0" step="0.01" value="{{ form_values.maximum_stock if form_values|default({}) else shopping_params.maximum_stock if shopping_params else '' }}" required>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary" {% if not product %}disabled{% endif %}>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modalElement = document.getElementById('productShoppingParamModal');
+        if (!modalElement || modalElement.dataset.ready === 'true') {
+            return;
+        }
+
+        modalElement.dataset.ready = 'true';
+        const shoppingParamModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        window.cleanupProductShoppingParamModal = () => {
+            const activeModalElement = document.getElementById('productShoppingParamModal');
+            if (activeModalElement) {
+                bootstrap.Modal.getInstance(activeModalElement)?.dispose();
+                activeModalElement.remove();
+            }
+            document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        };
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            if (window.cleanupProductShoppingParamModal) {
+                window.cleanupProductShoppingParamModal();
+            }
+            document.getElementById('product-shopping-param-modal-container')?.replaceChildren();
+        });
+        shoppingParamModal.show();
+    })();
+</script>

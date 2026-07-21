@@ -1,0 +1,33 @@
+<div id="product-shopping-params" class="h-100 rounded border border-secondary-subtle bg-body p-2">
+    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+        <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Parametro de compra</h2>
+        {% if product %}
+        <a href="#" class="link-primary fw-semibold text-decoration-none"
+            hx-get="{{ url_for('shopping.product_shopping_param_modal', code=product.code) }}"
+            hx-target="#product-shopping-param-modal-container" hx-swap="innerHTML">Editar</a>
+        {% else %}
+        <span class="text-body-secondary fw-semibold">Editar</span>
+        {% endif %}
+    </div>
+    <dl class="row mb-0 g-1">
+        <dt class="col-5 fw-semibold text-body-secondary">Minima:</dt>
+        <dd class="col-7 mb-0 text-body-secondary">{{ shopping_params.minimum_stock if shopping_params else '-' }}</dd>
+        <dt class="col-5 fw-semibold text-body-secondary">Maxima:</dt>
+        <dd class="col-7 mb-0 text-body-secondary">{{ shopping_params.maximum_stock if shopping_params else '-' }}</dd>
+    </dl>
+</div>
+
+<script>
+    (() => {
+        const modalElement = document.getElementById('productShoppingParamModal');
+        if (!modalElement) {
+            return;
+        }
+        bootstrap.Modal.getInstance(modalElement)?.dispose();
+        modalElement.remove();
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    })();
+</script>

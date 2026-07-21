@@ -140,6 +140,119 @@ def _parse_inventory_param_value(value):
         return None
 
 
+def get_product_shopping_param(code):
+    main_code = _resolve_main_code(code)
+    if not main_code:
+        return None
+
+    return ShoppingProductsParam.query.filter(
+        func.upper(func.trim(ShoppingProductsParam.code)) == main_code
+    ).first()
+
+
+def get_product_shopping_param_form_context(code, errors=None, form_values=None):
+    main_code = _resolve_main_code(code)
+    if not main_code:
+        return None
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
+    if not product:
+        return None
+
+    return {
+        'product': product,
+        'shopping_params': get_product_shopping_param(main_code),
+        'errors': errors or [],
+        'form_values': form_values or {},
+    }
+
+
+def _record_shopping_param_history(shopping_params, user_code, register_date):
+    next_history_correlative = (
+        db.session.query(func.coalesce(func.max(ShoppingProductsParamsHistory.correlative), 0) + 1)
+        .filter(ShoppingProductsParamsHistory.main_correlative == shopping_params.correlative)
+        .scalar()
+    )
+    db.session.add(
+        ShoppingProductsParamsHistory(
+            correlative=next_history_correlative,
+            main_correlative=shopping_params.correlative,
+            user_code=user_code,
+            register_date=register_date,
+        )
+    )
+
+
+def create_product_shopping_param(code, minimum_stock, maximum_stock, user_code):
+    now = datetime.now()
+    shopping_params = ShoppingProductsParam(
+        code=code,
+        minimum_stock=minimum_stock,
+        maximum_stock=maximum_stock,
+        update_at=now,
+    )
+    db.session.add(shopping_params)
+    db.session.flush()
+    _record_shopping_param_history(shopping_params, user_code, now)
+    db.session.commit()
+    return shopping_params
+
+
+def update_product_shopping_param(shopping_params, minimum_stock, maximum_stock, user_code):
+    now = datetime.now()
+    shopping_params.minimum_stock = minimum_stock
+    shopping_params.maximum_stock = maximum_stock
+    shopping_params.update_at = now
+    _record_shopping_param_history(shopping_params, user_code, now)
+    db.session.commit()
+    return shopping_params
+
+
+def save_product_shopping_param(params, user_code):
+    code = normalize_code(params.get('code'))
+    minimum_stock = _parse_stock_value(params.get('minimum_stock'))
+    maximum_stock = _parse_stock_value(params.get('maximum_stock'))
+    errors = []
+
+    if not code:
+        errors.append('Debe indicar el producto.')
+
+    main_code = _resolve_main_code(code) if code else ''
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first() if main_code else None
+    if code and not product:
+        errors.append('No se encontró el producto seleccionado.')
+
+    if minimum_stock is None or maximum_stock is None:
+        errors.append('Los valores mínimo y máximo deben ser numéricos.')
+    elif minimum_stock < 0 or maximum_stock < 0:
+        errors.append('Los valores mínimo y máximo no pueden ser negativos.')
+    elif minimum_stock > maximum_stock:
+        errors.append('El mínimo no puede ser mayor que el máximo.')
+
+    if errors:
+        context = get_product_shopping_param_form_context(main_code or code, errors, params)
+        if context:
+            return False, errors, context
+        return False, errors, {
+            'product': product,
+            'shopping_params': None,
+            'errors': errors,
+            'form_values': params,
+        }
+
+    shopping_params = get_product_shopping_param(main_code)
+    if shopping_params:
+        shopping_params = update_product_shopping_param(shopping_params, minimum_stock, maximum_stock, user_code)
+    else:
+        shopping_params = create_product_shopping_param(main_code, minimum_stock, maximum_stock, user_code)
+
+    return True, [], {
+        'product': product,
+        'shopping_params': shopping_params,
+        'errors': [],
+    }
+
+
 def save_products_params(params, user_code):
     code = normalize_code(params.get('code'))
     minimum_stock = _parse_stock_value(params.get('minimum_stock'))
@@ -162,41 +275,16 @@ def save_products_params(params, user_code):
     if minimum_stock > maximum_stock:
         return False, 'El stock mínimo no puede ser mayor que el máximo.', build_products_params_context(main_code)
 
-    now = datetime.now()
     shopping_params = ShoppingProductsParam.query.filter(
         func.upper(func.trim(ShoppingProductsParam.code)) == main_code
     ).first()
 
     if shopping_params:
-        shopping_params.minimum_stock = minimum_stock
-        shopping_params.maximum_stock = maximum_stock
-        shopping_params.update_at = now
+        update_product_shopping_param(shopping_params, minimum_stock, maximum_stock, user_code)
         message = 'Parámetros de compras actualizados correctamente.'
     else:
-        shopping_params = ShoppingProductsParam(
-            code=main_code,
-            minimum_stock=minimum_stock,
-            maximum_stock=maximum_stock,
-            update_at=now,
-        )
-        db.session.add(shopping_params)
-        db.session.flush()
+        create_product_shopping_param(main_code, minimum_stock, maximum_stock, user_code)
         message = 'Parámetros de compras creados correctamente.'
-
-    next_history_correlative = (
-        db.session.query(func.coalesce(func.max(ShoppingProductsParamsHistory.correlative), 0) + 1)
-        .filter(ShoppingProductsParamsHistory.main_correlative == shopping_params.correlative)
-        .scalar()
-    )
-    db.session.add(
-        ShoppingProductsParamsHistory(
-            correlative=next_history_correlative,
-            main_correlative=shopping_params.correlative,
-            user_code=user_code,
-            register_date=now,
-        )
-    )
-    db.session.commit()
 
     return True, message, build_products_params_context(main_code)
 
