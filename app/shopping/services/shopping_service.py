@@ -353,6 +353,12 @@ def get_product_edit_form_context(code, errors=None, form_values=None):
         .order_by(ProductsUnit.main_unit.desc(), ProductsUnit.correlative.asc())
         .all()
     )
+    product_codes = _build_submitted_product_codes(form_values) if form_values else (
+        ProductsCode.query
+        .filter(func.upper(func.trim(ProductsCode.main_code)) == main_code)
+        .order_by(ProductsCode.other_code.asc())
+        .all()
+    )
 
     return {
         'product': product,
@@ -361,6 +367,7 @@ def get_product_edit_form_context(code, errors=None, form_values=None):
         'taxes': taxes,
         'unit_options': unit_options,
         'product_units': product_units,
+        'product_codes': product_codes,
         'errors': errors or [],
         'form_values': form_values or {},
     }
@@ -431,6 +438,51 @@ def _parse_product_units_form(params):
         errors.append('Debe seleccionar una unidad de inicio.')
 
     return units, errors
+
+
+def _build_submitted_product_codes(params):
+    other_codes = params.getlist('other_code') if hasattr(params, 'getlist') else []
+    code_types = params.getlist('code_type') if hasattr(params, 'getlist') else []
+    codes = []
+    for index, other_code in enumerate(other_codes):
+        normalized_code = normalize_code(other_code)
+        if not normalized_code:
+            continue
+        codes.append({
+            'other_code': normalized_code,
+            'code_type': (code_types[index] if index < len(code_types) else '').strip(),
+        })
+    return codes
+
+
+def _parse_product_codes_form(params, product_code):
+    codes = _build_submitted_product_codes(params)
+    errors = []
+    seen_codes = set()
+
+    for code_data in codes:
+        other_code = normalize_code(code_data['other_code'])
+        if other_code in seen_codes:
+            errors.append(f'El código alterno {other_code} está repetido en el formulario.')
+            continue
+        seen_codes.add(other_code)
+
+        existing_code = ProductsCode.query.filter(func.upper(func.trim(ProductsCode.other_code)) == other_code).first()
+        if other_code == product_code:
+            if existing_code and normalize_code(existing_code.main_code) == product_code:
+                continue
+            errors.append('Un código alterno no puede ser igual al código principal del producto.')
+            continue
+
+        existing_product = Product.query.filter(func.upper(func.trim(Product.code)) == other_code).first()
+        if existing_product and normalize_code(existing_product.code) != product_code:
+            errors.append(f'El código alterno {other_code} ya pertenece a otro producto.')
+            continue
+
+        if existing_code and normalize_code(existing_code.main_code) != product_code:
+            errors.append(f'El código alterno {other_code} ya está asignado a otro producto.')
+
+    return codes, errors
 
 
 def _call_set_product(product, params):
@@ -524,6 +576,18 @@ def _save_product_units(product_code, units):
         product_unit.is_for_sale = unit_data['is_for_sale']
 
 
+def _save_product_codes(product_code, codes):
+    ProductsCode.query.filter(func.upper(func.trim(ProductsCode.main_code)) == product_code).delete(synchronize_session=False)
+    for code_data in codes:
+        db.session.add(
+            ProductsCode(
+                main_code=product_code,
+                other_code=normalize_code(code_data['other_code']),
+                code_type=(code_data.get('code_type') or '').strip() or None,
+            )
+        )
+
+
 def save_product_attributes(params):
     code = normalize_code(params.get('code'))
     errors = []
@@ -549,6 +613,8 @@ def save_product_attributes(params):
 
     units, unit_errors = _parse_product_units_form(params)
     errors.extend(unit_errors)
+    product_codes, code_errors = _parse_product_codes_form(params, code)
+    errors.extend(code_errors)
 
     if errors:
         context = get_product_edit_form_context(code, errors, params)
@@ -558,6 +624,7 @@ def save_product_attributes(params):
 
     _call_set_product(product, params)
     _save_product_units(code, units)
+    _save_product_codes(code, product_codes)
     db.session.commit()
     return True, [], {
         'product': get_product_order_details(code),

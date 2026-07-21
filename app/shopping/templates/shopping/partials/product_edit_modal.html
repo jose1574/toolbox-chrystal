@@ -26,6 +26,18 @@
                         <div class="small text-body-secondary">Codigo: {{ product.code }}</div>
                     </div>
 
+                    <ul class="nav nav-tabs mb-3" id="productEditTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="product-general-tab" data-bs-toggle="tab" data-bs-target="#product-general-pane" type="button" role="tab" aria-controls="product-general-pane" aria-selected="true">General</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="product-codes-tab" data-bs-toggle="tab" data-bs-target="#product-codes-pane" type="button" role="tab" aria-controls="product-codes-pane" aria-selected="false">Codigos</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="productEditTabsContent">
+                        <div class="tab-pane fade show active" id="product-general-pane" role="tabpanel" aria-labelledby="product-general-tab" tabindex="0">
+
                     <div class="row g-3">
                         <div class="col-12 col-lg-6">
                             <label for="product-edit-description" class="form-label small fw-semibold text-body-secondary">Nombre</label>
@@ -175,6 +187,45 @@
                             </tbody>
                         </table>
                     </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="product-codes-pane" role="tabpanel" aria-labelledby="product-codes-tab" tabindex="0">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <h3 class="section-title text-uppercase fw-semibold text-body mb-0">Codigos alternos</h3>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-product-code-row">Agregar codigo</button>
+                            </div>
+                            <div class="table-responsive rounded border border-secondary-subtle">
+                                <table class="table table-sm align-middle mb-0" id="product-codes-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Codigo alterno</th>
+                                            <th scope="col">Tipo</th>
+                                            <th scope="col" class="text-center">Accion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for product_code in product_codes|default([]) %}
+                                        <tr>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" name="other_code" value="{{ product_code.other_code }}" autocomplete="off">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" name="code_type" value="{{ product_code.code_type or '' }}" autocomplete="off">
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-product-code-row">Eliminar</button>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-body-secondary">No hay codigos alternos registrados.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
                 <div class="modal-footer">
@@ -221,6 +272,20 @@
     </tr>
 </template>
 
+<template id="product-code-row-template">
+    <tr>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="other_code" autocomplete="off">
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="code_type" autocomplete="off">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger remove-product-code-row">Eliminar</button>
+        </td>
+    </tr>
+</template>
+
 <script>
     (() => {
         const modalElement = document.getElementById('productEditModal');
@@ -231,6 +296,7 @@
         modalElement.dataset.ready = 'true';
         const editModal = bootstrap.Modal.getOrCreateInstance(modalElement);
         const unitRowTemplate = document.getElementById('product-unit-row-template');
+        const codeRowTemplate = document.getElementById('product-code-row-template');
 
         window.cleanupProductEditModalChrome = () => {
             document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
@@ -294,6 +360,25 @@
             tbody.appendChild(unitRowTemplate.content.cloneNode(true));
             refreshUnitIndexes();
             refreshMultiplicationLabels();
+        });
+
+        modalElement.querySelector('#add-product-code-row')?.addEventListener('click', () => {
+            const tbody = modalElement.querySelector('#product-codes-table tbody');
+            if (!tbody) {
+                return;
+            }
+            const emptyRow = tbody.querySelector('td[colspan]')?.closest('tr');
+            if (emptyRow) {
+                emptyRow.remove();
+            }
+            tbody.appendChild(codeRowTemplate.content.cloneNode(true));
+        });
+
+        modalElement.addEventListener('click', (event) => {
+            if (!event.target.matches('.remove-product-code-row')) {
+                return;
+            }
+            event.target.closest('tr')?.remove();
         });
 
         modalElement.addEventListener('change', (event) => {
