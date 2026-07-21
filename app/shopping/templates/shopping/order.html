@@ -40,6 +40,57 @@
         background-size: 3rem 3rem;
     }
 
+    .shopping-sales-panel.is-fullscreen {
+        position: fixed;
+        inset: 0.75rem;
+        z-index: 1080;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .shopping-sales-panel.is-fullscreen .shopping-order-chart {
+        min-height: 60vh;
+    }
+
+    .shopping-sales-panel.is-fullscreen .shopping-sales-chart-bars {
+        height: 55vh !important;
+    }
+
+    .shopping-sales-loading-bar {
+        height: 0.35rem;
+        overflow: hidden;
+        background-color: var(--bs-border-color-translucent);
+    }
+
+    .shopping-sales-loading-bar::before {
+        content: "";
+        display: block;
+        width: 45%;
+        height: 100%;
+        border-radius: inherit;
+        background-color: var(--bs-primary);
+        animation: shopping-sales-loading 1s ease-in-out infinite;
+    }
+
+    .shopping-sales-indicator {
+        display: none;
+    }
+
+    .shopping-sales-indicator.htmx-request,
+    .htmx-request .shopping-sales-indicator {
+        display: block;
+    }
+
+    @keyframes shopping-sales-loading {
+        0% {
+            transform: translateX(-110%);
+        }
+        100% {
+            transform: translateX(245%);
+        }
+    }
+
     .product-review-banner {
         min-height: 5rem;
     }

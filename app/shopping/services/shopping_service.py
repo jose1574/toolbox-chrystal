@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import func, or_, text
+from sqlalchemy import and_, func, or_, text
 
 from app import db
 from app.models import (
@@ -12,8 +12,10 @@ from app.models import (
     ProductsStock,
     ProductsUnit,
     Provider,
+    Numbering,
     SalesOperation,
     SalesOperationDetail,
+    SalesOperationDetailsCoin,
     ShoppingProductsParam,
     ShoppingProductsParamsHistory,
     Store,
@@ -99,80 +101,53 @@ def _build_period_label(period_start, granularity):
     return period_start.strftime('%d')
 
 
-def _iter_sales_periods(start_date, end_date, granularity):
-    current_start = start_date
-    while current_start <= end_date:
-        if granularity == 'month':
-            next_start = (current_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-        elif granularity == 'week':
-            next_start = current_start + timedelta(days=7)
-        else:
-            next_start = current_start + timedelta(days=1)
-
-        current_end = min(next_start - timedelta(days=1), end_date)
-        yield current_start, current_end
-        current_start = next_start
-
-
-def _run_sales_by_products_report(initial_date, final_date, product_code, user_code=''):
-    query = text(
-        """
-        SELECT code_product, description_product, amount, store, total, total_net_02
-        FROM rep_list_sales_by_products(
-            CAST(:initial_date AS date), CAST(:final_date AS date),
-            :initial_product, :final_product, :list_products,
-            :initial_client, :final_client, :list_clients,
-            :initial_area_sales, :final_area_sales, :list_area_sales,
-            :initial_client_group, :final_client_group, :list_clients_group,
-            :initial_seller, :final_seller, :list_sellers,
-            :user_code, :operation_type, :department, :provider, :mark, :model
-        )
-        """
-    )
+def _get_secondary_coin_code():
     return db.session.execute(
-        query,
-        {
-            'initial_date': initial_date,
-            'final_date': final_date,
-            'initial_product': product_code,
-            'final_product': product_code,
-            'list_products': '',
-            'initial_client': '',
-            'final_client': 'zzzzzzzzzzzzzzzzzzzz',
-            'list_clients': '',
-            'initial_area_sales': '',
-            'final_area_sales': 'zzzzzzzzzzzzzzzzzzzz',
-            'list_area_sales': '',
-            'initial_client_group': '',
-            'final_client_group': 'zzzzzzzzzzzzzzzzzzzz',
-            'list_clients_group': '',
-            'initial_seller': '',
-            'final_seller': 'zzzzzzzzzzzzzzzzzzzz',
-            'list_sellers': '',
-            'user_code': user_code or '',
-            'operation_type': "('BILL')",
-            'department': '00',
-            'provider': '',
-            'mark': '',
-            'model': '',
-        },
-    ).mappings().all()
+        text("SELECT r_system_value FROM get_system_properties(52, '001', '00', '00') LIMIT 1")
+    ).scalar() or '02'
 
 
-def _sum_sales_report_rows(rows):
-    amount = 0
-    total = 0
-    total_net_02 = 0
-    for row in rows:
-        amount += float(row.amount or 0)
-        total += float(row.total or 0)
-        total_net_02 += float(row.total_net_02 or 0)
-    return amount, total, total_net_02
+def _build_sales_amount_expressions():
+    factor = func.coalesce(Numbering.factor, 1)
+    freight_discount_factor = (
+        1
+        + (func.coalesce(SalesOperation.percent_freight, 0) / 100)
+        - (func.coalesce(SalesOperation.percent_discount, 0) / 100)
+    )
+    return {
+        'amount': func.coalesce(SalesOperationDetail.amount, 0) * factor,
+        'total': func.coalesce(SalesOperationDetail.total, 0) * factor,
+        'total_net_02': func.coalesce(SalesOperationDetailsCoin.total_net * freight_discount_factor, 0) * factor,
+    }
 
 
-def get_product_sales_context(code=None, date_from=None, date_to=None, granularity='month'):
+def _assign_store_colors(stores):
+    palette = [
+        '#0d6efd',
+        '#198754',
+        '#dc3545',
+        '#fd7e14',
+        '#20c997',
+        '#6f42c1',
+        '#0dcaf0',
+        '#d63384',
+        '#ffc107',
+        '#6c757d',
+    ]
+    for index, store in enumerate(stores):
+        store['color'] = palette[index % len(palette)]
+    return stores
+
+
+def _store_color_map(stores):
+    return {store['label']: store.get('color', '#0d6efd') for store in stores}
+
+
+def get_product_sales_context(code=None, date_from=None, date_to=None, granularity='month', chart_group='period'):
     allowed_granularities = {'day': 'day', 'week': 'week', 'month': 'month'}
+    allowed_chart_groups = {'period': 'period', 'store': 'store'}
     selected_granularity = allowed_granularities.get(granularity, 'month')
+    selected_chart_group = allowed_chart_groups.get(chart_group, 'period')
     selected_code = normalize_code(code)
     main_code = _resolve_main_code(selected_code) if selected_code else ''
     end_date = _parse_date(date_to) or date.today()
@@ -186,7 +161,9 @@ def get_product_sales_context(code=None, date_from=None, date_to=None, granulari
         'date_from': start_date.isoformat(),
         'date_to': end_date.isoformat(),
         'granularity': selected_granularity,
+        'chart_group': selected_chart_group,
         'series': [],
+        'chart_series': [],
         'sales_by_store': [],
         'sales_by_user': [],
         'totals': {'amount': 0, 'total': 0, 'total_net_02': 0},
@@ -196,74 +173,155 @@ def get_product_sales_context(code=None, date_from=None, date_to=None, granulari
     if not main_code:
         return context
 
-    series = []
-    for period_start, period_end in _iter_sales_periods(start_date, end_date, selected_granularity):
-        period_rows = _run_sales_by_products_report(period_start, period_end, main_code)
-        period_amount, period_total, period_total_net_02 = _sum_sales_report_rows(period_rows)
-        if period_amount or period_total or period_total_net_02:
-            series.append(
-                {
-                    'label': _build_period_label(period_start, selected_granularity),
-                    'amount': period_amount,
-                    'total': period_total,
-                    'total_net_02': period_total_net_02,
-                }
-            )
+    secondary_coin_code = _get_secondary_coin_code()
+    amount_expressions = _build_sales_amount_expressions()
+    base_filters = (
+        func.upper(func.trim(SalesOperationDetail.code_product)) == main_code,
+        SalesOperation.operation_type == 'BILL',
+        SalesOperation.emission_date.between(start_date, end_date),
+        SalesOperation.wait.is_(False),
+        or_(SalesOperation.canceled.is_(False), SalesOperation.canceled.is_(None)),
+    )
+    coin_join = and_(
+        SalesOperationDetailsCoin.main_correlative == SalesOperationDetail.main_correlative,
+        SalesOperationDetailsCoin.main_line == SalesOperationDetail.line,
+        SalesOperationDetailsCoin.coin_code == secondary_coin_code,
+    )
+    period_start = func.date_trunc(selected_granularity, SalesOperation.emission_date).label('period_start')
 
-    report_rows = _run_sales_by_products_report(start_date, end_date, main_code)
-    stores = {}
-    for row in report_rows:
-        store_code = row.store or ''
-        store = stores.setdefault(store_code, {'label': store_code or 'Sin depósito', 'amount': 0, 'total': 0, 'total_net_02': 0})
-        store['amount'] += float(row.amount or 0)
-        store['total'] += float(row.total or 0)
-        store['total_net_02'] += float(row.total_net_02 or 0)
-
-    store_names = {
-        store.code: store.description
-        for store in Store.query.filter(Store.code.in_([code for code in stores if code])).all()
-    }
-    for store_code, store in stores.items():
-        store['label'] = store_names.get(store_code) or store['label']
-
-    users = (
-        db.session.query(SalesOperation.user_code, User.description.label('user_description'))
+    period_rows = (
+        db.session.query(
+            period_start,
+            func.coalesce(func.sum(amount_expressions['amount']), 0).label('amount'),
+            func.coalesce(func.sum(amount_expressions['total']), 0).label('total'),
+            func.coalesce(func.sum(amount_expressions['total_net_02']), 0).label('total_net_02'),
+        )
         .select_from(SalesOperationDetail)
         .join(SalesOperation, SalesOperation.correlative == SalesOperationDetail.main_correlative)
-        .outerjoin(User, User.code == SalesOperation.user_code)
-        .filter(
-            func.upper(func.trim(SalesOperationDetail.code_product)) == main_code,
-            SalesOperation.operation_type == 'BILL',
-            SalesOperation.emission_date.between(start_date, end_date),
-        )
-        .group_by(SalesOperation.user_code, User.description)
+        .join(Numbering, and_(Numbering.code == SalesOperation.operation_type, Numbering.module == 'SALES'))
+        .outerjoin(SalesOperationDetailsCoin, coin_join)
+        .filter(*base_filters)
+        .group_by(period_start)
+        .order_by(period_start)
         .all()
     )
-    sales_by_user = []
-    for user in users:
-        user_report_rows = _run_sales_by_products_report(start_date, end_date, main_code, user.user_code)
-        user_amount, user_total, user_total_net_02 = _sum_sales_report_rows(user_report_rows)
-        if user_amount or user_total or user_total_net_02:
-            sales_by_user.append(
-                {
-                    'label': user.user_description or user.user_code or 'Sin usuario',
-                    'amount': user_amount,
-                    'total': user_total,
-                    'total_net_02': user_total_net_02,
-                }
-            )
+    series = [
+        {
+            'label': _build_period_label(row.period_start, selected_granularity),
+            'amount': float(row.amount or 0),
+            'total': float(row.total or 0),
+            'total_net_02': float(row.total_net_02 or 0),
+        }
+        for row in period_rows
+    ]
+
+    store_rows = (
+        db.session.query(
+            SalesOperationDetail.store.label('store_code'),
+            Store.description.label('store_description'),
+            func.coalesce(func.sum(amount_expressions['amount']), 0).label('amount'),
+            func.coalesce(func.sum(amount_expressions['total']), 0).label('total'),
+            func.coalesce(func.sum(amount_expressions['total_net_02']), 0).label('total_net_02'),
+        )
+        .select_from(SalesOperationDetail)
+        .join(SalesOperation, SalesOperation.correlative == SalesOperationDetail.main_correlative)
+        .join(Numbering, and_(Numbering.code == SalesOperation.operation_type, Numbering.module == 'SALES'))
+        .outerjoin(SalesOperationDetailsCoin, coin_join)
+        .outerjoin(Store, Store.code == SalesOperationDetail.store)
+        .filter(*base_filters)
+        .group_by(SalesOperationDetail.store, Store.description)
+        .order_by(func.sum(amount_expressions['amount']).desc())
+        .all()
+    )
+
+    sales_by_store = _assign_store_colors([
+        {
+            'label': row.store_description or row.store_code or 'Sin depósito',
+            'amount': float(row.amount or 0),
+            'total': float(row.total or 0),
+            'total_net_02': float(row.total_net_02 or 0),
+        }
+        for row in store_rows
+    ])
+    store_colors = _store_color_map(sales_by_store)
+
+    store_period_rows = (
+        db.session.query(
+            period_start,
+            SalesOperationDetail.store.label('store_code'),
+            Store.description.label('store_description'),
+            func.coalesce(func.sum(amount_expressions['amount']), 0).label('amount'),
+            func.coalesce(func.sum(amount_expressions['total']), 0).label('total'),
+            func.coalesce(func.sum(amount_expressions['total_net_02']), 0).label('total_net_02'),
+        )
+        .select_from(SalesOperationDetail)
+        .join(SalesOperation, SalesOperation.correlative == SalesOperationDetail.main_correlative)
+        .join(Numbering, and_(Numbering.code == SalesOperation.operation_type, Numbering.module == 'SALES'))
+        .outerjoin(SalesOperationDetailsCoin, coin_join)
+        .outerjoin(Store, Store.code == SalesOperationDetail.store)
+        .filter(*base_filters)
+        .group_by(period_start, SalesOperationDetail.store, Store.description)
+        .order_by(period_start, Store.description)
+        .all()
+    )
+    store_period_series = []
+    for row in store_period_rows:
+        store_label = row.store_description or row.store_code or 'Sin depósito'
+        period_label = _build_period_label(row.period_start, selected_granularity)
+        store_period_series.append(
+            {
+                'label': period_label,
+                'detail_label': store_label,
+                'amount': float(row.amount or 0),
+                'total': float(row.total or 0),
+                'total_net_02': float(row.total_net_02 or 0),
+                'color': store_colors.get(store_label, '#0d6efd'),
+            }
+        )
+
+    user_rows = (
+        db.session.query(
+            SalesOperation.user_code,
+            User.description.label('user_description'),
+            func.coalesce(func.sum(amount_expressions['amount']), 0).label('amount'),
+            func.coalesce(func.sum(amount_expressions['total']), 0).label('total'),
+            func.coalesce(func.sum(amount_expressions['total_net_02']), 0).label('total_net_02'),
+        )
+        .select_from(SalesOperationDetail)
+        .join(SalesOperation, SalesOperation.correlative == SalesOperationDetail.main_correlative)
+        .join(Numbering, and_(Numbering.code == SalesOperation.operation_type, Numbering.module == 'SALES'))
+        .outerjoin(SalesOperationDetailsCoin, coin_join)
+        .outerjoin(User, User.code == SalesOperation.user_code)
+        .filter(*base_filters)
+        .group_by(SalesOperation.user_code, User.description)
+        .order_by(func.sum(amount_expressions['amount']).desc())
+        .all()
+    )
+
+    sales_by_user = [
+        {
+            'label': row.user_description or row.user_code or 'Sin usuario',
+            'amount': float(row.amount or 0),
+            'total': float(row.total or 0),
+            'total_net_02': float(row.total_net_02 or 0),
+        }
+        for row in user_rows
+    ]
+    chart_series = store_period_series if selected_chart_group == 'store' else series
 
     context.update(
         {
             'series': series,
-            'sales_by_store': sorted(stores.values(), key=lambda item: item['amount'], reverse=True),
-            'sales_by_user': sorted(sales_by_user, key=lambda item: item['amount'], reverse=True),
+            'chart_series': chart_series,
+            'sales_by_store': sales_by_store,
+            'sales_by_user': sales_by_user,
+            'store_legend': sales_by_store if selected_chart_group == 'store' else [],
             'totals': {
                 'amount': sum(item['amount'] for item in series),
                 'total': sum(item['total'] for item in series),
                 'total_net_02': sum(item['total_net_02'] for item in series),
             },
-            'max_period_amount': max((item['amount'] for item in series), default=0),
+            'max_period_amount': max((item['amount'] for item in chart_series), default=0),
         }
     )
     return context

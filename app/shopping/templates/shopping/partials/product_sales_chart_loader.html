@@ -6,7 +6,10 @@
     {% endif %}>
     <div class="shopping-order-chart rounded border border-secondary-subtle bg-body d-flex align-items-center justify-content-center text-body-secondary text-center">
         {% if selected_code %}
-        Cargando ventas del producto...
+        <div class="w-75">
+            <div class="fw-semibold mb-2">Cargando ventas del producto...</div>
+            <div class="shopping-sales-loading-bar rounded-pill"></div>
+        </div>
         {% else %}
         Selecciona un producto para ver sus ventas.
         {% endif %}

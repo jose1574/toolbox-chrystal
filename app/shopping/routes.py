@@ -29,6 +29,7 @@ def product_sales_chart():
         date_from=request.args.get('date_from'),
         date_to=request.args.get('date_to'),
         granularity=request.args.get('granularity', 'month'),
+        chart_group=request.args.get('chart_group', 'period'),
     )
     return render_template('shopping/partials/product_sales_chart.html', sales_context=sales_context)
 
