@@ -17,7 +17,20 @@ def product_order_details():
         inventory_params=inventory_params,
         shopping_params=shopping_params,
         include_inventory_params_oob=True,
+        include_sales_chart_oob=True,
     )
+
+
+@shopping_bp.route('/product_sales_chart')
+@login_required
+def product_sales_chart():
+    sales_context = service.get_product_sales_context(
+        code=(request.args.get('code') or '').strip(),
+        date_from=request.args.get('date_from'),
+        date_to=request.args.get('date_to'),
+        granularity=request.args.get('granularity', 'month'),
+    )
+    return render_template('shopping/partials/product_sales_chart.html', sales_context=sales_context)
 
 
 @shopping_bp.route('/product_edit_modal')
@@ -134,7 +147,11 @@ def order():
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
         return render_template('shopping/order.html', provider=None, selected_provider_code=code_provider)
     
-    return render_template('shopping/order.html', provider=provider, inventory_params=[])
+    return render_template(
+        'shopping/order.html',
+        provider=provider,
+        inventory_params=[],
+    )
 
 
 @shopping_bp.route('/selected_provider_details')

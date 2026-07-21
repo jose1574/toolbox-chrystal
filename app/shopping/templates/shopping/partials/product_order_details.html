@@ -74,3 +74,9 @@
     {% include 'shopping/partials/product_inventory_params.html' %}
 </div>
 {% endif %}
+{% if include_sales_chart_oob|default(false) %}
+<div id="product-sales-chart-container" hx-swap-oob="innerHTML">
+    {% set selected_code = product.code if product else '' %}
+    {% include 'shopping/partials/product_sales_chart_loader.html' %}
+</div>
+{% endif %}

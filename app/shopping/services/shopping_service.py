@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, or_, text
 
@@ -12,11 +12,14 @@ from app.models import (
     ProductsStock,
     ProductsUnit,
     Provider,
+    SalesOperation,
+    SalesOperationDetail,
     ShoppingProductsParam,
     ShoppingProductsParamsHistory,
     Store,
     Tax,
     Unit,
+    User,
 )
 
 
@@ -72,6 +75,198 @@ def get_product_order_details(code):
         'minimal_stock': product.minimal_stock,
         'maximum_stock': product.maximum_stock,
     }
+
+
+def _parse_date(value):
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date() if value else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_period_label(period_start, granularity):
+    if not period_start:
+        return '-'
+
+    if isinstance(period_start, datetime):
+        period_start = period_start.date()
+
+    if granularity == 'month':
+        return period_start.strftime('%m/%Y')
+    if granularity == 'week':
+        iso_year, iso_week, _ = period_start.isocalendar()
+        return f'Sem {iso_week:02d}/{iso_year}'
+    return period_start.strftime('%d')
+
+
+def _iter_sales_periods(start_date, end_date, granularity):
+    current_start = start_date
+    while current_start <= end_date:
+        if granularity == 'month':
+            next_start = (current_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        elif granularity == 'week':
+            next_start = current_start + timedelta(days=7)
+        else:
+            next_start = current_start + timedelta(days=1)
+
+        current_end = min(next_start - timedelta(days=1), end_date)
+        yield current_start, current_end
+        current_start = next_start
+
+
+def _run_sales_by_products_report(initial_date, final_date, product_code, user_code=''):
+    query = text(
+        """
+        SELECT code_product, description_product, amount, store, total, total_net_02
+        FROM rep_list_sales_by_products(
+            CAST(:initial_date AS date), CAST(:final_date AS date),
+            :initial_product, :final_product, :list_products,
+            :initial_client, :final_client, :list_clients,
+            :initial_area_sales, :final_area_sales, :list_area_sales,
+            :initial_client_group, :final_client_group, :list_clients_group,
+            :initial_seller, :final_seller, :list_sellers,
+            :user_code, :operation_type, :department, :provider, :mark, :model
+        )
+        """
+    )
+    return db.session.execute(
+        query,
+        {
+            'initial_date': initial_date,
+            'final_date': final_date,
+            'initial_product': product_code,
+            'final_product': product_code,
+            'list_products': '',
+            'initial_client': '',
+            'final_client': 'zzzzzzzzzzzzzzzzzzzz',
+            'list_clients': '',
+            'initial_area_sales': '',
+            'final_area_sales': 'zzzzzzzzzzzzzzzzzzzz',
+            'list_area_sales': '',
+            'initial_client_group': '',
+            'final_client_group': 'zzzzzzzzzzzzzzzzzzzz',
+            'list_clients_group': '',
+            'initial_seller': '',
+            'final_seller': 'zzzzzzzzzzzzzzzzzzzz',
+            'list_sellers': '',
+            'user_code': user_code or '',
+            'operation_type': "('BILL')",
+            'department': '00',
+            'provider': '',
+            'mark': '',
+            'model': '',
+        },
+    ).mappings().all()
+
+
+def _sum_sales_report_rows(rows):
+    amount = 0
+    total = 0
+    total_net_02 = 0
+    for row in rows:
+        amount += float(row.amount or 0)
+        total += float(row.total or 0)
+        total_net_02 += float(row.total_net_02 or 0)
+    return amount, total, total_net_02
+
+
+def get_product_sales_context(code=None, date_from=None, date_to=None, granularity='month'):
+    allowed_granularities = {'day': 'day', 'week': 'week', 'month': 'month'}
+    selected_granularity = allowed_granularities.get(granularity, 'month')
+    selected_code = normalize_code(code)
+    main_code = _resolve_main_code(selected_code) if selected_code else ''
+    end_date = _parse_date(date_to) or date.today()
+    start_date = _parse_date(date_from) or end_date.replace(day=1)
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    context = {
+        'selected_code': main_code or selected_code,
+        'date_from': start_date.isoformat(),
+        'date_to': end_date.isoformat(),
+        'granularity': selected_granularity,
+        'series': [],
+        'sales_by_store': [],
+        'sales_by_user': [],
+        'totals': {'amount': 0, 'total': 0, 'total_net_02': 0},
+        'max_period_amount': 0,
+    }
+
+    if not main_code:
+        return context
+
+    series = []
+    for period_start, period_end in _iter_sales_periods(start_date, end_date, selected_granularity):
+        period_rows = _run_sales_by_products_report(period_start, period_end, main_code)
+        period_amount, period_total, period_total_net_02 = _sum_sales_report_rows(period_rows)
+        if period_amount or period_total or period_total_net_02:
+            series.append(
+                {
+                    'label': _build_period_label(period_start, selected_granularity),
+                    'amount': period_amount,
+                    'total': period_total,
+                    'total_net_02': period_total_net_02,
+                }
+            )
+
+    report_rows = _run_sales_by_products_report(start_date, end_date, main_code)
+    stores = {}
+    for row in report_rows:
+        store_code = row.store or ''
+        store = stores.setdefault(store_code, {'label': store_code or 'Sin depósito', 'amount': 0, 'total': 0, 'total_net_02': 0})
+        store['amount'] += float(row.amount or 0)
+        store['total'] += float(row.total or 0)
+        store['total_net_02'] += float(row.total_net_02 or 0)
+
+    store_names = {
+        store.code: store.description
+        for store in Store.query.filter(Store.code.in_([code for code in stores if code])).all()
+    }
+    for store_code, store in stores.items():
+        store['label'] = store_names.get(store_code) or store['label']
+
+    users = (
+        db.session.query(SalesOperation.user_code, User.description.label('user_description'))
+        .select_from(SalesOperationDetail)
+        .join(SalesOperation, SalesOperation.correlative == SalesOperationDetail.main_correlative)
+        .outerjoin(User, User.code == SalesOperation.user_code)
+        .filter(
+            func.upper(func.trim(SalesOperationDetail.code_product)) == main_code,
+            SalesOperation.operation_type == 'BILL',
+            SalesOperation.emission_date.between(start_date, end_date),
+        )
+        .group_by(SalesOperation.user_code, User.description)
+        .all()
+    )
+    sales_by_user = []
+    for user in users:
+        user_report_rows = _run_sales_by_products_report(start_date, end_date, main_code, user.user_code)
+        user_amount, user_total, user_total_net_02 = _sum_sales_report_rows(user_report_rows)
+        if user_amount or user_total or user_total_net_02:
+            sales_by_user.append(
+                {
+                    'label': user.user_description or user.user_code or 'Sin usuario',
+                    'amount': user_amount,
+                    'total': user_total,
+                    'total_net_02': user_total_net_02,
+                }
+            )
+
+    context.update(
+        {
+            'series': series,
+            'sales_by_store': sorted(stores.values(), key=lambda item: item['amount'], reverse=True),
+            'sales_by_user': sorted(sales_by_user, key=lambda item: item['amount'], reverse=True),
+            'totals': {
+                'amount': sum(item['amount'] for item in series),
+                'total': sum(item['total'] for item in series),
+                'total_net_02': sum(item['total_net_02'] for item in series),
+            },
+            'max_period_amount': max((item['amount'] for item in series), default=0),
+        }
+    )
+    return context
 
 
 def build_products_params_context(code=None):

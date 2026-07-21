@@ -1,0 +1,88 @@
+{% set sales_context = sales_context|default({}) %}
+{% set selected_code = sales_context.selected_code|default('') %}
+{% set max_period_amount = sales_context.max_period_amount|default(0) %}
+<div class="rounded border border-secondary-subtle bg-body-tertiary p-3">
+    <form class="row g-2 align-items-end mb-3"
+        hx-get="{{ url_for('shopping.product_sales_chart') }}" hx-target="#product-sales-chart-container"
+        hx-swap="innerHTML" hx-trigger="submit, change delay:300ms">
+        <input type="hidden" name="code" value="{{ selected_code }}">
+        <div class="col-12 col-md-3">
+            <label for="product-sales-date-from" class="form-label mb-1 text-body-secondary fw-semibold">Desde</label>
+            <input type="date" class="form-control form-control-sm" id="product-sales-date-from" name="date_from" value="{{ sales_context.date_from|default('') }}">
+        </div>
+        <div class="col-12 col-md-3">
+            <label for="product-sales-date-to" class="form-label mb-1 text-body-secondary fw-semibold">Hasta</label>
+            <input type="date" class="form-control form-control-sm" id="product-sales-date-to" name="date_to" value="{{ sales_context.date_to|default('') }}">
+        </div>
+        <div class="col-12 col-md-3">
+            <label for="product-sales-granularity" class="form-label mb-1 text-body-secondary fw-semibold">Agrupar</label>
+            <select class="form-select form-select-sm" id="product-sales-granularity" name="granularity">
+                <option value="month" {% if sales_context.granularity|default('month') == 'month' %}selected{% endif %}>Meses</option>
+                <option value="week" {% if sales_context.granularity|default('month') == 'week' %}selected{% endif %}>Semanas</option>
+                <option value="day" {% if sales_context.granularity|default('month') == 'day' %}selected{% endif %}>Días</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-3">
+            <button type="submit" class="btn btn-sm btn-outline-secondary w-100 shadow-sm">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="shopping-order-chart rounded border border-secondary-subtle bg-body p-3 mb-3">
+        {% if selected_code and sales_context.series %}
+        <div class="d-flex align-items-end gap-2 overflow-auto pb-1" style="height: 10.5rem;">
+            {% for item in sales_context.series %}
+            {% set bar_height = ((item.amount / max_period_amount) * 100) if max_period_amount else 0 %}
+            <div class="d-flex flex-column align-items-center justify-content-end h-100 flex-shrink-0" style="width: 3.6rem;">
+                <div class="small fw-semibold text-body">{{ '%.0f'|format(item.amount) }}</div>
+                <div class="w-75 rounded-top bg-primary" style="height: {{ bar_height }}%; min-height: 0.25rem;"></div>
+                <div class="text-body-secondary text-center text-truncate w-100" title="{{ item.label }}">{{ item.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif selected_code %}
+        <div class="h-100 d-flex align-items-center justify-content-center text-body-secondary text-center">
+            Sin ventas para este producto en el rango seleccionado.
+        </div>
+        {% else %}
+        <div class="h-100 d-flex align-items-center justify-content-center text-body-secondary text-center">
+            Selecciona un producto para ver sus ventas.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="rounded border border-secondary-subtle bg-body p-2 h-100">
+                <p class="fw-semibold mb-1">Total ventas generales</p>
+                <div class="text-body-secondary">Cantidad: {{ '%.2f'|format(sales_context.totals.amount|default(0)) }}</div>
+                <div class="text-body-secondary">Monto USD: {{ '%.2f'|format(sales_context.totals.total_net_02|default(0)) }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="rounded border border-secondary-subtle bg-body p-2 h-100">
+                <p class="fw-semibold mb-1">Ventas por depósitos</p>
+                {% for item in sales_context.sales_by_store|default([]) %}
+                <div class="d-flex justify-content-between gap-2 text-body-secondary">
+                    <span class="text-truncate">{{ item.label }}</span>
+                    <span class="fw-semibold">{{ '%.2f'|format(item.total_net_02|default(0)) }}</span>
+                </div>
+                {% else %}
+                <div class="text-body-secondary">Sin datos</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="rounded border border-secondary-subtle bg-body p-2 h-100">
+                <p class="fw-semibold mb-1">Ventas por usuarios</p>
+                {% for item in sales_context.sales_by_user|default([]) %}
+                <div class="d-flex justify-content-between gap-2 text-body-secondary">
+                    <span class="text-truncate">{{ item.label }}</span>
+                    <span class="fw-semibold">{{ '%.2f'|format(item.total_net_02|default(0)) }}</span>
+                </div>
+                {% else %}
+                <div class="text-body-secondary">Sin datos</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>

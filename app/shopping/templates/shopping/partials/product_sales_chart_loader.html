@@ -1,0 +1,14 @@
+{% set selected_code = selected_code|default('') %}
+<div class="rounded border border-secondary-subtle bg-body-tertiary p-3"
+    {% if selected_code %}
+    hx-get="{{ url_for('shopping.product_sales_chart', code=selected_code) }}" hx-trigger="load"
+    hx-target="#product-sales-chart-container" hx-swap="innerHTML"
+    {% endif %}>
+    <div class="shopping-order-chart rounded border border-secondary-subtle bg-body d-flex align-items-center justify-content-center text-body-secondary text-center">
+        {% if selected_code %}
+        Cargando ventas del producto...
+        {% else %}
+        Selecciona un producto para ver sus ventas.
+        {% endif %}
+    </div>
+</div>
