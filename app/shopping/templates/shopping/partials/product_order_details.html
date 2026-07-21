@@ -19,7 +19,13 @@
             <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Atributos de un producto</h2>
-                    <a href="#" class="link-primary fw-semibold text-decoration-none">Editar</a>
+                    {% if product %}
+                    <a href="#" class="link-primary fw-semibold text-decoration-none"
+                        hx-get="{{ url_for('shopping.product_edit_modal', code=product.code) }}"
+                        hx-target="#product-edit-modal-container" hx-swap="innerHTML">Editar</a>
+                    {% else %}
+                    <span class="text-body-secondary fw-semibold">Editar</span>
+                    {% endif %}
                 </div>
                 <dl class="row mb-0 g-1">
                     <dt class="col-5 fw-semibold text-body-secondary">Codigo:</dt>
@@ -60,6 +66,7 @@
     </section>
 
     <div id="products-modal-container"></div>
+    <div id="product-edit-modal-container"></div>
     <div id="product-shopping-param-modal-container"></div>
 </div>
 {% if include_inventory_params_oob|default(false) %}

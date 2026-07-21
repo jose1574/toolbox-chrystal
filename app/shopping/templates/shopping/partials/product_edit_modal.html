@@ -1,0 +1,339 @@
+<div class="modal fade" id="productEditModal" tabindex="-1" aria-labelledby="productEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <form hx-post="{{ url_for('shopping.save_product_attributes') }}" hx-target="#product-order-details-container" hx-swap="outerHTML">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title h5" id="productEditModalLabel">Editar producto</h2>
+                        <p class="small text-body-secondary mb-0">Actualiza los atributos principales y las unidades del producto.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    {% if errors|default([]) %}
+                    <div class="alert alert-danger py-2 small" role="alert">
+                        {% for error in errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if product %}
+                    <input type="hidden" name="code" value="{{ product.code }}">
+
+                    <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-3">
+                        <div class="fw-semibold text-body text-truncate">{{ product.description }}</div>
+                        <div class="small text-body-secondary">Codigo: {{ product.code }}</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6">
+                            <label for="product-edit-description" class="form-label small fw-semibold text-body-secondary">Nombre</label>
+                            <input type="text" class="form-control form-control-sm" id="product-edit-description" name="description" value="{{ form_values.description if form_values|default({}) else product.description or '' }}" required>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <label for="product-edit-short-name" class="form-label small fw-semibold text-body-secondary">Nombre corto</label>
+                            <input type="text" class="form-control form-control-sm" id="product-edit-short-name" name="short_name" value="{{ form_values.short_name if form_values|default({}) else product.short_name or '' }}">
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-referenc" class="form-label small fw-semibold text-body-secondary">Referencia</label>
+                            <input type="text" class="form-control form-control-sm" id="product-edit-referenc" name="referenc" value="{{ form_values.referenc if form_values|default({}) else product.referenc or '' }}">
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-model" class="form-label small fw-semibold text-body-secondary">Modelo</label>
+                            <input type="text" class="form-control form-control-sm" id="product-edit-model" name="model" value="{{ form_values.model if form_values|default({}) else product.model or '' }}">
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-mark" class="form-label small fw-semibold text-body-secondary">Marca</label>
+                            {% set selected_mark = form_values.mark if form_values|default({}) else product.mark %}
+                            <select class="form-select form-select-sm" id="product-edit-mark" name="mark">
+                                <option value="">Sin marca</option>
+                                {% for mark in marks|default([]) %}
+                                <option value="{{ mark.code }}" {% if mark.code == selected_mark %}selected{% endif %}>{{ mark.description or mark.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-department" class="form-label small fw-semibold text-body-secondary">Departamento</label>
+                            {% set selected_department = form_values.department if form_values|default({}) else product.department %}
+                            <select class="form-select form-select-sm" id="product-edit-department" name="department">
+                                <option value="">Sin departamento</option>
+                                {% for department in departments|default([]) %}
+                                <option value="{{ department.code }}" {% if department.code == selected_department %}selected{% endif %}>{{ department.description or department.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-buy-tax" class="form-label small fw-semibold text-body-secondary">Impuesto de compra</label>
+                            {% set selected_buy_tax = form_values.buy_tax if form_values|default({}) else product.buy_tax %}
+                            <select class="form-select form-select-sm" id="product-edit-buy-tax" name="buy_tax">
+                                <option value="">Sin impuesto</option>
+                                {% for tax in taxes|default([]) %}
+                                <option value="{{ tax.code }}" {% if tax.code == selected_buy_tax %}selected{% endif %}>{{ tax.description or tax.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <label for="product-edit-sale-tax" class="form-label small fw-semibold text-body-secondary">Impuesto de venta</label>
+                            {% set selected_sale_tax = form_values.sale_tax if form_values|default({}) else product.sale_tax %}
+                            <select class="form-select form-select-sm" id="product-edit-sale-tax" name="sale_tax">
+                                <option value="">Sin impuesto</option>
+                                {% for tax in taxes|default([]) %}
+                                <option value="{{ tax.code }}" {% if tax.code == selected_sale_tax %}selected{% endif %}>{{ tax.description or tax.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-4 mb-2">
+                        <h3 class="section-title text-uppercase fw-semibold text-body mb-0">Unidades</h3>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-product-unit-row">Agregar unidad</button>
+                    </div>
+                    <div class="table-responsive rounded border border-secondary-subtle">
+                        <table class="table table-sm align-middle mb-0" id="product-units-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Unidad</th>
+                                    <th scope="col" class="text-end">Factor</th>
+                                    <th scope="col">Multiplicacion</th>
+                                    <th scope="col" class="text-center">Principal</th>
+                                    <th scope="col" class="text-center">Inicio</th>
+                                    <th scope="col" class="text-center">Compras</th>
+                                    <th scope="col" class="text-center">Ventas</th>
+
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product_unit in product_units|default([]) %}
+                                <tr>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="unit_code" required>
+                                            <option value="">Seleccionar unidad</option>
+                                            {% for unit in unit_options|default([]) %}
+                                            <option value="{{ unit.code }}" {% if unit.code == product_unit.unit %}selected{% endif %}>{{ unit.description or unit.code }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm text-end" name="conversion_factor" min="0.0001" step="0.0001" value="{{ product_unit.conversion_factor or 1 }}" required>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="unit_type" required>
+                                            <option value="0" {% if product_unit.unit_type == 0 %}selected{% endif %}>Unidad principal</option>
+                                            <option value="1" {% if product_unit.unit_type == 1 %}selected{% endif %}>Principal x esta unidad</option>
+                                            <option value="2" {% if product_unit.unit_type == 2 %}selected{% endif %}>Esta unidad x principal</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" class="form-check-input" name="main_unit_index" value="{{ loop.index0 }}" {% if product_unit.main_unit %}checked{% endif %} required>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" class="form-check-input" name="show_in_screen" value="{{ loop.index0 }}" {% if product_unit.show_in_screen %}checked{% endif %} required>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input" name="is_for_buy" value="{{ loop.index0 }}" {% if product_unit.is_for_buy %}checked{% endif %}>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input" name="is_for_sale" value="{{ loop.index0 }}" {% if product_unit.is_for_sale %}checked{% endif %}>
+                                    </td>
+
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="unit_code" required>
+                                            <option value="">Seleccionar unidad</option>
+                                            {% for unit in unit_options|default([]) %}
+                                            <option value="{{ unit.code }}">{{ unit.description or unit.code }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm text-end" name="conversion_factor" min="0.0001" step="0.0001" value="1" required>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="unit_type" required>
+                                            <option value="0" selected>Unidad principal</option>
+                                            <option value="1">Principal x esta unidad</option>
+                                            <option value="2">Esta unidad x principal</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" class="form-check-input" name="main_unit_index" value="0" checked required>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" class="form-check-input" name="show_in_screen" value="0" checked required>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input" name="is_for_buy" value="0" checked>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input" name="is_for_sale" value="0" checked>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary" {% if not product %}disabled{% endif %}>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<template id="product-unit-row-template">
+    <tr>
+        <td>
+            <select class="form-select form-select-sm" name="unit_code" required>
+                <option value="">Seleccionar unidad</option>
+                {% for unit in unit_options|default([]) %}
+                <option value="{{ unit.code }}">{{ unit.description or unit.code }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm text-end" name="conversion_factor" min="0.0001" step="0.0001" value="1" required>
+        </td>
+        <td>
+            <select class="form-select form-select-sm" name="unit_type" required>
+                <option value="0">Unidad principal</option>
+                <option value="1" selected>Principal x esta unidad</option>
+                <option value="2">Esta unidad x principal</option>
+            </select>
+        </td>
+        <td class="text-center">
+            <input type="radio" class="form-check-input" name="main_unit_index" required>
+        </td>
+        <td class="text-center">
+            <input type="radio" class="form-check-input" name="show_in_screen" required>
+        </td>
+        <td class="text-center">
+            <input type="checkbox" class="form-check-input" name="is_for_buy" checked>
+        </td>
+        <td class="text-center">
+            <input type="checkbox" class="form-check-input" name="is_for_sale" checked>
+        </td>
+    </tr>
+</template>
+
+<script>
+    (() => {
+        const modalElement = document.getElementById('productEditModal');
+        if (!modalElement || modalElement.dataset.ready === 'true') {
+            return;
+        }
+
+        modalElement.dataset.ready = 'true';
+        const editModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        const unitRowTemplate = document.getElementById('product-unit-row-template');
+
+        window.cleanupProductEditModalChrome = () => {
+            document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        };
+
+        const refreshUnitIndexes = () => {
+            modalElement.querySelectorAll('input[name="main_unit_index"]').forEach((radio, index) => {
+                radio.value = String(index);
+            });
+            modalElement.querySelectorAll('input[name="show_in_screen"]').forEach((radio, index) => {
+                radio.value = String(index);
+            });
+            modalElement.querySelectorAll('input[name="is_for_buy"]').forEach((checkbox, index) => {
+                checkbox.value = String(index);
+            });
+            modalElement.querySelectorAll('input[name="is_for_sale"]').forEach((checkbox, index) => {
+                checkbox.value = String(index);
+            });
+        };
+
+        const selectedUnitLabel = (row) => {
+            const select = row?.querySelector('select[name="unit_code"]');
+            return select?.selectedOptions?.[0]?.textContent?.trim() || 'Unidad';
+        };
+
+        const refreshMultiplicationLabels = () => {
+            const checkedMain = modalElement.querySelector('input[name="main_unit_index"]:checked');
+            const mainRow = checkedMain?.closest('tr');
+            const mainLabel = selectedUnitLabel(mainRow);
+            modalElement.querySelectorAll('#product-units-table tbody tr').forEach((row) => {
+                const unitLabel = selectedUnitLabel(row);
+                const unitTypeSelect = row.querySelector('select[name="unit_type"]');
+                if (!unitTypeSelect) {
+                    return;
+                }
+                unitTypeSelect.options[0].textContent = 'Unidad principal';
+                unitTypeSelect.options[1].textContent = `${mainLabel} x ${unitLabel}`;
+                unitTypeSelect.options[2].textContent = `${unitLabel} x ${mainLabel}`;
+                if (row === mainRow) {
+                    unitTypeSelect.value = '0';
+                    unitTypeSelect.classList.add('bg-body-tertiary');
+                    unitTypeSelect.setAttribute('aria-readonly', 'true');
+                } else {
+                    unitTypeSelect.classList.remove('bg-body-tertiary');
+                    unitTypeSelect.removeAttribute('aria-readonly');
+                    if (unitTypeSelect.value === '0') {
+                        unitTypeSelect.value = '1';
+                    }
+                }
+            });
+        };
+
+        modalElement.querySelector('#add-product-unit-row')?.addEventListener('click', () => {
+            const tbody = modalElement.querySelector('#product-units-table tbody');
+            if (!tbody) {
+                return;
+            }
+            tbody.appendChild(unitRowTemplate.content.cloneNode(true));
+            refreshUnitIndexes();
+            refreshMultiplicationLabels();
+        });
+
+        modalElement.addEventListener('change', (event) => {
+            if (event.target.matches('select[name="unit_code"], input[name="main_unit_index"], select[name="unit_type"]')) {
+                refreshMultiplicationLabels();
+            }
+        });
+
+        window.cleanupProductEditModal = () => {
+            const activeModalElement = document.getElementById('productEditModal');
+            if (activeModalElement) {
+                bootstrap.Modal.getInstance(activeModalElement)?.hide();
+                bootstrap.Modal.getInstance(activeModalElement)?.dispose();
+                activeModalElement.remove();
+            }
+            window.cleanupProductEditModalChrome();
+            window.setTimeout(window.cleanupProductEditModalChrome, 250);
+        };
+        if (!window.productEditModalHtmxCleanupReady) {
+            window.productEditModalHtmxCleanupReady = true;
+            document.body.addEventListener('htmx:afterSwap', (event) => {
+                if (event.detail.target?.id === 'product-order-details-container') {
+                    window.cleanupProductEditModal?.();
+                }
+            });
+            document.body.addEventListener('htmx:afterSettle', (event) => {
+                if (event.detail.target?.id === 'product-order-details-container') {
+                    window.cleanupProductEditModalChrome?.();
+                    window.setTimeout(window.cleanupProductEditModalChrome, 250);
+                }
+            });
+        }
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            if (window.cleanupProductEditModal) {
+                window.cleanupProductEditModal();
+            }
+            document.getElementById('product-edit-modal-container')?.replaceChildren();
+        });
+        refreshUnitIndexes();
+        refreshMultiplicationLabels();
+        editModal.show();
+    })();
+</script>

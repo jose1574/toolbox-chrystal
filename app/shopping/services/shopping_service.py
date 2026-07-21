@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 
 from app import db
 from app.models import (
@@ -15,6 +15,7 @@ from app.models import (
     ShoppingProductsParam,
     ShoppingProductsParamsHistory,
     Store,
+    Tax,
     Unit,
 )
 
@@ -331,6 +332,239 @@ def get_product_filter_options():
         .all()
     )
     return marks, departments
+
+
+def get_product_edit_form_context(code, errors=None, form_values=None):
+    main_code = _resolve_main_code(code)
+    if not main_code:
+        return None
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == main_code).first()
+    if not product:
+        return None
+
+    marks = Mark.query.with_entities(Mark.code, Mark.description).order_by(Mark.description.asc(), Mark.code.asc()).all()
+    departments = Department.query.with_entities(Department.code, Department.description).order_by(Department.description.asc(), Department.code.asc()).all()
+    taxes = Tax.query.with_entities(Tax.code, Tax.description, Tax.aliquot).order_by(Tax.description.asc(), Tax.code.asc()).all()
+    unit_options = Unit.query.with_entities(Unit.code, Unit.description).order_by(Unit.description.asc(), Unit.code.asc()).all()
+    product_units = (
+        ProductsUnit.query
+        .filter(func.upper(func.trim(ProductsUnit.product_code)) == main_code)
+        .order_by(ProductsUnit.main_unit.desc(), ProductsUnit.correlative.asc())
+        .all()
+    )
+
+    return {
+        'product': product,
+        'marks': marks,
+        'departments': departments,
+        'taxes': taxes,
+        'unit_options': unit_options,
+        'product_units': product_units,
+        'errors': errors or [],
+        'form_values': form_values or {},
+    }
+
+
+def _parse_float_value(value, default=0):
+    try:
+        return float(value if value not in (None, '') else default)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_product_units_form(params):
+    unit_codes = params.getlist('unit_code')
+    conversion_factors = params.getlist('conversion_factor')
+    unit_types = params.getlist('unit_type')
+    main_unit_index = params.get('main_unit_index')
+    show_in_screen_index = params.get('show_in_screen')
+    buy_unit_indexes = set(params.getlist('is_for_buy'))
+    sale_unit_indexes = set(params.getlist('is_for_sale'))
+    units = []
+    errors = []
+    seen_units = set()
+    valid_units = {normalize_code(unit.code) for unit in Unit.query.with_entities(Unit.code).all()}
+
+    for index, unit_code in enumerate(unit_codes):
+        normalized_unit = normalize_code(unit_code)
+        factor = _parse_float_value(conversion_factors[index] if index < len(conversion_factors) else '')
+        if not normalized_unit and factor in (None, 0):
+            continue
+        if not normalized_unit:
+            errors.append('Debe seleccionar la unidad en todas las filas agregadas.')
+            continue
+        is_main_unit = str(index) == str(main_unit_index)
+        unit_type = '0' if is_main_unit else unit_types[index] if index < len(unit_types) else '1'
+        if unit_type not in ('0', '1', '2'):
+            errors.append('Debe seleccionar una forma de multiplicación válida.')
+            continue
+        if not is_main_unit and unit_type == '0':
+            errors.append('Solo la unidad principal puede tener tipo de unidad principal.')
+            continue
+        if factor is None or factor <= 0:
+            errors.append('El factor de conversión de cada unidad debe ser mayor a cero.')
+            continue
+        if normalized_unit not in valid_units:
+            errors.append('Debe seleccionar una unidad válida.')
+            continue
+        if normalized_unit in seen_units:
+            errors.append('No puede repetir la misma unidad para el producto.')
+            continue
+        seen_units.add(normalized_unit)
+        units.append({
+            'index': str(index),
+            'unit': normalized_unit,
+            'conversion_factor': factor,
+            'unit_type': int(unit_type),
+            'main_unit': is_main_unit,
+            'show_in_screen': str(index) == str(show_in_screen_index),
+            'is_for_buy': str(index) in buy_unit_indexes,
+            'is_for_sale': str(index) in sale_unit_indexes,
+        })
+
+    if not units:
+        errors.append('Debe indicar al menos una unidad para el producto.')
+    elif not any(unit['main_unit'] for unit in units):
+        errors.append('Debe seleccionar una unidad principal.')
+    elif not any(unit['show_in_screen'] for unit in units):
+        errors.append('Debe seleccionar una unidad de inicio.')
+
+    return units, errors
+
+
+def _call_set_product(product, params):
+    db.session.execute(
+        text(
+            """
+            SELECT set_product(
+                :code, :description, :short_name, :mark, :model, :referenc, :department,
+                :days_warranty, :sale_tax, :buy_tax, :rounding_type, :costing_type,
+                :discount, :max_discount, :minimal_sale, :maximal_sale, :status, :origin,
+                :take_department_utility, :allow_decimal, :edit_name, :sale_price,
+                :product_type, :technician, :request_technician, :serialized,
+                :request_details, :request_amount, :coin, :allow_negative_stock,
+                :use_scale, :add_unit_description, :use_lots, :lots_order,
+                :minimal_stock, :notify_minimal_stock, :size, :color,
+                :extract_net_from_unit_cost_plus_tax, :extract_net_from_unit_price_plus_tax,
+                :maximum_stock, :action
+            )
+            """
+        ),
+        {
+            'code': product.code,
+            'description': (params.get('description') or '').strip(),
+            'short_name': (params.get('short_name') or '').strip(),
+            'mark': normalize_code(params.get('mark')) or None,
+            'model': (params.get('model') or '').strip() or None,
+            'referenc': (params.get('referenc') or '').strip() or None,
+            'department': normalize_code(params.get('department')) or None,
+            'days_warranty': product.days_warranty or 0,
+            'sale_tax': normalize_code(params.get('sale_tax')) or None,
+            'buy_tax': normalize_code(params.get('buy_tax')) or None,
+            'rounding_type': product.rounding_type or 0,
+            'costing_type': product.costing_type or 0,
+            'discount': product.discount or 0,
+            'max_discount': product.max_discount or 0,
+            'minimal_sale': product.minimal_sale or 0,
+            'maximal_sale': product.maximal_sale or 0,
+            'status': product.status,
+            'origin': product.origin,
+            'take_department_utility': bool(product.take_department_utility),
+            'allow_decimal': bool(product.allow_decimal),
+            'edit_name': bool(product.edit_name),
+            'sale_price': product.sale_price or 0,
+            'product_type': product.product_type,
+            'technician': product.technician,
+            'request_technician': bool(product.request_technician),
+            'serialized': bool(product.serialized),
+            'request_details': bool(product.request_details),
+            'request_amount': bool(product.request_amount),
+            'coin': product.coin,
+            'allow_negative_stock': bool(product.allow_negative_stock),
+            'use_scale': bool(product.use_scale),
+            'add_unit_description': bool(product.add_unit_description),
+            'use_lots': bool(product.use_lots),
+            'lots_order': product.lots_order or 0,
+            'minimal_stock': product.minimal_stock or 0,
+            'notify_minimal_stock': bool(product.notify_minimal_stock),
+            'size': product.size,
+            'color': product.color,
+            'extract_net_from_unit_cost_plus_tax': bool(product.extract_net_from_unit_cost_plus_tax),
+            'extract_net_from_unit_price_plus_tax': bool(product.extract_net_from_unit_price_plus_tax),
+            'maximum_stock': product.maximum_stock or 0,
+            'action': 'I',
+        },
+    )
+
+
+def _save_product_units(product_code, units):
+    existing_units = {
+        normalize_code(product_unit.unit): product_unit
+        for product_unit in ProductsUnit.query.filter(func.upper(func.trim(ProductsUnit.product_code)) == product_code).all()
+    }
+
+    for unit_data in units:
+        product_unit = existing_units.get(unit_data['unit'])
+        if product_unit is None:
+            product_unit = ProductsUnit(
+                product_code=product_code,
+                unit=unit_data['unit'],
+                show_in_screen=True,
+                is_for_buy=True,
+                is_for_sale=True,
+                unit_type=0,
+            )
+            db.session.add(product_unit)
+        product_unit.conversion_factor = unit_data['conversion_factor']
+        product_unit.unit_type = unit_data['unit_type']
+        product_unit.main_unit = unit_data['main_unit']
+        product_unit.show_in_screen = unit_data['show_in_screen']
+        product_unit.is_for_buy = unit_data['is_for_buy']
+        product_unit.is_for_sale = unit_data['is_for_sale']
+
+
+def save_product_attributes(params):
+    code = normalize_code(params.get('code'))
+    errors = []
+    if not code:
+        errors.append('Debe indicar el producto.')
+
+    product = Product.query.filter(func.upper(func.trim(Product.code)) == code).first() if code else None
+    if code and not product:
+        errors.append('No se encontró el producto seleccionado.')
+
+    description = (params.get('description') or '').strip()
+    if not description:
+        errors.append('Debe indicar el nombre del producto.')
+
+    if params.get('department') and not Department.query.filter_by(code=normalize_code(params.get('department'))).first():
+        errors.append('Debe seleccionar un departamento válido.')
+    if params.get('mark') and not Mark.query.filter_by(code=normalize_code(params.get('mark'))).first():
+        errors.append('Debe seleccionar una marca válida.')
+    if params.get('buy_tax') and not Tax.query.filter_by(code=normalize_code(params.get('buy_tax'))).first():
+        errors.append('Debe seleccionar un impuesto de compra válido.')
+    if params.get('sale_tax') and not Tax.query.filter_by(code=normalize_code(params.get('sale_tax'))).first():
+        errors.append('Debe seleccionar un impuesto de venta válido.')
+
+    units, unit_errors = _parse_product_units_form(params)
+    errors.extend(unit_errors)
+
+    if errors:
+        context = get_product_edit_form_context(code, errors, params)
+        if context:
+            return False, errors, context
+        return False, errors, {'product': product, 'errors': errors, 'form_values': params}
+
+    _call_set_product(product, params)
+    _save_product_units(code, units)
+    db.session.commit()
+    return True, [], {
+        'product': get_product_order_details(code),
+        'inventory_params': get_product_inventory_params(code),
+        'shopping_params': get_product_shopping_param(code),
+        'include_inventory_params_oob': True,
+    }
 
 
 def search_products(query='', mark_codes=None, department_codes=None, page=1, per_page=10):

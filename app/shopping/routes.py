@@ -20,6 +20,38 @@ def product_order_details():
     )
 
 
+@shopping_bp.route('/product_edit_modal')
+@login_required
+def product_edit_modal():
+    code = (request.args.get('code') or '').strip()
+    context = service.get_product_edit_form_context(code)
+    if not context:
+        return render_template(
+            'shopping/partials/product_edit_modal.html',
+            errors=['No se encontraron los datos del producto para editar.'],
+            product=None,
+            marks=[],
+            departments=[],
+            taxes=[],
+            unit_options=[],
+            product_units=[],
+        )
+    return render_template('shopping/partials/product_edit_modal.html', **context)
+
+
+@shopping_bp.route('/save_product_attributes', methods=['POST'])
+@login_required
+def save_product_attributes():
+    success, errors, context = service.save_product_attributes(request.form)
+    if not success:
+        response = make_response(render_template('shopping/partials/product_edit_modal.html', **context))
+        response.headers['HX-Retarget'] = '#product-edit-modal-container'
+        response.headers['HX-Reswap'] = 'innerHTML'
+        return response
+
+    return render_template('shopping/partials/product_order_details.html', **context)
+
+
 @shopping_bp.route('/product_shopping_param_modal')
 @login_required
 def product_shopping_param_modal():
