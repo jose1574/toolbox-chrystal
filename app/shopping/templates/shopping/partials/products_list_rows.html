@@ -1,0 +1,38 @@
+{% for product in products %}
+<tr class="position-relative" data-product-option>
+    <td>
+        <a href="{{ url_for('shopping.product_order_details', code=product.code) }}"
+            class="stretched-link text-decoration-none text-body"
+            data-product-select-link
+            hx-get="{{ url_for('shopping.product_order_details', code=product.code) }}"
+            hx-target="#product-order-details-container"
+            hx-swap="outerHTML">
+            <span class="fw-semibold d-block">{{ product.code }}</span>
+            <span class="small text-body-secondary d-block">{{ product.description or 'Producto sin nombre' }}</span>
+        </a>
+    </td>
+    <td>{{ product.unit_description or '-' }}</td>
+    <td>{{ product.mark_description or '-' }}</td>
+    <td>{{ product.department_description or '-' }}</td>
+    <td>{{ product.referenc or '-' }}</td>
+    {% for store in stock_stores %}
+    <td class="text-end">{{ product.stock_by_store.get(store.code, 0) }}</td>
+    {% endfor %}
+</tr>
+{% else %}
+<tr>
+    <td colspan="{{ 5 + (stock_stores|length) }}" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+</tr>
+{% endfor %}
+
+{% if current_page < total_pages %}
+<tr hx-get="{{ url_for('shopping.products_list', q=query, reference=reference, page=current_page + 1, append=1) }}"
+    hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+    hx-trigger="intersect once root:#products-scroll-container"
+    hx-target="this"
+    hx-swap="outerHTML">
+    <td colspan="{{ 5 + (stock_stores|length) }}" class="text-center py-3 text-body-secondary">
+        Cargando más productos...
+    </td>
+</tr>
+{% endif %}

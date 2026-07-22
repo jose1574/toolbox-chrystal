@@ -217,11 +217,13 @@ def providers_list():
 @login_required
 def products_modal():
     query = (request.args.get('q') or '').strip()
+    reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
     page = request.args.get('page', 1, type=int)
-    products, total_products, total_pages, current_page = service.search_products(
+    products, total_products, total_pages, current_page, stock_stores = service.search_products(
         query=query,
+        reference=reference,
         mark_codes=mark_codes,
         department_codes=department_codes,
         page=page,
@@ -233,6 +235,7 @@ def products_modal():
         'shopping/partials/modal_products.html',
         products=products,
         query=query,
+        reference=reference,
         mark_codes=mark_codes,
         department_codes=department_codes,
         marks=marks,
@@ -240,6 +243,7 @@ def products_modal():
         total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,
+        stock_stores=stock_stores,
     )
 
 
@@ -247,26 +251,44 @@ def products_modal():
 @login_required
 def products_list():
     query = (request.args.get('q') or '').strip()
+    reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
     page = request.args.get('page', 1, type=int)
-    products, total_products, total_pages, current_page = service.search_products(
+    append = request.args.get('append') == '1'
+    products, total_products, total_pages, current_page, stock_stores = service.search_products(
         query=query,
+        reference=reference,
         mark_codes=mark_codes,
         department_codes=department_codes,
         page=page,
         per_page=10,
     )
 
+    if append:
+        return render_template(
+            'shopping/partials/products_list_rows.html',
+            products=products,
+            query=query,
+            reference=reference,
+            mark_codes=mark_codes,
+            department_codes=department_codes,
+            total_pages=total_pages,
+            current_page=current_page,
+            stock_stores=stock_stores,
+        )
+
     return render_template(
         'shopping/partials/products_list.html',
         products=products,
         query=query,
+        reference=reference,
         mark_codes=mark_codes,
         department_codes=department_codes,
         total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,
+        stock_stores=stock_stores,
     )
 
 

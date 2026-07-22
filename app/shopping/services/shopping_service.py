@@ -887,8 +887,9 @@ def save_product_attributes(params):
     }
 
 
-def search_products(query='', mark_codes=None, department_codes=None, page=1, per_page=10):
+def search_products(query='', reference='', mark_codes=None, department_codes=None, page=1, per_page=10):
     query = (query or '').strip()
+    reference = (reference or '').strip()
     mark_codes = [normalize_code(code) for code in (mark_codes or []) if normalize_code(code)]
     department_codes = [normalize_code(code) for code in (department_codes or []) if normalize_code(code)]
     page = max(page or 1, 1)
@@ -899,6 +900,7 @@ def search_products(query='', mark_codes=None, department_codes=None, page=1, pe
         .with_entities(
             Product.code,
             Product.description,
+            Product.referenc,
             Unit.description.label('unit_description'),
             ProductsUnit.main_unit.label('main_unit'),
             Mark.description.label('mark_description'),
@@ -912,6 +914,7 @@ def search_products(query='', mark_codes=None, department_codes=None, page=1, pe
         .outerjoin(Unit, Unit.code == ProductsUnit.unit)
         .outerjoin(Mark, Mark.code == Product.mark)
         .outerjoin(Department, Department.code == Product.department)
+        .where(Product.status == '01')
     )
 
     if query:
@@ -934,6 +937,13 @@ def search_products(query='', mark_codes=None, department_codes=None, page=1, pe
                 )
             )
 
+    if reference:
+        if '*' in reference:
+            reference_value = _wildcard_pattern(reference)
+            product_query = product_query.filter(Product.referenc.ilike(reference_value, escape='\\'))
+        else:
+            product_query = product_query.filter(Product.referenc.ilike(f'%{reference}%'))
+
     if mark_codes:
         product_query = product_query.filter(func.upper(func.trim(Product.mark)).in_(mark_codes))
 
@@ -944,9 +954,40 @@ def search_products(query='', mark_codes=None, department_codes=None, page=1, pe
     total = product_query.count()
     total_pages = max((total + per_page - 1) // per_page, 1)
     page = min(page, total_pages)
-    products = product_query.limit(per_page).offset((page - 1) * per_page).all()
+    product_rows = product_query.limit(per_page).offset((page - 1) * per_page).all()
+    product_codes = [row.code for row in product_rows]
 
-    return products, total, total_pages, page
+    stock_stores = [
+        {
+            'code': row.code,
+            'description': row.description or row.code,
+        }
+        for row in Store.query.with_entities(Store.code, Store.description).order_by(Store.description.asc(), Store.code.asc()).all()
+    ]
+    stock_by_product = {code: {} for code in product_codes}
+
+    if product_codes:
+        stock_rows = (
+            db.session.query(
+                ProductsStock.product_code,
+                ProductsStock.store,
+                func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_quantity'),
+            )
+            .filter(ProductsStock.product_code.in_(product_codes))
+            .group_by(ProductsStock.product_code, ProductsStock.store)
+            .all()
+        )
+
+        for row in stock_rows:
+            stock_by_product.setdefault(row.product_code, {})[row.store] = float(row.stock_quantity or 0)
+
+    products = []
+    for row in product_rows:
+        product = row._asdict() if hasattr(row, '_asdict') else dict(row._mapping)
+        product['stock_by_store'] = stock_by_product.get(row.code, {})
+        products.append(product)
+
+    return products, total, total_pages, page, stock_stores
 
 
 def search_products_for_params(query='', mark_codes=None, department_codes=None, page=1, per_page=10):
