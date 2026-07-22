@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from types import SimpleNamespace
 
 from sqlalchemy import and_, func, or_, text
 
@@ -633,8 +634,136 @@ def get_product_filter_options():
     return marks, departments
 
 
-def get_product_edit_form_context(code, errors=None, form_values=None):
+def get_product_code_availability_context(code):
+    product_code = normalize_code(code)
+    if not product_code:
+        return {
+            'code': product_code,
+            'is_available': False,
+            'message': 'Debe indicar el codigo del producto.',
+        }
+
+    existing_product = Product.query.filter(func.upper(func.trim(Product.code)) == product_code).first()
+    if existing_product:
+        return {
+            'code': product_code,
+            'is_available': False,
+            'message': 'Ya existe un producto con ese codigo.',
+        }
+
+    existing_alternate_code = ProductsCode.query.filter(
+        func.upper(func.trim(ProductsCode.other_code)) == product_code
+    ).first()
+    if existing_alternate_code:
+        return {
+            'code': product_code,
+            'is_available': False,
+            'message': 'Ya existe un codigo alterno registrado con ese codigo.',
+        }
+
+    return {
+        'code': product_code,
+        'is_available': True,
+        'message': 'Codigo disponible.',
+    }
+
+
+def _get_product_edit_options():
+    return {
+        'marks': Mark.query.with_entities(Mark.code, Mark.description).order_by(Mark.description.asc(), Mark.code.asc()).all(),
+        'departments': Department.query.with_entities(Department.code, Department.description).order_by(Department.description.asc(), Department.code.asc()).all(),
+        'taxes': Tax.query.with_entities(Tax.code, Tax.description, Tax.aliquot).order_by(Tax.description.asc(), Tax.code.asc()).all(),
+        'unit_options': Unit.query.with_entities(Unit.code, Unit.description).order_by(Unit.description.asc(), Unit.code.asc()).all(),
+    }
+
+
+def _build_new_product_form_product(code='', form_values=None):
+    form_values = form_values or {}
+    return SimpleNamespace(
+        code=normalize_code(form_values.get('code') or code),
+        description=(form_values.get('description') or '').strip(),
+        short_name=(form_values.get('short_name') or '').strip(),
+        mark=normalize_code(form_values.get('mark')) or None,
+        model=(form_values.get('model') or '').strip() or None,
+        referenc=(form_values.get('referenc') or '').strip() or None,
+        department=normalize_code(form_values.get('department')) or '00',
+        buy_tax=normalize_code(form_values.get('buy_tax')) or None,
+        sale_tax=normalize_code(form_values.get('sale_tax')) or None,
+        days_warranty=0,
+        rounding_type=0,
+        costing_type=0,
+        discount=0,
+        max_discount=0,
+        minimal_sale=0,
+        maximal_sale=0,
+        status=None,
+        origin=None,
+        take_department_utility=False,
+        allow_decimal=False,
+        edit_name=False,
+        sale_price=0,
+        product_type=None,
+        technician=None,
+        request_technician=False,
+        serialized=False,
+        request_details=False,
+        request_amount=False,
+        coin=None,
+        allow_negative_stock=False,
+        use_scale=False,
+        add_unit_description=False,
+        use_lots=False,
+        lots_order=0,
+        minimal_stock=0,
+        notify_minimal_stock=False,
+        size=None,
+        color=None,
+        extract_net_from_unit_cost_plus_tax=False,
+        extract_net_from_unit_price_plus_tax=False,
+        maximum_stock=0,
+    )
+
+
+def _build_submitted_product_units(params):
+    if not params or not hasattr(params, 'getlist'):
+        return []
+
+    unit_codes = params.getlist('unit_code')
+    conversion_factors = params.getlist('conversion_factor')
+    unit_types = params.getlist('unit_type')
+    main_unit_index = params.get('main_unit_index')
+    show_in_screen_index = params.get('show_in_screen')
+    buy_unit_indexes = set(params.getlist('is_for_buy'))
+    sale_unit_indexes = set(params.getlist('is_for_sale'))
+    units = []
+
+    for index, unit_code in enumerate(unit_codes):
+        units.append(SimpleNamespace(
+            unit=normalize_code(unit_code),
+            conversion_factor=conversion_factors[index] if index < len(conversion_factors) else 1,
+            unit_type=int(unit_types[index]) if index < len(unit_types) and unit_types[index] in ('0', '1', '2') else 1,
+            main_unit=str(index) == str(main_unit_index),
+            show_in_screen=str(index) == str(show_in_screen_index),
+            is_for_buy=str(index) in buy_unit_indexes,
+            is_for_sale=str(index) in sale_unit_indexes,
+        ))
+
+    return units
+
+
+def get_product_edit_form_context(code, errors=None, form_values=None, form_mode='edit'):
     main_code = _resolve_main_code(code)
+    if form_mode == 'create':
+        return {
+            'product': _build_new_product_form_product(code, form_values),
+            **_get_product_edit_options(),
+            'product_units': _build_submitted_product_units(form_values),
+            'product_codes': _build_submitted_product_codes(form_values) if form_values else [],
+            'errors': errors or [],
+            'form_values': form_values or {},
+            'form_mode': 'create',
+        }
+
     if not main_code:
         return None
 
@@ -642,11 +771,7 @@ def get_product_edit_form_context(code, errors=None, form_values=None):
     if not product:
         return None
 
-    marks = Mark.query.with_entities(Mark.code, Mark.description).order_by(Mark.description.asc(), Mark.code.asc()).all()
-    departments = Department.query.with_entities(Department.code, Department.description).order_by(Department.description.asc(), Department.code.asc()).all()
-    taxes = Tax.query.with_entities(Tax.code, Tax.description, Tax.aliquot).order_by(Tax.description.asc(), Tax.code.asc()).all()
-    unit_options = Unit.query.with_entities(Unit.code, Unit.description).order_by(Unit.description.asc(), Unit.code.asc()).all()
-    product_units = (
+    product_units = _build_submitted_product_units(form_values) if form_values else (
         ProductsUnit.query
         .filter(func.upper(func.trim(ProductsUnit.product_code)) == main_code)
         .order_by(ProductsUnit.main_unit.desc(), ProductsUnit.correlative.asc())
@@ -661,14 +786,12 @@ def get_product_edit_form_context(code, errors=None, form_values=None):
 
     return {
         'product': product,
-        'marks': marks,
-        'departments': departments,
-        'taxes': taxes,
-        'unit_options': unit_options,
+        **_get_product_edit_options(),
         'product_units': product_units,
         'product_codes': product_codes,
         'errors': errors or [],
         'form_values': form_values or {},
+        'form_mode': 'edit',
     }
 
 
@@ -889,13 +1012,22 @@ def _save_product_codes(product_code, codes):
 
 def save_product_attributes(params):
     code = normalize_code(params.get('code'))
+    form_mode = params.get('form_mode') or 'edit'
+    is_create = form_mode == 'create'
     errors = []
     if not code:
         errors.append('Debe indicar el producto.')
 
     product = Product.query.filter(func.upper(func.trim(Product.code)) == code).first() if code else None
-    if code and not product:
+    if is_create and product:
+        errors.append('Ya existe un producto con ese código.')
+    elif not is_create and code and not product:
         errors.append('No se encontró el producto seleccionado.')
+
+    if is_create and code:
+        existing_alternate_code = ProductsCode.query.filter(func.upper(func.trim(ProductsCode.other_code)) == code).first()
+        if existing_alternate_code:
+            errors.append('Ya existe un código alterno registrado con ese código.')
 
     description = (params.get('description') or '').strip()
     if not description:
@@ -916,10 +1048,13 @@ def save_product_attributes(params):
     errors.extend(code_errors)
 
     if errors:
-        context = get_product_edit_form_context(code, errors, params)
+        context = get_product_edit_form_context(code, errors, params, form_mode=form_mode)
         if context:
             return False, errors, context
-        return False, errors, {'product': product, 'errors': errors, 'form_values': params}
+        return False, errors, {'product': product, 'errors': errors, 'form_values': params, 'form_mode': form_mode}
+
+    if is_create:
+        product = _build_new_product_form_product(code, params)
 
     _call_set_product(product, params)
     _save_product_units(code, units)

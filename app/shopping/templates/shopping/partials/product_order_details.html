@@ -10,7 +10,9 @@
                     <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
                         hx-get="{{ url_for('shopping.products_modal') }}" hx-target="#products-modal-container"
                         hx-swap="innerHTML">Abrir Catalogo</button>
-                    <button type="button" class="btn btn-sm btn-outline-success flex-fill">Nuevo Producto</button>
+                    <button type="button" class="btn btn-sm btn-outline-success flex-fill"
+                        hx-get="{{ url_for('shopping.product_create_modal') }}" hx-target="#product-edit-modal-container"
+                        hx-swap="innerHTML">Nuevo Producto</button>
                 </div>
             </form>
         </div>

@@ -4,8 +4,8 @@
             <form hx-post="{{ url_for('shopping.save_product_attributes') }}" hx-target="#product-order-details-container" hx-swap="outerHTML">
                 <div class="modal-header">
                     <div>
-                        <h2 class="modal-title h5" id="productEditModalLabel">Editar producto</h2>
-                        <p class="small text-body-secondary mb-0">Actualiza los atributos principales y las unidades del producto.</p>
+                        <h2 class="modal-title h5" id="productEditModalLabel">{{ 'Nuevo producto' if form_mode|default('edit') == 'create' else 'Editar producto' }}</h2>
+                        <p class="small text-body-secondary mb-0">{{ 'Registra el codigo propio, los atributos principales y las unidades del producto.' if form_mode|default('edit') == 'create' else 'Actualiza los atributos principales y las unidades del producto.' }}</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -19,11 +19,23 @@
                     {% endif %}
 
                     {% if product %}
+                    <input type="hidden" name="form_mode" value="{{ form_mode|default('edit') }}">
+                    {% if form_mode|default('edit') == 'create' %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-lg-4">
+                            <label for="product-edit-code" class="form-label small fw-semibold text-body-secondary">Codigo</label>
+                            <input type="text" class="form-control form-control-sm" id="product-edit-code" name="code" value="{{ form_values.code if form_values|default({}) else product.code or '' }}" autocomplete="off" required
+                                hx-get="{{ url_for('shopping.product_code_availability') }}" hx-trigger="product-code-check, change delay:300ms" hx-target="#product-code-availability" hx-swap="outerHTML">
+                            <div id="product-code-availability" class="form-text text-body-secondary" data-code-valid="false">Presiona Enter para validar el codigo antes de continuar.</div>
+                        </div>
+                    </div>
+                    {% else %}
                     <input type="hidden" name="code" value="{{ product.code }}">
+                    {% endif %}
 
                     <div class="rounded border border-secondary-subtle bg-body-tertiary p-2 mb-3">
-                        <div class="fw-semibold text-body text-truncate">{{ product.description }}</div>
-                        <div class="small text-body-secondary">Codigo: {{ product.code }}</div>
+                        <div class="fw-semibold text-body text-truncate">{{ product.description or 'Producto nuevo' }}</div>
+                        <div class="small text-body-secondary">Codigo: {{ product.code or 'Pendiente' }}</div>
                     </div>
 
                     <ul class="nav nav-tabs mb-3" id="productEditTabs" role="tablist">
@@ -230,7 +242,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-sm btn-primary" {% if not product %}disabled{% endif %}>Guardar</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="product-edit-save-button" {% if not product or form_mode|default('edit') == 'create' %}disabled{% endif %}>Guardar</button>
                 </div>
             </form>
         </div>
@@ -297,6 +309,7 @@
         const editModal = bootstrap.Modal.getOrCreateInstance(modalElement);
         const unitRowTemplate = document.getElementById('product-unit-row-template');
         const codeRowTemplate = document.getElementById('product-code-row-template');
+        const saveButton = modalElement.querySelector('#product-edit-save-button');
 
         window.cleanupProductEditModalChrome = () => {
             document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
@@ -385,6 +398,32 @@
             if (event.target.matches('select[name="unit_code"], input[name="main_unit_index"], select[name="unit_type"]')) {
                 refreshMultiplicationLabels();
             }
+        });
+
+        modalElement.addEventListener('input', (event) => {
+            if (event.target.matches('#product-edit-code') && saveButton) {
+                saveButton.disabled = true;
+            }
+        });
+
+        modalElement.addEventListener('keydown', (event) => {
+            if (!event.target.matches('#product-edit-code') || event.key !== 'Enter') {
+                return;
+            }
+            event.preventDefault();
+            event.target.value = event.target.value.trim().toUpperCase();
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+            htmx.trigger(event.target, 'product-code-check');
+        });
+
+        modalElement.addEventListener('htmx:afterSwap', (event) => {
+            if (event.detail.target?.id !== 'product-code-availability' || !saveButton) {
+                return;
+            }
+            const feedback = modalElement.querySelector('#product-code-availability');
+            saveButton.disabled = feedback?.dataset.codeValid !== 'true';
         });
 
         window.cleanupProductEditModal = () => {

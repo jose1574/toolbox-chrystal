@@ -56,6 +56,21 @@ def product_edit_modal():
     return render_template('shopping/partials/product_edit_modal.html', **context)
 
 
+@shopping_bp.route('/product_create_modal')
+@login_required
+def product_create_modal():
+    context = service.get_product_edit_form_context('', form_mode='create')
+    return render_template('shopping/partials/product_edit_modal.html', **context)
+
+
+@shopping_bp.route('/product_code_availability')
+@login_required
+def product_code_availability():
+    code = (request.args.get('code') or '').strip()
+    context = service.get_product_code_availability_context(code)
+    return render_template('shopping/partials/product_code_availability.html', **context)
+
+
 @shopping_bp.route('/save_product_attributes', methods=['POST'])
 @login_required
 def save_product_attributes():
