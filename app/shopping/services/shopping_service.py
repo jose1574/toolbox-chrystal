@@ -7,6 +7,7 @@ from app.models import (
     Department,
     Mark,
     Product,
+    ProductsProvider,
     ProductsCode,
     ProductsFailure,
     ProductsStock,
@@ -77,6 +78,51 @@ def get_product_order_details(code):
         'minimal_stock': product.minimal_stock,
         'maximum_stock': product.maximum_stock,
     }
+
+
+def get_product_purchase_history(code, limit=10):
+    if not code:
+        return []
+
+    main_code = _resolve_main_code(code)
+    if not main_code:
+        return []
+
+    rows = (
+        db.session.query(
+            ProductsProvider.emission_date,
+            ProductsProvider.provider_code,
+            Provider.provider_id,
+            Provider.description.label('provider_description'),
+            ProductsProvider.amount,
+            ProductsProvider.unit.label('unit_correlative'),
+            ProductsUnit.unit.label('unit_code'),
+            Unit.description.label('unit_description'),
+            ProductsProvider.unitary_cost,
+        )
+        .select_from(ProductsProvider)
+        .outerjoin(Provider, Provider.code == ProductsProvider.provider_code)
+        .outerjoin(ProductsUnit, ProductsUnit.correlative == ProductsProvider.unit)
+        .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+        .filter(func.upper(func.trim(ProductsProvider.product_code)) == main_code)
+        .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            'emission_date': row.emission_date,
+            'provider_code': row.provider_code,
+            'provider_id': row.provider_id,
+            'provider_description': row.provider_description,
+            'amount': row.amount or 0,
+            'unit': row.unit_description or row.unit_code or row.unit_correlative,
+            'unitary_cost': row.unitary_cost or 0,
+            'total': (row.amount or 0) * (row.unitary_cost or 0),
+        }
+        for row in rows
+    ]
 
 
 def _parse_date(value):

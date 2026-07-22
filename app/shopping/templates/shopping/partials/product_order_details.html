@@ -80,3 +80,8 @@
     {% include 'shopping/partials/product_sales_chart_loader.html' %}
 </div>
 {% endif %}
+{% if include_purchase_history_oob|default(false) %}
+<div id="product-purchase-history" hx-swap-oob="innerHTML">
+    {% include 'shopping/partials/product_purchase_history.html' %}
+</div>
+{% endif %}

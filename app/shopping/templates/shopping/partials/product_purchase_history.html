@@ -1,0 +1,41 @@
+<section class="shopping-order-panel rounded border border-secondary-subtle bg-body p-3 shadow-sm">
+    <h2 class="section-title text-uppercase fw-semibold text-body mb-2">Compras</h2>
+    <div class="table-responsive rounded border border-secondary-subtle">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">RIF</th>
+                    <th scope="col">Proveedor</th>
+                    <th scope="col" class="text-end">Cantidad</th>
+                    <th scope="col">Unidad</th>
+                    <th scope="col" class="text-end">Precio</th>
+                    <th scope="col" class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchase_history|default([]) %}
+                <tr>
+                    <td>{{ purchase.emission_date.strftime('%d/%m/%Y') if purchase.emission_date else '-' }}</td>
+                    <td>{{ purchase.provider_id or '-' }}</td>
+                    <td>{{ purchase.provider_description or purchase.provider_code or '-' }}</td>
+                    <td class="text-end">{{ '%.2f'|format(purchase.amount) }}</td>
+                    <td>{{ purchase.unit or '-' }}</td>
+                    <td class="text-end">{{ '%.2f'|format(purchase.unitary_cost) }}</td>
+                    <td class="text-end">{{ '%.2f'|format(purchase.total) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-body-secondary py-3">
+                        {% if product|default(none) %}
+                        No hay compras registradas para este producto.
+                        {% else %}
+                        Seleccione un producto para ver sus compras.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>

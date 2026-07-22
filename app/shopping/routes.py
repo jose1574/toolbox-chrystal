@@ -11,13 +11,16 @@ def product_order_details():
     product = service.get_product_order_details(code)
     inventory_params = service.get_product_inventory_params(code)
     shopping_params = service.get_product_shopping_param(code)
+    purchase_history = service.get_product_purchase_history(code)
     return render_template(
         'shopping/partials/product_order_details.html',
         product=product,
         inventory_params=inventory_params,
         shopping_params=shopping_params,
+        purchase_history=purchase_history,
         include_inventory_params_oob=True,
         include_sales_chart_oob=True,
+        include_purchase_history_oob=True,
     )
 
 
@@ -152,6 +155,7 @@ def order():
         'shopping/order.html',
         provider=provider,
         inventory_params=[],
+        purchase_history=[],
     )
 
 
