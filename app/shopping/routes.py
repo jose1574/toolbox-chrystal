@@ -188,10 +188,12 @@ def selected_provider_details():
         return render_template('shopping/partials/selected_provider_details.html', provider=None)
 
     purchase_context = service.get_provider_purchase_context(provider.code, page=1, per_page=5)
+    inventory_context = service.get_provider_inventory_context(provider.code, page=1, per_page=5)
     return render_template(
         'shopping/partials/selected_provider_details.html',
         provider=provider,
         purchase_context=purchase_context,
+        inventory_context=inventory_context,
     )
 
 
@@ -204,6 +206,18 @@ def provider_purchases():
     return render_template(
         'shopping/partials/provider_purchases.html',
         purchase_context=purchase_context,
+    )
+
+
+@shopping_bp.route('/provider_inventory')
+@login_required
+def provider_inventory():
+    code_provider = (request.args.get('code_provider') or '').strip()
+    page = request.args.get('page', 1, type=int)
+    inventory_context = service.get_provider_inventory_context(code_provider, page=page, per_page=5)
+    return render_template(
+        'shopping/partials/provider_inventory.html',
+        inventory_context=inventory_context,
     )
 
 

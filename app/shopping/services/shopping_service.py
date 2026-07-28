@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
-from sqlalchemy import and_, func, or_, text
+from sqlalchemy import and_, case, func, or_, text
 
 from app import db
 from app.models import (
@@ -1482,6 +1482,109 @@ def get_provider_purchase_context(provider_code, page=1, per_page=10):
         'current_page': page,
         'last_purchase_date': summary.last_purchase_date if summary else None,
         'total_purchase_amount': float(summary.total_purchase_amount or 0) if summary else 0.0,
+        'per_page': per_page,
+    }
+
+
+def get_provider_inventory_context(provider_code, page=1, per_page=10):
+    provider_code = normalize_code(provider_code)
+    page = max(page or 1, 1)
+    per_page = max(min(per_page or 10, 50), 1)
+
+    empty_context = {
+        'provider_code': provider_code,
+        'products': [],
+        'total_products': 0,
+        'total_pages': 1,
+        'current_page': 1,
+        'total_product_units': 0.0,
+        'with_inventory': 0,
+        'without_inventory': 0,
+        'with_inventory_percent': 0.0,
+        'without_inventory_percent': 0.0,
+        'per_page': per_page,
+    }
+
+    provider = Provider.query.filter(func.upper(func.trim(Provider.code)) == provider_code).first()
+    if not provider:
+        return empty_context
+
+    provider_products = (
+        db.session.query(
+            func.upper(func.trim(ProductsProvider.product_code)).label('product_code'),
+            func.coalesce(func.sum(ProductsProvider.amount), 0).label('purchased_amount'),
+            func.max(ProductsProvider.emission_date).label('last_purchase_date'),
+        )
+        .filter(func.upper(func.trim(ProductsProvider.provider_code)) == provider_code)
+        .filter(ProductsProvider.product_code.isnot(None))
+        .group_by(func.upper(func.trim(ProductsProvider.product_code)))
+        .subquery()
+    )
+
+    stock_totals = (
+        db.session.query(
+            func.upper(func.trim(ProductsStock.product_code)).label('product_code'),
+            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
+        )
+        .group_by(func.upper(func.trim(ProductsStock.product_code)))
+        .subquery()
+    )
+
+    total_products = db.session.query(func.count()).select_from(provider_products).scalar() or 0
+    total_pages = max((total_products + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+
+    summary = (
+        db.session.query(
+            func.coalesce(func.sum(provider_products.c.purchased_amount), 0).label('total_product_units'),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (func.coalesce(stock_totals.c.stock_total, 0) > 0, 1),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label('with_inventory'),
+        )
+        .select_from(provider_products)
+        .outerjoin(stock_totals, stock_totals.c.product_code == provider_products.c.product_code)
+        .first()
+    )
+
+    with_inventory = int(summary.with_inventory or 0) if summary else 0
+    without_inventory = max(total_products - with_inventory, 0)
+    with_inventory_percent = (with_inventory / total_products * 100) if total_products else 0.0
+    without_inventory_percent = (without_inventory / total_products * 100) if total_products else 0.0
+
+    rows = (
+        db.session.query(
+            provider_products.c.product_code,
+            Product.description.label('product_description'),
+            provider_products.c.purchased_amount,
+            provider_products.c.last_purchase_date,
+            func.coalesce(stock_totals.c.stock_total, 0).label('stock_total'),
+        )
+        .select_from(provider_products)
+        .outerjoin(Product, func.upper(func.trim(Product.code)) == provider_products.c.product_code)
+        .outerjoin(stock_totals, stock_totals.c.product_code == provider_products.c.product_code)
+        .order_by(provider_products.c.last_purchase_date.desc().nullslast(), provider_products.c.product_code.asc())
+        .limit(per_page)
+        .offset((page - 1) * per_page)
+        .all()
+    )
+
+    return {
+        'provider_code': provider_code,
+        'products': rows,
+        'total_products': total_products,
+        'total_pages': total_pages,
+        'current_page': page,
+        'total_product_units': float(summary.total_product_units or 0) if summary else 0.0,
+        'with_inventory': with_inventory,
+        'without_inventory': without_inventory,
+        'with_inventory_percent': with_inventory_percent,
+        'without_inventory_percent': without_inventory_percent,
         'per_page': per_page,
     }
 

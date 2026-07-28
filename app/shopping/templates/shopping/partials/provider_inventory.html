@@ -1,0 +1,80 @@
+{% set products = inventory_context.products|default([]) %}
+{% set total_products = inventory_context.total_products|default(0) %}
+{% set total_pages = inventory_context.total_pages|default(1) %}
+{% set current_page = inventory_context.current_page|default(1) %}
+{% set provider_code = inventory_context.provider_code|default('') %}
+
+<div id="provider-inventory-content">
+    <h2 class="h6 text-uppercase text-center fw-bold mb-3">Inventarios</h2>
+    <div class="row g-3 mb-3">
+        <div class="col-6">
+            <div class="rounded bg-success-subtle text-success-emphasis p-3 h-100">
+                <div class="small">Con inventario</div>
+                <div class="fs-4 fw-semibold" data-provider-field="withInventory">{{ inventory_context.with_inventory|default(0) }}</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="rounded bg-danger-subtle text-danger-emphasis p-3 h-100">
+                <div class="small">Sin inventario</div>
+                <div class="fs-4 fw-semibold" data-provider-field="withoutInventory">{{ inventory_context.without_inventory|default(0) }}</div>
+            </div>
+        </div>
+    </div>
+    <ul class="list-unstyled small mb-0 d-grid gap-2">
+        <li class="d-flex justify-content-between gap-3">
+            <span>Productos comprados a este proveedor</span>
+            <strong data-provider-field="purchasedProductCount">{{ total_products }}</strong>
+        </li>
+        <li class="d-flex justify-content-between gap-3">
+            <span>Cantidad total de productos comprados</span>
+            <strong data-provider-field="totalProductUnits">{{ '%.2f'|format(inventory_context.total_product_units|default(0)) }}</strong>
+        </li>
+        <li class="d-flex justify-content-between gap-3">
+            <span>Actualmente con inventario</span>
+            <strong data-provider-field="withInventoryPercent">{{ '%.1f'|format(inventory_context.with_inventory_percent|default(0)) }}%</strong>
+        </li>
+        <li class="d-flex justify-content-between gap-3">
+            <span>Actualmente sin inventario</span>
+            <strong data-provider-field="withoutInventoryPercent">{{ '%.1f'|format(inventory_context.without_inventory_percent|default(0)) }}%</strong>
+        </li>
+    </ul>
+    <hr>
+    <ul class="list-group list-group-flush" id="provider-inventory-list">
+        {% for product in products %}
+        <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3">
+            <span>
+                <span class="fw-semibold">{{ product.product_code }}</span>
+                <span class="d-block small text-body-secondary">{{ product.product_description or 'Producto sin descripcion' }}</span>
+                <span class="d-block small text-body-secondary">
+                    Comprado: {{ '%.2f'|format(product.purchased_amount or 0) }}
+                </span>
+            </span>
+            <span class="fw-semibold text-end {% if product.stock_total and product.stock_total > 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ '%.2f'|format(product.stock_total or 0) }}
+            </span>
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 bg-transparent text-body-secondary small">
+            No hay productos comprados registrados para este proveedor.
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page <= 1 %}disabled{% else %}
+            hx-get="{{ url_for('shopping.provider_inventory', code_provider=provider_code, page=current_page - 1) }}"
+            hx-target="#provider-inventory-content" hx-swap="outerHTML"
+            {% endif %}>
+            Anterior
+        </button>
+        <span class="small text-body-secondary">Pagina {{ current_page }} de {{ total_pages }}</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+            {% if current_page >= total_pages %}disabled{% else %}
+            hx-get="{{ url_for('shopping.provider_inventory', code_provider=provider_code, page=current_page + 1) }}"
+            hx-target="#provider-inventory-content" hx-swap="outerHTML"
+            {% endif %}>
+            Siguiente
+        </button>
+    </div>
+</div>
