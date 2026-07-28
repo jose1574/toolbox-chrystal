@@ -1,0 +1,39 @@
+{% for product in products %}
+<tr class="position-relative" data-product-option>
+    <td>
+        <a href="{{ url_for('shopping.product_order_details', code=product.code, provider_code=provider_code) }}"
+            class="stretched-link text-decoration-none text-body d-block overflow-hidden"
+            data-product-select-link
+            hx-get="{{ url_for('shopping.product_order_details', code=product.code, provider_code=provider_code) }}"
+            hx-target="#product-order-details-container"
+            hx-swap="outerHTML"
+            title="{{ product.code }} - {{ product.description or 'Producto sin nombre' }}">
+            <span class="fw-semibold product-cell-truncate">{{ product.code }}</span>
+            <span class="small text-body-secondary product-cell-truncate">{{ product.description or 'Producto sin nombre' }}</span>
+        </a>
+    </td>
+    <td title="{{ product.unit_description or '-' }}"><span class="product-cell-truncate">{{ product.unit_description or '-' }}</span></td>
+    <td title="{{ product.mark_description or '-' }}"><span class="product-cell-truncate">{{ product.mark_description or '-' }}</span></td>
+    <td title="{{ product.department_description or '-' }}"><span class="product-cell-truncate">{{ product.department_description or '-' }}</span></td>
+    <td title="{{ product.referenc or '-' }}"><span class="product-cell-truncate">{{ product.referenc or '-' }}</span></td>
+    {% for store in stock_stores %}
+    <td class="text-end" title="{{ product.stock_by_store.get(store.code, 0) }}"><span class="product-cell-truncate">{{ product.stock_by_store.get(store.code, 0) }}</span></td>
+    {% endfor %}
+</tr>
+{% else %}
+<tr>
+    <td colspan="{{ 5 + (stock_stores|length) }}" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+</tr>
+{% endfor %}
+
+{% if current_page < total_pages %}
+<tr hx-get="{{ url_for('shopping.products_list', q=query, reference=reference, page=current_page + 1, append=1) }}"
+    hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
+    hx-trigger="intersect once root:#products-scroll-container"
+    hx-target="this"
+    hx-swap="outerHTML">
+    <td colspan="{{ 5 + (stock_stores|length) }}" class="text-center py-3 text-body-secondary">
+        Cargando más productos...
+    </td>
+</tr>
+{% endif %}

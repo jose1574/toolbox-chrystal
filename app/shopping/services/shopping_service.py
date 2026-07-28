@@ -1069,13 +1069,16 @@ def save_product_attributes(params):
     }
 
 
-def search_products(query='', reference='', mark_codes=None, department_codes=None, page=1, per_page=10):
+def search_products(query='', reference='', mark_codes=None, department_codes=None, page=1, per_page=10, sort_by='', sort_dir='asc', provider_code='', show_all_products=False):
     query = (query or '').strip()
     reference = (reference or '').strip()
     mark_codes = [normalize_code(code) for code in (mark_codes or []) if normalize_code(code)]
     department_codes = [normalize_code(code) for code in (department_codes or []) if normalize_code(code)]
     page = max(page or 1, 1)
     per_page = max(min(per_page or 10, 50), 1)
+    sort_by = (sort_by or '').strip()
+    sort_dir = 'desc' if sort_dir == 'desc' else 'asc'
+    provider_code = normalize_code(provider_code)
 
     product_query = (
         Product.query
@@ -1132,7 +1135,38 @@ def search_products(query='', reference='', mark_codes=None, department_codes=No
     if department_codes:
         product_query = product_query.filter(func.upper(func.trim(Product.department)).in_(department_codes))
 
-    product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
+    if provider_code and not show_all_products:
+        provider_product_codes = (
+            db.session.query(func.upper(func.trim(ProductsProvider.product_code)))
+            .filter(func.upper(func.trim(ProductsProvider.provider_code)) == provider_code)
+            .distinct()
+        )
+        product_query = product_query.filter(func.upper(func.trim(Product.code)).in_(provider_product_codes))
+
+    stock_sort_store = None
+    if sort_by.startswith('stock:'):
+        stock_sort_store = normalize_code(sort_by.split(':', 1)[1])
+
+    if stock_sort_store:
+        stock_sort_subquery = (
+            db.session.query(
+                ProductsStock.product_code.label('product_code'),
+                func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_quantity'),
+            )
+            .filter(func.upper(func.trim(ProductsStock.store)) == stock_sort_store)
+            .group_by(ProductsStock.product_code)
+            .subquery()
+        )
+        stock_sort_expression = func.coalesce(stock_sort_subquery.c.stock_quantity, 0)
+        product_query = product_query.outerjoin(stock_sort_subquery, stock_sort_subquery.c.product_code == Product.code)
+        product_query = product_query.order_by(
+            stock_sort_expression.desc() if sort_dir == 'desc' else stock_sort_expression.asc(),
+            Product.description.asc(),
+            Product.code.asc(),
+        )
+    else:
+        product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
+
     total = product_query.count()
     total_pages = max((total + per_page - 1) // per_page, 1)
     page = min(page, total_pages)

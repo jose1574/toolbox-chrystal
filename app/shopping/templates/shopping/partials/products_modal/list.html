@@ -1,0 +1,112 @@
+<div id="products-list-content">
+    <style>
+        #products-list-content .product-select-table tbody tr[data-product-option] {
+            cursor: pointer;
+        }
+
+        #products-list-content .product-select-table tbody tr[data-product-option]:hover,
+        #products-list-content .product-select-table tbody tr[data-product-option]:focus-within {
+            --bs-table-bg: var(--bs-primary-bg-subtle);
+            --bs-table-color: var(--bs-body-color);
+            outline: 2px solid var(--bs-primary-border-subtle);
+            outline-offset: -2px;
+        }
+
+        #products-list-content .products-list-scroll {
+            max-height: min(28rem, 58vh);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        #products-list-content .product-select-table {
+            table-layout: fixed;
+            width: 100%;
+            min-width: 0;
+        }
+
+        #products-list-content .product-select-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--bs-table-bg);
+            box-shadow: inset 0 -1px 0 var(--bs-border-color);
+        }
+
+        #products-list-content .product-select-table th + th,
+        #products-list-content .product-select-table td + td {
+            border-left: 1px solid var(--bs-border-color-translucent);
+        }
+
+        #products-list-content .product-stock-sort {
+            color: inherit;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        #products-list-content .product-cell-truncate {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+
+    <span id="products-list-sort-state" class="d-none">
+        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+        <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+    </span>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-3 small text-body-secondary">
+        <span>{{ total_products }} productos encontrados</span>
+        <span>Pagina {{ current_page }} de {{ total_pages }}</span>
+    </div>
+
+    <div class="table-responsive rounded border border-secondary-subtle products-list-scroll" id="products-scroll-container">
+        <table class="table table-sm table-hover product-select-table align-middle mb-0">
+            {% set total_width_units = 62 + (stock_stores|length * 7) %}
+            <colgroup>
+                <col style="width: {{ (24 / total_width_units * 100)|round(4) }}%;">
+                <col style="width: {{ (8 / total_width_units * 100)|round(4) }}%;">
+                <col style="width: {{ (10 / total_width_units * 100)|round(4) }}%;">
+                <col style="width: {{ (11 / total_width_units * 100)|round(4) }}%;">
+                <col style="width: {{ (9 / total_width_units * 100)|round(4) }}%;">
+                {% for store in stock_stores %}
+                <col style="width: {{ (7 / total_width_units * 100)|round(4) }}%;">
+                {% endfor %}
+            </colgroup>
+            <thead class="table-light small text-uppercase">
+                <tr>
+                    <th scope="col">Codigo / nombre</th>
+                    <th scope="col">Unidad</th>
+                    <th scope="col">Marca</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Referencia</th>
+                    {% for store in stock_stores %}
+                    {% set stock_sort_key = 'stock:' ~ store.code %}
+                    {% set next_sort_dir = 'asc' if sort_by == stock_sort_key and sort_dir == 'desc' else 'desc' %}
+                    <th scope="col" class="text-end">
+                        <a href="#" class="product-stock-sort text-decoration-none d-inline-flex align-items-center justify-content-end gap-1"
+                            hx-get="{{ url_for('shopping.products_list', sort_by=stock_sort_key, sort_dir=next_sort_dir) }}"
+                            hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+                            hx-target="#products-list-content" hx-swap="outerHTML"
+                            title="{{ store.description }}"
+                            aria-label="Ordenar {{ store.description }} {{ 'de menor a mayor' if next_sort_dir == 'asc' else 'de mayor a menor' }}">
+                            <span class="product-cell-truncate">{{ store.description }}</span>
+                            {% if sort_by == stock_sort_key %}
+                            {% if sort_dir == 'asc' %}
+                            <span aria-hidden="true">&uarr;</span>
+                            {% else %}
+                            <span aria-hidden="true">&darr;</span>
+                            {% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% include 'shopping/partials/products_modal/rows.html' %}
+            </tbody>
+        </table>
+    </div>
+</div>

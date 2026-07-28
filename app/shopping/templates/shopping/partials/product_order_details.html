@@ -1,14 +1,16 @@
 <div class="container-fluid px-0 my-2" id="product-order-details-container">
+    {% set order_provider_code = selected_provider_code|default(provider.code if provider else '') %}
     <section class="row g-2 rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
         <div class="col-12 col-xl-2">
             <form class="h-100 d-flex flex-column gap-2"
                 hx-get="{{ url_for('shopping.product_order_details') }}" hx-trigger="submit, keyup changed delay:500ms"
                 hx-target="#product-order-details-container" hx-swap="outerHTML">
                 <label for="product-code-input" class="form-label mb-0 text-body-secondary fw-semibold">Ingrese codigo de producto</label>
+                <input type="hidden" name="provider_code" value="{{ order_provider_code }}">
                 <input type="text" class="form-control form-control-sm" id="product-code-input" name="code" value="{{ product.code if product else '' }}" autocomplete="off">
                 <div class="d-flex flex-column flex-sm-row gap-2 mt-1">
                     <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
-                        hx-get="{{ url_for('shopping.products_modal') }}" hx-target="#products-modal-container"
+                        hx-get="{{ url_for('shopping.products_modal', provider_code=order_provider_code) }}" hx-target="#products-modal-container"
                         hx-swap="innerHTML">Abrir Catalogo</button>
                     <button type="button" class="btn btn-sm btn-outline-success flex-fill"
                         hx-get="{{ url_for('shopping.product_create_modal') }}" hx-target="#product-edit-modal-container"

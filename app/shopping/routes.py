@@ -8,6 +8,7 @@ from app.shopping.services import shopping_service as service
 @login_required
 def product_order_details():
     code = (request.args.get('code') or '').strip()
+    selected_provider_code = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
     product = service.get_product_order_details(code)
     inventory_params = service.get_product_inventory_params(code)
     shopping_params = service.get_product_shopping_param(code)
@@ -18,6 +19,7 @@ def product_order_details():
         inventory_params=inventory_params,
         shopping_params=shopping_params,
         purchase_history=purchase_history,
+        selected_provider_code=selected_provider_code,
         include_inventory_params_oob=True,
         include_sales_chart_oob=True,
         include_purchase_history_oob=True,
@@ -270,6 +272,10 @@ def products_modal():
     reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
+    sort_by = (request.args.get('sort_by') or '').strip()
+    sort_dir = 'desc' if request.args.get('sort_dir') == 'desc' else 'asc'
+    provider_code = (request.args.get('provider_code') or request.args.get('code_provider') or '').strip()
+    show_all_products = request.args.get('show_all_products') == '1'
     page = request.args.get('page', 1, type=int)
     products, total_products, total_pages, current_page, stock_stores = service.search_products(
         query=query,
@@ -278,11 +284,15 @@ def products_modal():
         department_codes=department_codes,
         page=page,
         per_page=10,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        provider_code=provider_code,
+        show_all_products=show_all_products,
     )
     marks, departments = service.get_product_filter_options()
 
     return render_template(
-        'shopping/partials/modal_products.html',
+        'shopping/partials/products_modal/modal.html',
         products=products,
         query=query,
         reference=reference,
@@ -294,6 +304,10 @@ def products_modal():
         total_pages=total_pages,
         current_page=current_page,
         stock_stores=stock_stores,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        provider_code=provider_code,
+        show_all_products=show_all_products,
     )
 
 
@@ -304,6 +318,10 @@ def products_list():
     reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
+    sort_by = (request.args.get('sort_by') or '').strip()
+    sort_dir = 'desc' if request.args.get('sort_dir') == 'desc' else 'asc'
+    provider_code = (request.args.get('provider_code') or request.args.get('code_provider') or '').strip()
+    show_all_products = request.args.get('show_all_products') == '1'
     page = request.args.get('page', 1, type=int)
     append = request.args.get('append') == '1'
     products, total_products, total_pages, current_page, stock_stores = service.search_products(
@@ -313,11 +331,15 @@ def products_list():
         department_codes=department_codes,
         page=page,
         per_page=10,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        provider_code=provider_code,
+        show_all_products=show_all_products,
     )
 
     if append:
         return render_template(
-            'shopping/partials/products_list_rows.html',
+            'shopping/partials/products_modal/rows.html',
             products=products,
             query=query,
             reference=reference,
@@ -326,10 +348,14 @@ def products_list():
             total_pages=total_pages,
             current_page=current_page,
             stock_stores=stock_stores,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            provider_code=provider_code,
+            show_all_products=show_all_products,
         )
 
     return render_template(
-        'shopping/partials/products_list.html',
+        'shopping/partials/products_modal/list.html',
         products=products,
         query=query,
         reference=reference,
@@ -339,6 +365,10 @@ def products_list():
         total_pages=total_pages,
         current_page=current_page,
         stock_stores=stock_stores,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        provider_code=provider_code,
+        show_all_products=show_all_products,
     )
 
 

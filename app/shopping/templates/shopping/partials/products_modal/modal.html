@@ -1,12 +1,19 @@
 <div class="modal fade" id="productsModal" tabindex="-1" aria-labelledby="productsModalLabel" aria-hidden="true">
 	<style>
 		#productsModal .modal-dialog {
-			width: max-content;
-			max-width: calc(100vw - 2rem);
+			width: min(96rem, calc(100vw - 1rem));
+			max-width: calc(100vw - 1rem);
 		}
 
 		#productsModal .modal-content {
-			min-width: min(72rem, calc(100vw - 2rem));
+			width: 100%;
+		}
+
+		#productsModal .product-scope-check:checked + .product-scope-label {
+			background-color: var(--bs-warning);
+			border-color: var(--bs-warning);
+			color: var(--bs-dark);
+			font-weight: 700;
 		}
 	</style>
 
@@ -26,7 +33,7 @@
 						<input type="search" class="form-control form-control-sm" id="product-modal-search" name="q"
 							value="{{ query }}" placeholder="Codigo o nombre" autocomplete="off"
 							hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="keyup changed delay:300ms"
-							hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+							hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
 							hx-target="#products-list-content" hx-swap="outerHTML">
 					</div>
 					<div class="col-12 col-lg-3">
@@ -34,11 +41,26 @@
 						<input type="search" class="form-control form-control-sm" id="product-reference-filter" name="reference"
 							value="{{ reference }}" placeholder="Referencia" autocomplete="off"
 							hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="keyup changed delay:300ms"
-							hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+							hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
 							hx-target="#products-list-content" hx-swap="outerHTML">
 					</div>
 					<div class="col-12 col-lg-5" id="product-modal-filters">
+						<input type="hidden" name="provider_code" value="{{ provider_code }}">
 						<div class="d-flex flex-column flex-md-row gap-2">
+							{% if provider_code %}
+							<div class="flex-fill">
+								<label class="form-label small fw-semibold text-body-secondary mb-1">Alcance</label>
+								<input class="btn-check product-filter-checkbox product-scope-check" type="checkbox"
+									id="show-all-products-filter" name="show_all_products" value="1"
+									{% if show_all_products %}checked{% endif %}
+									hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="change"
+									hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
+									hx-target="#products-list-content" hx-swap="outerHTML">
+								<label class="btn btn-outline-secondary btn-sm w-100 text-start product-scope-label" for="show-all-products-filter" title="Desmarcado muestra solo productos asociados al proveedor seleccionado">
+									Mostrar todos los productos
+								</label>
+							</div>
+							{% endif %}
 							<div class="dropdown flex-fill">
 								<label class="form-label small fw-semibold text-body-secondary mb-1">Marca</label>
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
@@ -51,7 +73,7 @@
 										<input class="form-check-input mt-0 product-filter-checkbox" type="checkbox" name="mark_codes"
 											value="{{ mark.code }}" {% if mark.code in mark_codes %}checked{% endif %}
 											hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="change"
-											hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+											hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
 											hx-target="#products-list-content" hx-swap="outerHTML">
 										<span>{{ mark.description or mark.code }}</span>
 									</label>
@@ -70,7 +92,7 @@
 										<input class="form-check-input mt-0 product-filter-checkbox" type="checkbox" name="department_codes"
 											value="{{ department.code }}" {% if department.code in department_codes %}checked{% endif %}
 											hx-get="{{ url_for('shopping.products_list') }}" hx-trigger="change"
-											hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters"
+											hx-include="#product-modal-search, #product-reference-filter, #product-modal-filters, #products-list-sort-state"
 											hx-target="#products-list-content" hx-swap="outerHTML">
 										<span>{{ department.description or department.code }}</span>
 									</label>
@@ -81,7 +103,7 @@
 					</div>
 				</div>
 
-				{% include 'shopping/partials/products_list.html' %}
+				{% include 'shopping/partials/products_modal/list.html' %}
 			</div>
 			<div class="modal-footer justify-content-between">
 				<span class="small text-body-secondary">Usa flechas arriba/abajo y Enter para seleccionar.</span>
