@@ -1754,9 +1754,12 @@ def delete_product_from_order():
     if not order_id or not code_product:
         return "Error: Datos incompletos.", 400
 
-    inventory_service.delete_detail_from_order(order_id, code_product)
-    inventory_service.delete_user_checking_progress_item(order_id, current_user.code, code_product)
-    inventory_service.commit_session()
+    try:
+        inventory_service.delete_detail_from_order(order_id, code_product)
+        inventory_service.commit_session()
+    except Exception as exc:
+        inventory_service.rollback_session()
+        return f"Error al quitar producto: {exc}", 500
 
     # Responder vacío para hx-swap=delete
     return ""

@@ -2372,11 +2372,36 @@ def add_product_to_order(order_id, main_code, amount):
 
 
 def delete_detail_from_order(order_id, code_product):
+  delete_checking_artifacts_for_product(order_id, code_product)
   detail = find_detail_by_codes(order_id, [code_product])
   if detail:
     db.session.delete(detail)
-    db.session.commit()
   return True
+
+
+def delete_checking_artifacts_for_product(operation_correlative, product_code):
+  normalized_code = normalize_code(product_code)
+  if not operation_correlative or not normalized_code:
+    return {"progress": 0, "package_details": 0}
+
+  package_ids = select(InventoryOperationPackage.correlative).where(
+    InventoryOperationPackage.operation_correlative == operation_correlative
+  )
+
+  deleted_package_details = InventoryOperationPackageDetail.query.filter(
+    InventoryOperationPackageDetail.package_correlative.in_(package_ids),
+    func.upper(func.trim(InventoryOperationPackageDetail.product_code)) == normalized_code,
+  ).delete(synchronize_session=False)
+
+  deleted_progress = InventoryOperationCheckingProgress.query.filter(
+    InventoryOperationCheckingProgress.operation_correlative == operation_correlative,
+    func.upper(func.trim(InventoryOperationCheckingProgress.product_code)) == normalized_code,
+  ).delete(synchronize_session=False)
+
+  return {
+    "progress": deleted_progress,
+    "package_details": deleted_package_details,
+  }
 
 
 def delete_details_from_order(order_id, code_products):

@@ -149,22 +149,11 @@ def delete_transfers():
     try:
         for item in correlatives:
             correlative = int(item)
-            operation = InventoryOperation.query.options(
-                joinedload(InventoryOperation.operation_flow)
-            ).filter_by(
+            deleted_count += InventoryOperation.query.filter_by(
                 correlative=correlative,
                 operation_type="TRANSFER",
                 wait=True,
-            ).first()
-
-            if not operation:
-                continue
-
-            if operation.operation_flow and operation.operation_flow.current_status == FLOW_RECEIVED:
-                continue
-
-            db.session.delete(operation)
-            deleted_count += 1
+            ).delete(synchronize_session=False)
 
         db.session.commit()
         return jsonify({"status": "success", "message": f"Eliminadas {deleted_count} operaciones."}), 200
