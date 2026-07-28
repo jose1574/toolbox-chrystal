@@ -24,6 +24,7 @@ from app.models import (
     Tax,
     Unit,
     User,
+    ShoppingOperation,
 )
 
 
@@ -1423,3 +1424,73 @@ def save_product_inventory_param(params):
         'inventory_params': get_product_inventory_params(code),
         'product_code': code,
     }
+
+
+def get_provider_purchase_context(provider_code, page=1, per_page=10):
+    provider_code = normalize_code(provider_code)
+    page = max(page or 1, 1)
+    per_page = max(min(per_page or 10, 50), 1)
+
+    empty_context = {
+        'provider_code': provider_code,
+        'shopping_operations': [],
+        'total_purchases': 0,
+        'total_pages': 1,
+        'current_page': 1,
+        'last_purchase_date': None,
+        'total_purchase_amount': 0.0,
+        'per_page': per_page,
+    }
+
+    provider = Provider.query.filter(func.upper(func.trim(Provider.code)) == provider_code).first()
+    if not provider:
+        return empty_context
+
+    shopping_query = (
+        ShoppingOperation.query
+        .with_entities(
+            ShoppingOperation.correlative,
+            ShoppingOperation.document_no,
+            ShoppingOperation.control_no,
+            ShoppingOperation.emission_date,
+            ShoppingOperation.wait,
+            ShoppingOperation.total,
+        )
+        .filter(func.upper(func.trim(ShoppingOperation.provider_code)) == provider_code)
+        .order_by(ShoppingOperation.emission_date.desc(), ShoppingOperation.correlative.desc())
+    )
+
+    total = shopping_query.count()
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+    shopping_operations = shopping_query.limit(per_page).offset((page - 1) * per_page).all()
+
+    summary = (
+        db.session.query(
+            func.max(ShoppingOperation.emission_date).label('last_purchase_date'),
+            func.coalesce(func.sum(ShoppingOperation.total), 0).label('total_purchase_amount'),
+        )
+        .filter(func.upper(func.trim(ShoppingOperation.provider_code)) == provider_code)
+        .first()
+    )
+
+    return {
+        'provider_code': provider_code,
+        'shopping_operations': shopping_operations,
+        'total_purchases': total,
+        'total_pages': total_pages,
+        'current_page': page,
+        'last_purchase_date': summary.last_purchase_date if summary else None,
+        'total_purchase_amount': float(summary.total_purchase_amount or 0) if summary else 0.0,
+        'per_page': per_page,
+    }
+
+
+def shopping_operation_by_provider(provider_code, page=1, per_page=10):
+    context = get_provider_purchase_context(provider_code, page, per_page)
+    return (
+        context['shopping_operations'],
+        context['total_purchases'],
+        context['total_pages'],
+        context['current_page'],
+    )

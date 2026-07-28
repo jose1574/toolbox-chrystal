@@ -187,7 +187,24 @@ def selected_provider_details():
         flash(message, 'error')
         return render_template('shopping/partials/selected_provider_details.html', provider=None)
 
-    return render_template('shopping/partials/selected_provider_details.html', provider=provider)
+    purchase_context = service.get_provider_purchase_context(provider.code, page=1, per_page=5)
+    return render_template(
+        'shopping/partials/selected_provider_details.html',
+        provider=provider,
+        purchase_context=purchase_context,
+    )
+
+
+@shopping_bp.route('/provider_purchases')
+@login_required
+def provider_purchases():
+    code_provider = (request.args.get('code_provider') or '').strip()
+    page = request.args.get('page', 1, type=int)
+    purchase_context = service.get_provider_purchase_context(code_provider, page=page, per_page=5)
+    return render_template(
+        'shopping/partials/provider_purchases.html',
+        purchase_context=purchase_context,
+    )
 
 
 @shopping_bp.route('/providers_modal')

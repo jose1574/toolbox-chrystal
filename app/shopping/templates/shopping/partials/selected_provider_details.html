@@ -38,36 +38,7 @@
 
     <div class="col-12 col-lg-4">
         <div class="h-100 rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
-            <h2 class="h6 text-uppercase fw-bold mb-3">Listado de compras a este proveedor</h2>
-            <div class="d-grid gap-3">
-                <div>
-                    <div class="small text-body-secondary">Compras registradas</div>
-                    <div class="fs-4 fw-semibold" data-provider-field="purchaseCount">18</div>
-                </div>
-                <div>
-                    <div class="small text-body-secondary">Ultima compra</div>
-                    <div class="fw-semibold" data-provider-field="lastPurchaseDate">08/07/2026</div>
-                </div>
-                <div>
-                    <div class="small text-body-secondary">Monto acumulado</div>
-                    <div class="fw-semibold" data-provider-field="totalPurchaseAmount">$ 8,430.75</div>
-                </div>
-            </div>
-            <hr>
-            <ul class="list-group list-group-flush" id="provider-purchase-list">
-                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
-                    <span>OC-2026-0418</span>
-                    <span class="fw-semibold">$ 1,245.20</span>
-                </li>
-                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
-                    <span>OC-2026-0389</span>
-                    <span class="fw-semibold">$ 980.00</span>
-                </li>
-                <li class="list-group-item px-0 bg-transparent d-flex justify-content-between gap-3" data-purchase-row>
-                    <span>OC-2026-0362</span>
-                    <span class="fw-semibold">$ 2,104.35</span>
-                </li>
-            </ul>
+            {% include 'shopping/partials/provider_purchases.html' %}
         </div>
     </div>
 
