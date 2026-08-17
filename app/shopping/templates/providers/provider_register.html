@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de proveedor | Toolbox</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --provider-register-bg: #0f1117;
+            --provider-register-surface: #161821;
+            --provider-register-field: #0f1117;
+            --provider-register-border: rgba(255, 255, 255, 0.06);
+            --provider-register-text: #f9fafb;
+            --provider-register-muted: #9ca3af;
+            --provider-register-success: #22c55e;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: var(--provider-register-bg);
+            color: var(--provider-register-text);
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .provider-register-page {
+            min-height: 100vh;
+            padding: 1.5rem 5vw 4rem;
+        }
+
+        .provider-register-surface {
+            background: var(--provider-register-surface);
+            border: 1px solid var(--provider-register-border);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .provider-register-header {
+            min-height: 4.5rem;
+            padding: 1.25rem;
+        }
+
+        .provider-register-card {
+            padding: 1.5rem;
+        }
+
+        .provider-register-label,
+        .provider-register-section-title {
+            color: var(--provider-register-muted);
+            font-size: 0.8125rem;
+        }
+
+        .provider-register-section-title {
+            color: var(--provider-register-text);
+            font-size: 1rem;
+        }
+
+        .provider-register-input {
+            min-height: 2.625rem;
+            background: var(--provider-register-field);
+            border: 1px solid var(--provider-register-border);
+            border-radius: 0.625rem;
+            color: var(--provider-register-text);
+        }
+
+        .provider-register-input::placeholder {
+            color: var(--provider-register-muted);
+            opacity: 1;
+        }
+
+        .provider-register-input:focus {
+            background: var(--provider-register-field);
+            border-color: rgba(34, 197, 94, 0.7);
+            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.12);
+            color: var(--provider-register-text);
+        }
+
+        .provider-register-input.is-invalid {
+            border-color: rgba(239, 68, 68, 0.9);
+            box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.12);
+        }
+
+        .provider-register-input.is-valid {
+            border-color: rgba(34, 197, 94, 0.7);
+            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.12);
+        }
+
+        .provider-register-feedback {
+            min-height: 1.1rem;
+            margin-top: 0.35rem;
+            font-size: 0.75rem;
+            color: #fca5a5;
+        }
+
+        .provider-register-actions {
+            padding-top: 0.5rem;
+        }
+
+        .provider-register-back {
+            min-height: 3rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--provider-register-border);
+            color: var(--provider-register-text);
+        }
+
+        .provider-register-submit {
+            min-height: 3rem;
+            background: var(--provider-register-success);
+            border-color: var(--provider-register-success);
+            color: var(--provider-register-bg);
+            font-weight: 700;
+            box-shadow: 0 10px 12px rgba(34, 197, 94, 0.2);
+        }
+
+        .provider-register-submit:hover,
+        .provider-register-submit:focus {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: var(--provider-register-bg);
+        }
+
+        @media (max-width: 575.98px) {
+            .provider-register-page {
+                padding: 1rem 0.75rem 2rem;
+            }
+
+            .provider-register-card {
+                padding: 1.25rem;
+            }
+
+            .provider-register-actions {
+                gap: 0.75rem;
+            }
+
+            .provider-register-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const upperFields = ['company_tax_id', 'company_name', 'address', 'salesperson_name', 'salesperson_phone'];
+
+            function setFieldState(field, isValid, message) {
+                const feedback = field.parentElement.querySelector('.provider-register-feedback');
+                field.classList.remove('is-invalid', 'is-valid');
+                if (field.value.trim() === '') {
+                    field.classList.remove('is-invalid', 'is-valid');
+                    if (feedback) feedback.textContent = '';
+                    return;
+                }
+                if (isValid) {
+                    field.classList.add('is-valid');
+                    if (feedback) feedback.textContent = '';
+                } else {
+                    field.classList.add('is-invalid');
+                    if (feedback) feedback.textContent = message || 'Campo inválido.';
+                }
+            }
+
+            function validateRif(value) {
+                const normalized = value.replace(/[\s-]+/g, '').toUpperCase();
+                return /^[JVE]\d{7,9}$/.test(normalized);
+            }
+
+            function validatePhone(value) {
+                return /^\+\d{1,3}(?:[\s.-]?\d){7,14}$/.test(value.trim());
+            }
+
+            function validateEmail(value) {
+                return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+            }
+
+            function validateUsername(value) {
+                return value.length >= 4 && value.length <= 50 && !/\s/.test(value);
+            }
+
+            let usernameAvailabilityTimer = null;
+
+            function validatePassword(value) {
+                return value.length >= 8 && !/\s/.test(value);
+            }
+
+            const fieldValidators = {
+                company_tax_id: {
+                    validate: validateRif,
+                    message: 'Debe iniciar con J, V o E y llevar solo números después de la letra sin espacios ni guiones.'
+                },
+                company_name: {
+                    validate: (value) => value.trim().length >= 2,
+                    message: 'El nombre debe tener al menos 2 caracteres.'
+                },
+                address: {
+                    validate: (value) => value.trim().length >= 5,
+                    message: 'La dirección debe tener al menos 5 caracteres.'
+                },
+                salesperson_name: {
+                    validate: (value) => value.trim().length >= 2,
+                    message: 'El nombre del vendedor debe tener al menos 2 caracteres.'
+                },
+                salesperson_phone: {
+                    validate: validatePhone,
+                    message: 'El teléfono debe incluir un código de país válido, por ejemplo +58 4245655769 o +1 4155552671.'
+                },
+                company_email: {
+                    validate: validateEmail,
+                    message: 'Ejemplo válido: compras@acme.com'
+                },
+                provider_username: {
+                    validate: validateUsername,
+                    message: 'El usuario debe tener entre 4 y 50 caracteres, no incluir espacios y no estar registrado.'
+                },
+                provider_password: {
+                    validate: validatePassword,
+                    message: 'La clave debe tener al menos 8 caracteres y no puede contener espacios.'
+                }
+            };
+
+            upperFields.forEach(function (fieldId) {
+                const field = document.getElementById(fieldId);
+                if (!field) return;
+
+                field.addEventListener('input', function () {
+                    let value = this.value;
+                    if (fieldId === 'company_tax_id') {
+                        value = value.replace(/[\s-]+/g, '');
+                    }
+                    this.value = value.toUpperCase();
+
+                    const validator = fieldValidators[fieldId];
+                    if (!validator) return;
+                    setFieldState(this, validator.validate(this.value), validator.message);
+                });
+            });
+
+            Object.keys(fieldValidators).forEach(function (fieldId) {
+                const field = document.getElementById(fieldId);
+                if (!field) return;
+
+                field.addEventListener('input', function () {
+                    const validator = fieldValidators[fieldId];
+                    if (!validator) return;
+
+                    if (fieldId === 'provider_username') {
+                        const username = this.value.trim();
+                        const formatValid = validator.validate(username);
+                        if (!username) {
+                            setFieldState(this, false, validator.message);
+                            return;
+                        }
+                        if (!formatValid) {
+                            setFieldState(this, false, validator.message);
+                            return;
+                        }
+
+                        clearTimeout(usernameAvailabilityTimer);
+                        const currentUsername = username;
+                        usernameAvailabilityTimer = setTimeout(function () {
+                            fetch('/provider_username_availability?username=' + encodeURIComponent(currentUsername))
+                                .then(function (response) {
+                                    if (!response.ok) {
+                                        throw new Error('Request failed');
+                                    }
+                                    return response.json();
+                                })
+                                .then(function (data) {
+                                    if (field.value.trim() !== currentUsername) {
+                                        return;
+                                    }
+                                    if (data && data.available === false) {
+                                        setFieldState(field, false, data.message || 'Este nombre de usuario ya está registrado.');
+                                        return;
+                                    }
+                                    setFieldState(field, true, '');
+                                })
+                                .catch(function () {
+                                    if (field.value.trim() === currentUsername) {
+                                        setFieldState(field, true, '');
+                                    }
+                                });
+                        }, 350);
+                        return;
+                    }
+
+                    setFieldState(this, validator.validate(this.value), validator.message);
+                });
+
+                field.addEventListener('blur', function () {
+                    const validator = fieldValidators[fieldId];
+                    if (!validator) return;
+                    setFieldState(this, validator.validate(this.value), validator.message);
+                });
+            });
+
+            const passwordField = document.getElementById('provider_password');
+            if (passwordField) {
+                passwordField.setAttribute('minlength', '8');
+                passwordField.setAttribute('pattern', '^[^\\s]+$');
+                passwordField.addEventListener('input', function () {
+                    this.value = this.value.replace(/\s+/g, '');
+                });
+            }
+        });
+    </script>
+    <main class="provider-register-page">
+        <header class="provider-register-surface provider-register-header d-flex align-items-center mb-4">
+            <h1 class="h5 mb-0 fw-bold">REGISTRO DE NUEVO PROVEEDOR</h1>
+        </header>
+
+        <form method="post" class="provider-register-surface provider-register-card">
+            {% if errors %}
+                <div class="alert alert-danger border-0 mb-4" role="alert">
+                    <div class="fw-bold mb-2">Corrige los siguientes errores:</div>
+                    <ul class="mb-0 ps-3">
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <section class="mb-4">
+                <h2 class="provider-register-section-title fw-bold mb-3">Información de la empresa</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="company_tax_id" class="provider-register-label form-label mb-1">RIF de la empresa</label>
+                        <input id="company_tax_id" name="company_tax_id" type="text" class="provider-register-input form-control" value="{{ form_data.get('company_tax_id', '') }}" placeholder="Ej: J085030140" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="company_name" class="provider-register-label form-label mb-1">Nombre de la empresa</label>
+                        <input id="company_name" name="company_name" type="text" class="provider-register-input form-control" value="{{ form_data.get('company_name', '') }}" placeholder="Ej: ACME S.A." required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="address" class="provider-register-label form-label mb-1">Dirección</label>
+                        <input id="address" name="address" type="text" class="provider-register-input form-control" value="{{ form_data.get('address', '') }}" placeholder="Ej: AV. PRINCIPAL 123, EDIF. NORTE, PISO 4" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-4">
+                <h2 class="provider-register-section-title fw-bold mb-3">Contacto</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="salesperson_name" class="provider-register-label form-label mb-1">Nombre del vendedor</label>
+                        <input id="salesperson_name" name="salesperson_name" type="text" class="provider-register-input form-control" value="{{ form_data.get('salesperson_name', '') }}" placeholder="Ej: MARÍA PÉREZ" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="salesperson_phone" class="provider-register-label form-label mb-1">Número de teléfono del vendedor</label>
+                        <input id="salesperson_phone" name="salesperson_phone" type="tel" class="provider-register-input form-control" value="{{ form_data.get('salesperson_phone', '') }}" placeholder="Ej: +58 4245655769 o +1 4155552671" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="company_email" class="provider-register-label form-label mb-1">Correo electrónico de la empresa</label>
+                        <input id="company_email" name="company_email" type="email" class="provider-register-input form-control" value="{{ form_data.get('company_email', '') }}" placeholder="Ej: COMPRAS@ACME.COM" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="provider_username" class="provider-register-label form-label mb-1">Usuario del proveedor</label>
+                        <input id="provider_username" name="provider_username" type="text" class="provider-register-input form-control" value="{{ form_data.get('provider_username', '') }}" placeholder="Ej: PROVEEDOR_ACME" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="provider_password" class="provider-register-label form-label mb-1">Clave del proveedor</label>
+                        <input id="provider_password" name="provider_password" type="password" class="provider-register-input form-control" value="{{ form_data.get('provider_password', '') }}" placeholder="Mínimo 8 caracteres sin espacios" minlength="8" pattern="^[^\s]+$" required>
+                        <div class="provider-register-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="provider-register-actions d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('shopping.provider_login') }}" class="provider-register-back btn px-4">Regresar</a>
+                <button type="submit" class="provider-register-submit btn px-4">Solicitar aprobación de usuario</button>
+            </div>
+        </form>
+    </main>
+</body>
+</html>

@@ -109,6 +109,14 @@ def ensure_toolbox_schema_columns(inspector):
             "update_at": "ALTER TABLE toolbox.shopping_products_params ADD COLUMN update_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
         }
 
+    if "provider_registrations" in table_names:
+        table_columns_sql["provider_registrations"] = {
+            "username": "ALTER TABLE toolbox.provider_registrations ADD COLUMN username VARCHAR(100) NOT NULL DEFAULT ''",
+            "password": "ALTER TABLE toolbox.provider_registrations ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT ''",
+            "registered_at": "ALTER TABLE toolbox.provider_registrations ADD COLUMN registered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            "status": "ALTER TABLE toolbox.provider_registrations ADD COLUMN status VARCHAR(30) NOT NULL DEFAULT 'PENDING'",
+        }
+
     added_columns = []
     with db.engine.begin() as connection:
         connection.execute(text("SET statement_timeout = 15000"))
@@ -122,6 +130,26 @@ def ensure_toolbox_schema_columns(inspector):
                 connection.execute(text(column_sql[column_name]))
             if missing_columns:
                 added_columns.append(f"{table_name} ({', '.join(missing_columns)})")
+
+        connection.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'toolbox' AND table_name = 'provider_registrations'
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM pg_constraint c
+                    JOIN pg_class t ON c.conrelid = t.oid
+                    JOIN pg_namespace n ON n.oid = t.relnamespace
+                    WHERE n.nspname = 'toolbox' AND t.relname = 'provider_registrations' AND c.conname = 'ck_provider_registrations_status'
+                ) THEN
+                    ALTER TABLE toolbox.provider_registrations
+                    ADD CONSTRAINT ck_provider_registrations_status
+                    CHECK (status IN ('PENDING', 'APPROVED'));
+                END IF;
+            END $$;
+        """))
 
     if added_columns:
         print("Toolbox schema columns added: " f"{'; '.join(added_columns)}.")
@@ -156,7 +184,12 @@ def create_app():
     def enforce_authentication():
         """Redirige a login cuando un usuario anónimo accede a rutas protegidas."""
         # Permitir rutas públicas (login, assets) sin autenticación previa
-        public_endpoints = {"auth.login", "static"}
+        public_endpoints = {
+            "auth.login",
+            "static",
+            "shopping.provider_login",
+            "shopping.provider_register",
+        }
 
         if request.endpoint is None:
             return

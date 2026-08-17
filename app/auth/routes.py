@@ -9,27 +9,35 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
 
+    selected_mode = (request.args.get('mode') or '').strip().lower()
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
 
         user = User.query.filter_by(code=username).first()
-        
+
         # Comparación de contraseña (en texto plano según la base de datos actual)
         # TODO: Implementar hashing de contraseñas con werkzeug.security o bcrypt
         if user and user.user_password == password:
             print(f"DEBUG LOGIN - Exitoso: {username}")
             login_user(user)
-            
+
             # Respuesta para HTMX: Header de redirección
             response = Response()
             response.headers['HX-Redirect'] = url_for('dashboard.dashboard')
             return response
-        
+
         print(f"DEBUG LOGIN - Fallido para: {username}")
         return "<div class='p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50' role='alert'>Usuario o contraseña incorrectos</div>"
-        
-    return render_template('auth/login.html')
+
+    if selected_mode == 'provider':
+        return render_template('providers/provider_login.html')
+
+    if selected_mode == 'admin':
+        return render_template('auth/login.html', show_admin_form=True)
+
+    return render_template('auth/choose_login.html')
 
 
 @auth_bp.route('/logout')

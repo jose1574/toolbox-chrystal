@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Compras | Selección de proveedor{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-lg-4">
+  <div class="d-flex flex-column gap-4">
+    <section class="rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-2 mb-3">
+        <div>
+          <h1 class="h4 fw-bold text-body mb-1">Crear lista como proveedor</h1>
+          <p class="text-body-secondary mb-0">Selecciona el proveedor para identificarlo y continuar con la creación de la lista.</p>
+        </div>
+        <a href="{{ url_for('shopping.index') }}" class="btn btn-outline-secondary btn-sm">Volver</a>
+      </div>
+
+      {% include 'shopping/partials/select_provider.html' %}
+    </section>
+
+    <div id="provider-details-container">
+      {% if provider %}
+        {% include 'shopping/partials/selected_provider_details.html' %}
+      {% endif %}
+    </div>
+
+    <div id="providers-modal-container"></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido | Toolbox</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --welcome-bg: #f4f7fb;
+            --welcome-card: #ffffff;
+            --welcome-border: rgba(15, 23, 42, 0.06);
+            --welcome-primary: #0d6efd;
+            --welcome-primary-soft: #edf3ff;
+            --welcome-secondary: #198754;
+            --welcome-secondary-soft: #e9f9f0;
+            --welcome-text: #12213a;
+            --welcome-muted: #667085;
+            --welcome-shadow: rgba(15, 23, 42, 0.12);
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(140deg, #f8fbff 0%, #eef5ff 52%, #f4fbf7 100%);
+            color: var(--welcome-text);
+        }
+
+        .welcome-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .welcome-card {
+            width: min(900px, 100%);
+            background: var(--welcome-card);
+            border: 1px solid var(--welcome-border);
+            border-radius: 1.5rem;
+            box-shadow: 0 24px 55px var(--welcome-shadow);
+            overflow: hidden;
+        }
+
+        .welcome-hero {
+            background: linear-gradient(155deg, #0d6efd 0%, #0d5cd6 55%, #198754 100%);
+            color: #fff;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-hero::before,
+        .welcome-hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .welcome-hero::before {
+            width: 260px;
+            height: 260px;
+            top: -120px;
+            right: -80px;
+        }
+
+        .welcome-hero::after {
+            width: 220px;
+            height: 220px;
+            bottom: -90px;
+            left: -60px;
+        }
+
+        .welcome-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .welcome-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-options {
+            background: #fff;
+            padding: 2.25rem;
+        }
+
+        .welcome-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            text-align: left;
+            padding: 1.1rem 1.15rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(13, 110, 253, 0.14);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            color: var(--welcome-text);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+        }
+
+        .welcome-option:hover {
+            transform: translateY(-1px);
+            border-color: rgba(13, 110, 253, 0.28);
+            box-shadow: 0 10px 20px rgba(13, 110, 253, 0.08);
+            text-decoration: none;
+            color: var(--welcome-text);
+        }
+
+        .welcome-option.provider {
+            background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+        }
+
+        .welcome-option.admin {
+            background: linear-gradient(180deg, #ffffff 0%, #f3faf6 100%);
+        }
+
+        .welcome-option-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .welcome-option.provider .welcome-option-icon {
+            background: var(--welcome-primary-soft);
+            color: var(--welcome-primary);
+        }
+
+        .welcome-option.admin .welcome-option-icon {
+            background: var(--welcome-secondary-soft);
+            color: var(--welcome-secondary);
+        }
+
+        .welcome-option-copy {
+            flex: 1;
+            margin-left: 1rem;
+        }
+
+        .welcome-option-title {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 0.15rem;
+        }
+
+        .welcome-option-text {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--welcome-muted);
+        }
+
+        @media (max-width: 767.98px) {
+            .welcome-hero,
+            .welcome-options {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-screen">
+        <div class="welcome-card">
+            <div class="row g-0">
+                <div class="col-lg-5 welcome-hero">
+                    <div class="welcome-text">
+                        <span class="welcome-badge">Toolbox</span>
+                        <h1 class="mt-4 mb-3 fw-bold" style="font-size: clamp(2rem, 2vw + 0.8rem, 2.5rem);">Bienvenido</h1>
+                        <p class="mb-0 text-white-50" style="font-size: 1rem; line-height: 1.7;">
+                            Selecciona cómo deseas ingresar a la plataforma y accede al acceso correcto para tu perfil.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-7 welcome-options">
+                    <div class="d-grid gap-3">
+                        <a href="{{ url_for('auth.login', mode='provider') }}" class="welcome-option provider" aria-label="Ingresar como proveedor">
+                            <span class="welcome-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M8 18V6.5A1.5 1.5 0 0 1 9.5 5h5A1.5 1.5 0 0 1 16 6.5V18M6 18h12M9 9.5h6M9 13h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="welcome-option-copy">
+                                <span class="welcome-option-title">Ingresar como proveedor</span>
+                                <span class="welcome-option-text">Acceso para proveedores y socios comerciales.</span>
+                            </span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="text-body-secondary">
+                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+
+                        <a href="{{ url_for('auth.login', mode='admin') }}" class="welcome-option admin" aria-label="Ingresar como usuario administrador">
+                            <span class="welcome-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M12 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm-7 15.5c.8-2.3 3.1-3.5 7-3.5s6.2 1.2 7 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="welcome-option-copy">
+                                <span class="welcome-option-title">Ingresar como usuario administrador</span>
+                                <span class="welcome-option-text">Acceso para personal interno y administración.</span>
+                            </span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="text-body-secondary">
+                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

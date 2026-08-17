@@ -1,8 +1,79 @@
-from flask import make_response, render_template, request, flash
+import re
+
+from flask import make_response, redirect, render_template, request, flash, url_for
 from flask_login import current_user, login_required
 
+from app import db
+from app.models import ProviderRegistration, User
 from app.shopping import shopping_bp
 from app.shopping.services import shopping_service as service
+
+
+def normalize_upper(value):
+    return (value or '').strip().upper()
+
+
+def normalize_rif(value):
+    return re.sub(r'[\s\-]+', '', (value or '').strip()).upper()
+
+
+def is_valid_rif(value):
+    rif = normalize_rif(value)
+    if not rif or len(rif) < 9 or len(rif) > 10:
+        return False
+    if rif[0] not in {'J', 'V', 'E'}:
+        return False
+    if not rif[1:].isdigit():
+        return False
+    return True
+
+
+def is_valid_phone(value):
+    phone = (value or '').strip()
+    if not phone:
+        return False
+    return bool(re.fullmatch(r'\+\d{1,3}(?:[\s.-]?\d){7,14}', phone))
+
+
+def is_valid_email(value):
+    return bool(re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', (value or '').strip()))
+
+
+def is_valid_password(value):
+    password = (value or '').strip()
+    if len(password) < 8:
+        return False
+    if re.search(r'\s', password):
+        return False
+    return True
+
+
+def username_is_registered(value):
+    username = (value or '').strip()
+    if not username:
+        return False
+
+    normalized = username.lower()
+    return bool(
+        ProviderRegistration.query.filter(
+            db.func.lower(ProviderRegistration.username) == normalized
+        ).first()
+        or User.query.filter(db.func.lower(User.code) == normalized).first()
+    )
+
+
+@shopping_bp.route('/provider_username_availability')
+def provider_username_availability():
+    username = (request.args.get('username') or '').strip()
+    if not username:
+        return {'available': False, 'message': 'Debes ingresar un usuario.'}
+
+    available = not username_is_registered(username)
+    return {
+        'available': available,
+        'message': 'Usuario disponible.' if available else 'Este nombre de usuario ya está registrado.'
+    }
+
 
 @shopping_bp.route('/product_order_details')
 @login_required
@@ -154,6 +225,19 @@ def index():
 
 
 #menu de orden de compras sin lista previa de productos
+@shopping_bp.route('/provider_selection')
+@login_required
+def provider_selection():
+    code_provider = (request.args.get('code_provider') or '').strip()
+    provider = service.get_provider_by_code(code_provider) if code_provider else None
+
+    return render_template(
+        'providers/provider_selection.html',
+        provider=provider,
+        selected_provider_code=code_provider,
+    )
+
+
 @shopping_bp.route('/order')
 @login_required 
 def order():
@@ -197,6 +281,192 @@ def selected_provider_details():
         purchase_context=purchase_context,
         inventory_context=inventory_context,
     )
+
+
+@shopping_bp.route('/provider_login', methods=['GET', 'POST'])
+def provider_login():
+    submitted_login_value = (
+        request.form.get('login_value')
+        or request.form.get('username')
+        or request.form.get('email')
+        or request.form.get('user')
+        or ''
+    ).strip()
+    login_type = (request.form.get('login_type') or request.args.get('login_type') or '').strip().lower()
+    if not login_type:
+        login_type = 'correo' if '@' in submitted_login_value else 'usuario'
+    password = (request.form.get('password') or '').strip()
+
+    if request.method == 'POST':
+        if not submitted_login_value or not password:
+            return render_template(
+                'providers/provider_login.html',
+                login_type=login_type,
+                login_value=submitted_login_value,
+                password=password,
+                show_demo_message=True,
+                error_message='Ingresa tu usuario o correo y tu clave.',
+            )
+
+        searched_value = submitted_login_value.lower()
+
+        registration = None
+        if login_type == 'correo' or '@' in submitted_login_value:
+            registration = ProviderRegistration.query.filter(
+                db.func.lower(ProviderRegistration.email) == searched_value
+            ).first()
+
+        if registration is None:
+            registration = ProviderRegistration.query.filter(
+                db.func.lower(ProviderRegistration.username) == searched_value
+            ).first()
+
+        if registration is None:
+            return render_template(
+                'providers/provider_login.html',
+                login_type=login_type,
+                login_value=submitted_login_value,
+                password=password,
+                show_demo_message=True,
+                error_message='No está registrado. Registre su cuenta antes de iniciar sesión.',
+            )
+
+        if registration.password != password:
+            return render_template(
+                'providers/provider_login.html',
+                login_type=login_type,
+                login_value=submitted_login_value,
+                password=password,
+                show_demo_message=True,
+                error_message='Usuario o clave incorrectos.',
+            )
+
+        if registration.status == 'PENDING':
+            return render_template(
+                'providers/provider_register_status.html',
+                registration=registration,
+                status_label='PENDIENTE',
+            )
+
+        return render_template(
+            'providers/provider_login.html',
+            login_type=login_type,
+            login_value=submitted_login_value,
+            password=password,
+            show_demo_message=True,
+            error_message='Esta cuenta ya fue aprobada y puede continuar con el acceso.',
+        )
+
+    return render_template('providers/provider_login.html', login_type=login_type, login_value=submitted_login_value, password='')
+
+
+@shopping_bp.route('/provider_register_status')
+def provider_register_status():
+    username = (request.args.get('username') or '').strip()
+    registration = None
+
+    if username:
+        registration = ProviderRegistration.query.filter(
+            db.func.lower(ProviderRegistration.username) == username.lower()
+        ).first()
+
+    if registration is None:
+        return redirect(url_for('shopping.provider_login'))
+
+    return render_template(
+        'providers/provider_register_status.html',
+        registration=registration,
+        status_label='PENDIENTE',
+    )
+
+
+@shopping_bp.route('/provider_register', methods=['GET', 'POST'])
+def provider_register():
+    form_data = request.form.to_dict() if request.method == 'POST' else {}
+
+    if request.method == 'POST':
+        company_tax_id = normalize_rif(form_data.get('company_tax_id'))
+        company_name = normalize_upper(form_data.get('company_name'))
+        address = normalize_upper(form_data.get('address'))
+        salesperson_name = normalize_upper(form_data.get('salesperson_name'))
+        salesperson_phone = normalize_upper(form_data.get('salesperson_phone'))
+        company_email = (form_data.get('company_email') or '').strip()
+        provider_username = (form_data.get('provider_username') or '').strip()
+        provider_password = (form_data.get('provider_password') or '').strip()
+
+        errors = []
+
+        required_fields = {
+            'RIF del proveedor': company_tax_id,
+            'Nombre de la empresa': company_name,
+            'Dirección': address,
+            'Nombre del vendedor': salesperson_name,
+            'Teléfono del contacto': salesperson_phone,
+            'Correo electrónico de la empresa': company_email,
+            'Usuario del proveedor': provider_username,
+            'Clave del proveedor': provider_password,
+        }
+
+        for field_name, value in required_fields.items():
+            if not value:
+                errors.append(f'Falta completar: {field_name}.')
+
+        if company_tax_id and not is_valid_rif(company_tax_id):
+            errors.append('El RIF del proveedor es inválido. Debe comenzar con J, V o E y contener solo números después de la letra, sin espacios ni guiones.')
+
+        if salesperson_phone and not is_valid_phone(salesperson_phone):
+            errors.append('El teléfono del contacto contiene caracteres no válidos.')
+
+        if company_email and not is_valid_email(company_email):
+            errors.append('El correo electrónico ingresado no es válido.')
+
+        if provider_username and (len(provider_username) < 4 or len(provider_username) > 50):
+            errors.append('El usuario debe tener entre 4 y 50 caracteres.')
+
+        if provider_username and username_is_registered(provider_username):
+            errors.append('Ese nombre de usuario ya está registrado. Elige otro.')
+
+        if provider_password and not is_valid_password(provider_password):
+            errors.append('La clave debe tener al menos 8 caracteres y no puede contener espacios.')
+
+        if errors:
+            for message in errors:
+                flash(message, 'error')
+            return render_template('providers/provider_register.html', form_data=form_data, errors=errors)
+
+        code = company_tax_id
+        if ProviderRegistration.query.filter_by(code=code).first():
+            errors.append('Ya existe una solicitud de registro con este RIF.')
+            for message in errors:
+                flash(message, 'error')
+            return render_template('providers/provider_register.html', form_data=form_data, errors=errors)
+
+        if ProviderRegistration.query.filter_by(username=provider_username).first():
+            errors.append('Ese nombre de usuario ya está en uso.')
+            for message in errors:
+                flash(message, 'error')
+            return render_template('providers/provider_register.html', form_data=form_data, errors=errors)
+
+        registration = ProviderRegistration(
+            code=code,
+            description=company_name,
+            address=address,
+            provider_id=company_tax_id,
+            email=company_email,
+            phone=salesperson_phone,
+            contact=salesperson_name,
+            username=provider_username,
+            password=provider_password,
+            status='PENDING',
+        )
+
+        db.session.add(registration)
+        db.session.commit()
+
+        flash('Tu solicitud de proveedor fue enviada y queda pendiente de aprobación.', 'success')
+        return redirect(url_for('shopping.provider_login'))
+
+    return render_template('providers/provider_register.html', form_data=form_data, errors=[])
 
 
 @shopping_bp.route('/provider_purchases')

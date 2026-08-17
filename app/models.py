@@ -9562,3 +9562,152 @@ class ShoppingProductsParamsHistory(db.Model):
         primaryjoin="ShoppingProductsParamsHistory.user_code == User.code",
         backref="shopping_products_params_history_entries",
     )
+
+
+class PurchaseReviewList(db.Model):
+    __tablename__ = "purchase_review_lists"
+    __table_args__ = (
+        db.CheckConstraint(
+            "list_type IN ('PARAMETERS_GENERATED','PROVIDER_SUBMISSION','USER_MANUAL')",
+            name="ck_purchase_review_lists_type",
+        ),
+        db.CheckConstraint(
+            "status IN ('DRAFT','SUBMITTED','REVIEWED','APPROVED','REJECTED')",
+            name="ck_purchase_review_lists_status",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    list_type = db.Column(db.String(32), nullable=False)
+    provider_code = db.Column(
+        db.ForeignKey("public.provider.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    created_by = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    buyer_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    reference = db.Column(db.String)
+    status = db.Column(db.String(32), nullable=False, server_default="DRAFT")
+    provider_notes = db.Column(db.String)
+    buyer_notes = db.Column(db.String)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    submitted_at = db.Column(db.DateTime)
+    reviewed_at = db.Column(db.DateTime)
+
+    provider = db.relationship(
+        "Provider",
+        primaryjoin="PurchaseReviewList.provider_code == Provider.code",
+        backref="purchase_review_lists",
+    )
+    creator = db.relationship(
+        "User",
+        primaryjoin="PurchaseReviewList.created_by == User.code",
+        backref="created_purchase_review_lists",
+    )
+    buyer = db.relationship(
+        "User",
+        primaryjoin="PurchaseReviewList.buyer_code == User.code",
+        backref="assigned_purchase_review_lists",
+    )
+
+
+class PurchaseReviewListItem(db.Model):
+    __tablename__ = "purchase_review_list_items"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('PENDING','ACCEPTED','REJECTED')",
+            name="ck_purchase_review_list_items_status",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    main_correlative = db.Column(
+        db.ForeignKey(
+            "toolbox.purchase_review_lists.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    unit = db.Column(
+        db.ForeignKey("public.products_units.correlative", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    requested_amount = db.Column(db.Double(53), nullable=False, server_default="0")
+    unitary_cost = db.Column(db.Double(53), nullable=False, server_default="0")
+    status = db.Column(db.String(16), nullable=False, server_default="PENDING")
+    rejected_reason = db.Column(db.String)
+    reviewed_by = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    reviewed_at = db.Column(db.DateTime)
+    note = db.Column(db.String)
+
+    review_list = db.relationship(
+        "PurchaseReviewList",
+        primaryjoin="PurchaseReviewListItem.main_correlative == PurchaseReviewList.correlative",
+        backref="items",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="PurchaseReviewListItem.product_code == Product.code",
+        backref="purchase_review_list_items",
+    )
+    unit_detail = db.relationship(
+        "ProductsUnit",
+        primaryjoin="PurchaseReviewListItem.unit == ProductsUnit.correlative",
+        backref="purchase_review_list_items",
+    )
+    reviewer = db.relationship(
+        "User",
+        primaryjoin="PurchaseReviewListItem.reviewed_by == User.code",
+        backref="reviewed_purchase_review_list_items",
+    )
+
+
+class ProviderRegistration(db.Model):
+    __tablename__ = "provider_registrations"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('PENDING', 'APPROVED')",
+            name="ck_provider_registrations_status",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    code = db.Column(db.String, primary_key=True, nullable=False)
+    description = db.Column(db.String, nullable=False)
+    address = db.Column(db.String, nullable=False)
+    provider_id = db.Column(db.String, nullable=False)
+    email = db.Column(db.String, nullable=False)
+    phone = db.Column(db.String, nullable=False)
+    contact = db.Column(db.String, nullable=False)
+    username = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    registered_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    status = db.Column(db.String(30), nullable=False, server_default="PENDING")
