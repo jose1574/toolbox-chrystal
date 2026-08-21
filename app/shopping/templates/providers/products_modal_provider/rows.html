@@ -1,5 +1,15 @@
 {% for product in products %}
 <tr>
+    <td class="provider-product-select-cell">
+        <input
+            class="form-check-input provider-product-select-input"
+            type="checkbox"
+            name="selected_product_codes"
+            value="{{ product.code }}"
+            aria-label="Seleccionar {{ product.code }}"
+            onchange="handleProviderProductSelection()"
+        >
+    </td>
     <td>
         <span class="product-cell-name">{{ product.code }}</span>
         <span class="product-cell-sub">{{ product.name or '-' }}</span>
@@ -14,7 +24,7 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="8" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+    <td colspan="9" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
 </tr>
 {% endfor %}
 
@@ -25,7 +35,7 @@
     hx-target="this"
     hx-swap="outerHTML"
 >
-    <td colspan="8" class="text-center py-3 text-body-secondary">
+    <td colspan="9" class="text-center py-3 text-body-secondary">
         Cargando más productos...
     </td>
 </tr>

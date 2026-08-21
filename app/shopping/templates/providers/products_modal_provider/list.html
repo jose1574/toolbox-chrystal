@@ -1,8 +1,16 @@
-<div class="provider-table-wrap" id="provider-catalog-list">
+<div class="provider-table-wrap" id="provider-catalog-list" data-total-products="{{ total_products }}">
     <div class="table-responsive provider-table-scroll" id="provider-catalog-table-scroll">
         <table class="table provider-table align-middle mb-0">
             <thead>
                 <tr>
+                    <th class="provider-product-select-cell">
+                        <input
+                            class="form-check-input provider-product-select-input"
+                            type="checkbox"
+                            aria-label="Seleccionar productos visibles"
+                            onchange="toggleProviderVisibleProducts(this)"
+                        >
+                    </th>
                     <th style="width: 22%;">Código / Nombre</th>
                     <th style="width: 12%;">Departamento</th>
                     <th style="width: 10%;">Marca</th>

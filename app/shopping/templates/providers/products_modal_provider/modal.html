@@ -328,6 +328,18 @@
             text-overflow: ellipsis;
         }
 
+        #providerCatalogModal .provider-product-select-cell {
+            width: 2.8rem;
+            text-align: center;
+        }
+
+        #providerCatalogModal .provider-product-select-input {
+            width: 1rem;
+            height: 1rem;
+            margin: 0;
+            cursor: pointer;
+        }
+
         #providerCatalogModal .provider-table tbody tr:nth-child(odd) {
             background: rgba(255,255,255,0.015);
         }
@@ -480,11 +492,6 @@
                         />
                     </div>
 
-                    <div class="provider-scope">
-                        <label class="mb-0" style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:rgba(255,255,255,0.62);">Alcance</label>
-                        <button type="button" class="provider-scope-highlight">Mostrar todos los productos</button>
-                    </div>
-
                     <div class="provider-field provider-provider-filter">
                         <label for="provider-only-products">Catálogo</label>
                         <div class="form-check">
@@ -552,16 +559,19 @@
                 </div>
 
                 <div class="provider-topbar-row">
-                    <div class="provider-chip-group">
-                        <span class="provider-chip active">Todos</span>
-                        <span class="provider-chip">Limpieza</span>
-                        <span class="provider-chip">Tecnología</span>
-                        <span class="provider-chip">Oficina</span>
-                        <span class="provider-chip">Mecánica</span>
-                        <span class="provider-chip">Hogar</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="small text-body-secondary">
+                        {{ total_products }} productos encontrados
+                        <span class="mx-1">·</span>
+                        <span id="provider-selected-products-count">0 seleccionados</span>
+                        </span>
+                        <button
+                            id="provider-select-all-filtered"
+                            type="button"
+                            class="btn btn-sm btn-outline-primary d-none"
+                            onclick="selectAllProviderFilteredProducts()"
+                        >Seleccionar todos</button>
                     </div>
-
-                    <div class="small text-body-secondary">{{ total_products }} productos encontrados</div>
                 </div>
 
                 {% include 'providers/products_modal_provider/list.html' %}
@@ -575,6 +585,8 @@
 </div>
 
 <script>
+    window.providerCatalogSelection ||= { allFiltered: false };
+
     function filterProviderDepartmentOptions(input) {
         const searchValue = input.value.trim().toLocaleLowerCase();
         input.closest('.dropdown-menu').querySelectorAll('.provider-department-option').forEach((option) => {
@@ -603,5 +615,57 @@
         if (label) {
             label.textContent = count ? `${count} seleccionados` : 'Todos';
         }
+    }
+
+    function updateProviderSelectedProductsCount() {
+        const list = document.getElementById('provider-catalog-list');
+        const visibleSelectedCount = document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]:checked').length;
+        const totalProducts = Number(list?.dataset.totalProducts || 0);
+        const count = window.providerCatalogSelection.allFiltered ? totalProducts : visibleSelectedCount;
+        const label = document.getElementById('provider-selected-products-count');
+        const selectAllButton = document.getElementById('provider-select-all-filtered');
+        if (label) {
+            label.textContent = `${count} seleccionados`;
+        }
+        if (selectAllButton) {
+            const hasMoreResults = totalProducts > document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]').length;
+            selectAllButton.classList.toggle('d-none', count === 0 || !hasMoreResults);
+            selectAllButton.textContent = window.providerCatalogSelection.allFiltered
+                ? 'Quitar selección total'
+                : `Seleccionar todos (${totalProducts})`;
+        }
+    }
+
+    function toggleProviderVisibleProducts(selectAll) {
+        document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]').forEach((input) => {
+            input.checked = selectAll.checked;
+        });
+        window.providerCatalogSelection.allFiltered = false;
+        updateProviderSelectedProductsCount();
+    }
+
+    function handleProviderProductSelection() {
+        window.providerCatalogSelection.allFiltered = false;
+        updateProviderSelectedProductsCount();
+    }
+
+    function selectAllProviderFilteredProducts() {
+        window.providerCatalogSelection.allFiltered = !window.providerCatalogSelection.allFiltered;
+        document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]').forEach((input) => {
+            input.checked = window.providerCatalogSelection.allFiltered;
+        });
+        updateProviderSelectedProductsCount();
+    }
+
+    if (!document.body.dataset.providerCatalogSelectionBound) {
+        document.body.dataset.providerCatalogSelectionBound = 'true';
+        document.body.addEventListener('htmx:afterSwap', () => {
+            if (window.providerCatalogSelection.allFiltered) {
+                document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]').forEach((input) => {
+                    input.checked = true;
+                });
+            }
+            updateProviderSelectedProductsCount();
+        });
     }
 </script>
