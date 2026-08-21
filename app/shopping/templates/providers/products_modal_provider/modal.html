@@ -1,0 +1,456 @@
+<div class="modal fade" id="providerCatalogModal" tabindex="-1" aria-labelledby="providerCatalogModalLabel" aria-hidden="true">
+    <style>
+        #providerCatalogModal .modal-dialog {
+            width: min(120rem, calc(100vw - 0.75rem));
+            max-width: calc(100vw - 0.75rem);
+            margin: 0.75rem auto;
+        }
+
+        #providerCatalogModal .modal-content {
+            background: #1d232b;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.9rem;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+
+        #providerCatalogModal .provider-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 1rem 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.10);
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        }
+
+        #providerCatalogModal .provider-brand-mark {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 50%;
+            background: #58a6ff;
+            box-shadow: 0 0 0 0.3rem rgba(88, 166, 255, 0.16);
+        }
+
+        #providerCatalogModal .provider-modal-kicker {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.56);
+        }
+
+        #providerCatalogModal .provider-modal-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+        }
+
+        #providerCatalogModal .provider-modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        #providerCatalogModal .provider-action-btn,
+        #providerCatalogModal .provider-page-btn,
+        #providerCatalogModal .provider-close-btn {
+            border-radius: 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.02);
+            color: rgba(255,255,255,0.8);
+            transition: all 0.2s ease;
+        }
+
+        #providerCatalogModal .provider-action-btn {
+            min-width: 2.2rem;
+            height: 2.1rem;
+            padding: 0.35rem 0.7rem;
+        }
+
+        #providerCatalogModal .provider-primary-btn {
+            background: #f4d44b;
+            border-color: #f4d44b;
+            color: #1b1d21;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+        }
+
+        #providerCatalogModal .provider-close-btn {
+            width: 2.2rem;
+            height: 2.2rem;
+            background: transparent;
+            border-radius: 0.6rem;
+            padding: 0;
+        }
+
+        #providerCatalogModal .provider-close-btn:hover,
+        #providerCatalogModal .provider-action-btn:hover,
+        #providerCatalogModal .provider-page-btn:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.18);
+            color: #fff;
+        }
+
+        #providerCatalogModal .provider-modal-body {
+            background: rgba(18, 21, 27, 0.96);
+            padding: 1rem 1.35rem 0.65rem;
+        }
+
+        #providerCatalogModal .provider-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.7fr) minmax(220px, 1fr) minmax(190px, 0.8fr) minmax(190px, 0.8fr);
+            gap: 0.75rem;
+            align-items: end;
+            margin-bottom: 0.9rem;
+        }
+
+        #providerCatalogModal .provider-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.38rem;
+        }
+
+        #providerCatalogModal .provider-field label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: rgba(255,255,255,0.62);
+            margin: 0;
+        }
+
+        #providerCatalogModal .provider-field input,
+        #providerCatalogModal .provider-field select {
+            width: 100%;
+            height: 2.5rem;
+            border-radius: 0.55rem;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.88);
+            padding: 0.55rem 0.8rem;
+            font-size: 0.84rem;
+        }
+
+        #providerCatalogModal .provider-field input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        #providerCatalogModal .provider-field input:focus,
+        #providerCatalogModal .provider-field select:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.18rem rgba(88,166,255,0.18);
+            border-color: rgba(88,166,255,0.55);
+        }
+
+        #providerCatalogModal .provider-scope {
+            display: flex;
+            flex-direction: column;
+            gap: 0.38rem;
+        }
+
+        #providerCatalogModal .provider-scope button {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 2.5rem;
+            border-radius: 0.55rem;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.9);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0 0.8rem;
+        }
+
+        #providerCatalogModal .provider-scope .provider-scope-highlight {
+            background: #f4d44b;
+            border-color: #f4d44b;
+            color: #121417;
+            font-weight: 800;
+        }
+
+        #providerCatalogModal .provider-topbar-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+            margin-bottom: 0.9rem;
+        }
+
+        #providerCatalogModal .provider-chip-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        #providerCatalogModal .provider-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.1rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.6rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.7);
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+
+        #providerCatalogModal .provider-chip.active {
+            background: rgba(244, 212, 75, 0.18);
+            border-color: rgba(244, 212, 75, 0.42);
+            color: #f4d44b;
+        }
+
+        #providerCatalogModal .provider-table-wrap {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.7rem;
+            overflow: hidden;
+            background: rgba(255,255,255,0.01);
+            max-height: min(58vh, 46rem);
+        }
+
+        #providerCatalogModal .provider-table-scroll {
+            max-height: min(58vh, 46rem);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #providerCatalogModal .provider-table {
+            margin: 0;
+            width: 100%;
+            border-collapse: collapse;
+            color: rgba(255,255,255,0.9);
+            table-layout: fixed;
+            font-size: 0.77rem;
+        }
+
+        #providerCatalogModal .provider-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: rgba(27, 31, 38, 0.98);
+            color: rgba(255,255,255,0.72);
+            border-bottom: 1px solid rgba(255,255,255,0.09);
+            font-size: 0.7rem;
+            line-height: 1.2;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.8rem 0.75rem;
+        }
+
+        #providerCatalogModal .provider-table tbody td {
+            padding: 0.7rem 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.9);
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #providerCatalogModal .provider-table tbody tr:nth-child(odd) {
+            background: rgba(255,255,255,0.015);
+        }
+
+        #providerCatalogModal .provider-table tbody tr:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        #providerCatalogModal .product-cell-name {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 700;
+            color: rgba(255,255,255,0.96);
+        }
+
+        #providerCatalogModal .product-cell-sub {
+            display: block;
+            color: rgba(255,255,255,0.62);
+            font-size: 0.72rem;
+            margin-top: 0.15rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #providerCatalogModal .provider-table .text-end {
+            text-align: right;
+        }
+
+        #providerCatalogModal .provider-modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            min-height: 3.3rem;
+            padding: 0.7rem 1rem 0.9rem;
+            background: rgba(255,255,255,0.01);
+            border-top: 1px solid rgba(255,255,255,0.09);
+            color: rgba(255,255,255,0.66);
+            font-size: 0.82rem;
+        }
+
+        #providerCatalogModal .provider-pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        #providerCatalogModal .provider-page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0;
+        }
+
+        #providerCatalogModal .provider-page-btn.active {
+            background: rgba(244, 212, 75, 0.18);
+            border-color: rgba(244, 212, 75, 0.44);
+            color: #f4d44b;
+        }
+
+        @media (max-width: 1199.98px) {
+            #providerCatalogModal .provider-controls {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            #providerCatalogModal .modal-dialog {
+                width: min(100vw - 0.5rem, 100%);
+                max-width: 100vw;
+                margin: 0.5rem auto;
+            }
+
+            #providerCatalogModal .provider-controls {
+                grid-template-columns: 1fr;
+            }
+
+            #providerCatalogModal .provider-modal-header,
+            #providerCatalogModal .provider-topbar-row,
+            #providerCatalogModal .provider-modal-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content provider-modal-shell border-0">
+            <div class="modal-header provider-modal-header border-0">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="provider-brand-mark d-inline-block"></span>
+                    <div>
+                        <div class="provider-modal-kicker">Portal de proveedores</div>
+                        <h2 id="providerCatalogModalLabel" class="provider-modal-title">Catálogo de Productos</h2>
+                    </div>
+                </div>
+
+                <div class="provider-modal-actions">
+                    <button type="button" class="btn btn-sm provider-action-btn" aria-label="Filtrar productos">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-sm provider-primary-btn">Agregar productos</button>
+                    <button type="button" class="btn provider-close-btn" data-bs-dismiss="modal" aria-label="Cerrar">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body provider-modal-body p-3 p-md-4">
+                <div class="provider-controls">
+                    <div class="provider-field">
+                        <label for="provider-product-search">Buscar producto</label>
+                        <input
+                            id="provider-product-search"
+                            type="text"
+                            placeholder="Código o nombre"
+                            value="{{ query or '' }}"
+                            hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
+                            hx-trigger="keyup changed delay:300ms"
+                            hx-target="#provider-catalog-modal-container"
+                            hx-swap="innerHTML"
+                            name="q"
+                        />
+                    </div>
+
+                    <div class="provider-field">
+                        <label for="provider-product-reference">Referencia</label>
+                        <input
+                            id="provider-product-reference"
+                            type="text"
+                            placeholder="Referencia"
+                            value="{{ reference or '' }}"
+                            hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
+                            hx-trigger="keyup changed delay:300ms"
+                            hx-target="#provider-catalog-modal-container"
+                            hx-swap="innerHTML"
+                            name="reference"
+                        />
+                    </div>
+
+                    <div class="provider-scope">
+                        <label class="mb-0" style="font-size:0.72rem;font-weight:700;letter-spacing:0.02em;color:rgba(255,255,255,0.62);">Alcance</label>
+                        <button type="button" class="provider-scope-highlight">Mostrar todos los productos</button>
+                    </div>
+
+                    <div class="provider-field">
+                        <label for="mock-product-brand">Marca</label>
+                        <select id="mock-product-brand">
+                            <option>Todas</option>
+                            <option>ABB</option>
+                            <option>Vimar</option>
+                            <option>Schneider</option>
+                        </select>
+                    </div>
+
+                    <div class="provider-field">
+                        <label for="mock-product-department">Departamento</label>
+                        <select id="mock-product-department">
+                            <option>Todos</option>
+                            <option>Oficina</option>
+                            <option>Limpieza</option>
+                            <option>Tecnología</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="provider-topbar-row">
+                    <div class="provider-chip-group">
+                        <span class="provider-chip active">Todos</span>
+                        <span class="provider-chip">Limpieza</span>
+                        <span class="provider-chip">Tecnología</span>
+                        <span class="provider-chip">Oficina</span>
+                        <span class="provider-chip">Mecánica</span>
+                        <span class="provider-chip">Hogar</span>
+                    </div>
+
+                    <div class="small text-body-secondary">{{ total_products }} productos encontrados</div>
+                </div>
+
+                {% include 'providers/products_modal_provider/list.html' %}
+            </div>
+
+            <div class="modal-footer provider-modal-footer">
+                <div>Scroll infinito · página {{ current_page }} de {{ total_pages }}</div>
+            </div>
+        </div>
+    </div>
+</div>

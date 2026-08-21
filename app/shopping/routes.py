@@ -318,7 +318,38 @@ def selected_provider_details():
 @shopping_bp.route('/provider_catalog_modal')
 @provider_session_required
 def provider_catalog_modal():
-    return render_template('providers/provider_catalog_modal_products.html')
+    query = (request.args.get('q') or '').strip()
+    reference = (request.args.get('reference') or '').strip()
+    page = request.args.get('page', 1, type=int)
+    append = request.args.get('append') == '1'
+
+    products, total_products, total_pages, current_page = service.get_provider_catalog_products(
+        query=query,
+        reference=reference,
+        page=page,
+        per_page=20,
+    )
+
+    if append:
+        return render_template(
+            'providers/products_modal_provider/rows.html',
+            products=products,
+            query=query,
+            reference=reference,
+            total_products=total_products,
+            total_pages=total_pages,
+            current_page=current_page,
+        )
+
+    return render_template(
+        'providers/products_modal_provider/modal.html',
+        products=products,
+        query=query,
+        reference=reference,
+        total_products=total_products,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
 
 @shopping_bp.route('/provider_login', methods=['GET', 'POST'])
 def provider_login():

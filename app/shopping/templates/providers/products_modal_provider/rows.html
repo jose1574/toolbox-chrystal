@@ -1,0 +1,32 @@
+{% for product in products %}
+<tr>
+    <td>
+        <span class="product-cell-name">{{ product.code }}</span>
+        <span class="product-cell-sub">{{ product.name or '-' }}</span>
+    </td>
+    <td>{{ product.department }}</td>
+    <td>{{ product.brand }}</td>
+    <td>{{ product.reference }}</td>
+    <td>{{ product.stock_total }}</td>
+    <td>{{ product.minimum_stock }}</td>
+    <td>{{ product.maximum_stock }}</td>
+    <td>{{ product.replenishment_needed }}</td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="8" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+</tr>
+{% endfor %}
+
+{% if current_page < total_pages %}
+<tr
+    hx-get="{{ url_for('shopping.provider_catalog_modal', q=query, reference=reference, page=current_page + 1, append=1) }}"
+    hx-trigger="intersect once root:#provider-catalog-table-scroll"
+    hx-target="this"
+    hx-swap="outerHTML"
+>
+    <td colspan="8" class="text-center py-3 text-body-secondary">
+        Cargando más productos...
+    </td>
+</tr>
+{% endif %}

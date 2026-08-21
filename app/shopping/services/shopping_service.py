@@ -452,6 +452,98 @@ def get_product_shopping_param(code):
     ).first()
 
 
+def get_provider_catalog_products(query='', reference='', page=1, per_page=20):
+    query = (query or '').strip()
+    reference = (reference or '').strip()
+    page = max(page or 1, 1)
+    per_page = max(min(per_page or 20, 100), 1)
+
+    product_query = (
+        db.session.query(
+            Product.code.label('code'),
+            Product.description.label('name'),
+            Product.referenc.label('reference'),
+            Department.description.label('department'),
+            Mark.description.label('brand'),
+            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
+            func.coalesce(ShoppingProductsParam.minimum_stock, 0).label('minimum_stock'),
+            func.coalesce(ShoppingProductsParam.maximum_stock, 0).label('maximum_stock'),
+        )
+        .outerjoin(Department, Department.code == Product.department)
+        .outerjoin(Mark, Mark.code == Product.mark)
+        .outerjoin(ProductsStock, ProductsStock.product_code == Product.code)
+        .outerjoin(
+            ShoppingProductsParam,
+            func.upper(func.trim(ShoppingProductsParam.code)) == func.upper(func.trim(Product.code)),
+        )
+        .filter(Product.status == '01')
+        .group_by(
+            Product.code,
+            Product.description,
+            Product.referenc,
+            Department.description,
+            Mark.description,
+            ShoppingProductsParam.minimum_stock,
+            ShoppingProductsParam.maximum_stock,
+        )
+    )
+
+    if query:
+        term = (query or '').strip()
+        if '*' in term:
+            pattern = _wildcard_pattern(term)
+            product_query = product_query.filter(
+                or_(
+                    Product.code.ilike(pattern, escape='\\'),
+                    Product.description.ilike(pattern, escape='\\'),
+                    Product.referenc.ilike(pattern, escape='\\'),
+                )
+            )
+        else:
+            search_value = f'%{term}%'
+            product_query = product_query.filter(
+                or_(
+                    Product.code.ilike(search_value),
+                    Product.description.ilike(search_value),
+                    Product.referenc.ilike(search_value),
+                )
+            )
+
+    if reference:
+        ref_value = (reference or '').strip()
+        if '*' in ref_value:
+            pattern = _wildcard_pattern(ref_value)
+            product_query = product_query.filter(Product.referenc.ilike(pattern, escape='\\'))
+        else:
+            product_query = product_query.filter(Product.referenc.ilike(f'%{ref_value}%'))
+
+    product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
+    total_products = product_query.count()
+    total_pages = max((total_products + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+
+    rows = product_query.limit(per_page).offset((page - 1) * per_page).all()
+    products = []
+    for row in rows:
+        stock_total = float(row.stock_total or 0)
+        minimum_stock = float(row.minimum_stock or 0)
+        maximum_stock = float(row.maximum_stock or 0)
+        replenishment_needed = max(0.0, maximum_stock - stock_total)
+        products.append({
+            'code': row.code,
+            'name': row.name,
+            'department': row.department or '-',
+            'brand': row.brand or '-',
+            'reference': row.reference or '-',
+            'stock_total': stock_total,
+            'minimum_stock': minimum_stock,
+            'maximum_stock': maximum_stock,
+            'replenishment_needed': replenishment_needed,
+        })
+
+    return products, total_products, total_pages, page
+
+
 def get_product_shopping_param_form_context(code, errors=None, form_values=None):
     main_code = _resolve_main_code(code)
     if not main_code:

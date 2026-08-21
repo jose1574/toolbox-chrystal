@@ -1,0 +1,21 @@
+<div class="provider-table-wrap">
+    <div class="table-responsive provider-table-scroll" id="provider-catalog-table-scroll">
+        <table class="table provider-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 22%;">Código / Nombre</th>
+                    <th style="width: 12%;">Departamento</th>
+                    <th style="width: 10%;">Marca</th>
+                    <th style="width: 12%;">Referencia</th>
+                    <th style="width: 10%;">Stock total</th>
+                    <th style="width: 10%;">Mínimo</th>
+                    <th style="width: 10%;">Máximo</th>
+                    <th style="width: 14%;">Reponer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% include 'providers/products_modal_provider/rows.html' %}
+            </tbody>
+        </table>
+    </div>
+</div>
