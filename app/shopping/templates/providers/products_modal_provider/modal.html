@@ -120,7 +120,7 @@
             margin: 0;
         }
 
-        #providerCatalogModal .provider-field input,
+        #providerCatalogModal .provider-field input:not([type="checkbox"]),
         #providerCatalogModal .provider-field select {
             width: 100%;
             height: 2.5rem;
@@ -132,15 +132,63 @@
             font-size: 0.84rem;
         }
 
-        #providerCatalogModal .provider-field input::placeholder {
+        #providerCatalogModal .provider-field input:not([type="checkbox"])::placeholder {
             color: rgba(255,255,255,0.4);
         }
 
-        #providerCatalogModal .provider-field input:focus,
+        #providerCatalogModal .provider-field input:not([type="checkbox"]):focus,
         #providerCatalogModal .provider-field select:focus {
             outline: none;
             box-shadow: 0 0 0 0.18rem rgba(88,166,255,0.18);
             border-color: rgba(88,166,255,0.55);
+        }
+
+        #providerCatalogModal .provider-filter-dropdown .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 2.5rem;
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 0.55rem;
+            background: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.88);
+            font-size: 0.84rem;
+            text-align: left;
+        }
+
+        #providerCatalogModal .provider-filter-dropdown .dropdown-menu {
+            width: 100%;
+            max-height: 18rem;
+            padding: 0.4rem;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 0.55rem;
+            background: #252c35;
+        }
+
+        #providerCatalogModal .provider-filter-dropdown .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            border-radius: 0.4rem;
+            color: rgba(255,255,255,0.85);
+            cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-filter-dropdown .form-check-input {
+            width: 0.9rem;
+            height: 0.9rem;
+            min-width: 0.9rem;
+            margin: 0;
+            padding: 0;
+            appearance: auto;
+            cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-filter-dropdown .form-check-input:checked {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
         }
 
         #providerCatalogModal .provider-scope {
@@ -375,7 +423,7 @@
             </div>
 
             <div class="modal-body provider-modal-body p-3 p-md-4">
-                <div class="provider-controls">
+                <div class="provider-controls" id="provider-catalog-filters">
                     <div class="provider-field">
                         <label for="provider-product-search">Buscar producto</label>
                         <input
@@ -411,24 +459,48 @@
                         <button type="button" class="provider-scope-highlight">Mostrar todos los productos</button>
                     </div>
 
-                    <div class="provider-field">
-                        <label for="mock-product-brand">Marca</label>
-                        <select id="mock-product-brand">
-                            <option>Todas</option>
-                            <option>ABB</option>
-                            <option>Vimar</option>
-                            <option>Schneider</option>
-                        </select>
+                    <div class="provider-field provider-filter-dropdown">
+                        <label>Marca</label>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                <span id="provider-mark-filter-count">{{ mark_codes|length ~ ' seleccionadas' if mark_codes else 'Todas' }}</span>
+                            </button>
+                            <div class="dropdown-menu">
+                                <div class="px-2 pb-2">
+                                    <input type="search" class="form-control form-control-sm" placeholder="Buscar marca" aria-label="Buscar marca" oninput="filterProviderMarkOptions(this)">
+                                </div>
+                                {% for mark in marks %}
+                                <label class="dropdown-item provider-mark-option">
+                                    <input class="form-check-input" type="checkbox" name="mark_codes" value="{{ mark.code }}" {% if mark.code in mark_codes %}checked{% endif %}
+                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
+                                        onchange="updateProviderMarkCount()">
+                                    <span>{{ mark.description or mark.code }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="provider-field">
-                        <label for="mock-product-department">Departamento</label>
-                        <select id="mock-product-department">
-                            <option>Todos</option>
-                            <option>Oficina</option>
-                            <option>Limpieza</option>
-                            <option>Tecnología</option>
-                        </select>
+                    <div class="provider-field provider-filter-dropdown">
+                        <label>Departamento</label>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                <span id="provider-department-filter-count">{{ department_codes|length ~ ' seleccionados' if department_codes else 'Todos' }}</span>
+                            </button>
+                            <div class="dropdown-menu">
+                                <div class="px-2 pb-2">
+                                    <input type="search" class="form-control form-control-sm" placeholder="Buscar departamento" aria-label="Buscar departamento" oninput="filterProviderDepartmentOptions(this)">
+                                </div>
+                                {% for department in departments %}
+                                <label class="dropdown-item provider-department-option">
+                                    <input class="form-check-input" type="checkbox" name="department_codes" value="{{ department.code }}" {% if department.code in department_codes %}checked{% endif %}
+                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
+                                        onchange="updateProviderDepartmentCount()">
+                                    <span>{{ department.description or department.code }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -454,3 +526,35 @@
         </div>
     </div>
 </div>
+
+<script>
+    function filterProviderDepartmentOptions(input) {
+        const searchValue = input.value.trim().toLocaleLowerCase();
+        input.closest('.dropdown-menu').querySelectorAll('.provider-department-option').forEach((option) => {
+            option.classList.toggle('d-none', !option.textContent.toLocaleLowerCase().includes(searchValue));
+        });
+    }
+
+    function filterProviderMarkOptions(input) {
+        const searchValue = input.value.trim().toLocaleLowerCase();
+        input.closest('.dropdown-menu').querySelectorAll('.provider-mark-option').forEach((option) => {
+            option.classList.toggle('d-none', !option.textContent.toLocaleLowerCase().includes(searchValue));
+        });
+    }
+
+    function updateProviderMarkCount() {
+        const count = document.querySelectorAll('input[name="mark_codes"]:checked').length;
+        const label = document.getElementById('provider-mark-filter-count');
+        if (label) {
+            label.textContent = count ? `${count} seleccionadas` : 'Todas';
+        }
+    }
+
+    function updateProviderDepartmentCount() {
+        const count = document.querySelectorAll('input[name="department_codes"]:checked').length;
+        const label = document.getElementById('provider-department-filter-count');
+        if (label) {
+            label.textContent = count ? `${count} seleccionados` : 'Todos';
+        }
+    }
+</script>

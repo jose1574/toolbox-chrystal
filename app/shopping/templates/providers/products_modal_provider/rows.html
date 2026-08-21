@@ -20,7 +20,7 @@
 
 {% if current_page < total_pages %}
 <tr
-    hx-get="{{ url_for('shopping.provider_catalog_modal', q=query, reference=reference, page=current_page + 1, append=1) }}"
+    hx-get="{{ url_for('shopping.provider_catalog_modal', q=query, reference=reference, mark_codes=mark_codes, department_codes=department_codes, page=current_page + 1, append=1) }}"
     hx-trigger="intersect once root:#provider-catalog-table-scroll"
     hx-target="this"
     hx-swap="outerHTML"

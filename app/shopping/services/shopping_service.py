@@ -452,9 +452,11 @@ def get_product_shopping_param(code):
     ).first()
 
 
-def get_provider_catalog_products(query='', reference='', page=1, per_page=20):
+def get_provider_catalog_products(query='', reference='', mark_codes=None, department_codes=None, page=1, per_page=20):
     query = (query or '').strip()
     reference = (reference or '').strip()
+    mark_codes = [normalize_code(code) for code in (mark_codes or []) if normalize_code(code)]
+    department_codes = [normalize_code(code) for code in (department_codes or []) if normalize_code(code)]
     page = max(page or 1, 1)
     per_page = max(min(per_page or 20, 100), 1)
 
@@ -516,6 +518,16 @@ def get_provider_catalog_products(query='', reference='', page=1, per_page=20):
             product_query = product_query.filter(Product.referenc.ilike(pattern, escape='\\'))
         else:
             product_query = product_query.filter(Product.referenc.ilike(f'%{ref_value}%'))
+
+    if department_codes:
+        product_query = product_query.filter(
+            func.upper(func.trim(Product.department)).in_(department_codes)
+        )
+
+    if mark_codes:
+        product_query = product_query.filter(
+            func.upper(func.trim(Product.mark)).in_(mark_codes)
+        )
 
     product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
     total_products = product_query.count()

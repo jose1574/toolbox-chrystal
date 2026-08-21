@@ -320,12 +320,17 @@ def selected_provider_details():
 def provider_catalog_modal():
     query = (request.args.get('q') or '').strip()
     reference = (request.args.get('reference') or '').strip()
+    mark_codes = request.args.getlist('mark_codes')
+    department_codes = request.args.getlist('department_codes')
     page = request.args.get('page', 1, type=int)
     append = request.args.get('append') == '1'
+    list_only = request.args.get('list_only') == '1'
 
     products, total_products, total_pages, current_page = service.get_provider_catalog_products(
         query=query,
         reference=reference,
+        mark_codes=mark_codes,
+        department_codes=department_codes,
         page=page,
         per_page=20,
     )
@@ -336,16 +341,36 @@ def provider_catalog_modal():
             products=products,
             query=query,
             reference=reference,
+            mark_codes=mark_codes,
+            department_codes=department_codes,
             total_products=total_products,
             total_pages=total_pages,
             current_page=current_page,
         )
 
+    if list_only:
+        return render_template(
+            'providers/products_modal_provider/list.html',
+            products=products,
+            query=query,
+            reference=reference,
+            mark_codes=mark_codes,
+            department_codes=department_codes,
+            total_products=total_products,
+            total_pages=total_pages,
+            current_page=current_page,
+        )
+
+    marks, departments = service.get_product_filter_options()
     return render_template(
         'providers/products_modal_provider/modal.html',
         products=products,
         query=query,
         reference=reference,
+        mark_codes=mark_codes,
+        marks=marks,
+        department_codes=department_codes,
+        departments=departments,
         total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,
