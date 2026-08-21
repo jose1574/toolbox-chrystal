@@ -322,6 +322,8 @@ def provider_catalog_modal():
     reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
+    only_provider_products = request.args.get('only_provider_products') == '1'
+    provider_code = session.get('provider_code', '')
     page = request.args.get('page', 1, type=int)
     append = request.args.get('append') == '1'
     list_only = request.args.get('list_only') == '1'
@@ -331,6 +333,8 @@ def provider_catalog_modal():
         reference=reference,
         mark_codes=mark_codes,
         department_codes=department_codes,
+        provider_code=provider_code,
+        only_provider_products=only_provider_products,
         page=page,
         per_page=20,
     )
@@ -343,6 +347,7 @@ def provider_catalog_modal():
             reference=reference,
             mark_codes=mark_codes,
             department_codes=department_codes,
+            only_provider_products=only_provider_products,
             total_products=total_products,
             total_pages=total_pages,
             current_page=current_page,
@@ -356,6 +361,7 @@ def provider_catalog_modal():
             reference=reference,
             mark_codes=mark_codes,
             department_codes=department_codes,
+            only_provider_products=only_provider_products,
             total_products=total_products,
             total_pages=total_pages,
             current_page=current_page,
@@ -371,6 +377,7 @@ def provider_catalog_modal():
         marks=marks,
         department_codes=department_codes,
         departments=departments,
+        only_provider_products=only_provider_products,
         total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,

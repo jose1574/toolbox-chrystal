@@ -452,11 +452,21 @@ def get_product_shopping_param(code):
     ).first()
 
 
-def get_provider_catalog_products(query='', reference='', mark_codes=None, department_codes=None, page=1, per_page=20):
+def get_provider_catalog_products(
+    query='',
+    reference='',
+    mark_codes=None,
+    department_codes=None,
+    provider_code='',
+    only_provider_products=False,
+    page=1,
+    per_page=20,
+):
     query = (query or '').strip()
     reference = (reference or '').strip()
     mark_codes = [normalize_code(code) for code in (mark_codes or []) if normalize_code(code)]
     department_codes = [normalize_code(code) for code in (department_codes or []) if normalize_code(code)]
+    provider_code = normalize_code(provider_code)
     page = max(page or 1, 1)
     per_page = max(min(per_page or 20, 100), 1)
 
@@ -527,6 +537,16 @@ def get_provider_catalog_products(query='', reference='', mark_codes=None, depar
     if mark_codes:
         product_query = product_query.filter(
             func.upper(func.trim(Product.mark)).in_(mark_codes)
+        )
+
+    if only_provider_products and provider_code:
+        product_query = product_query.filter(
+            db.session.query(ProductsProvider.line)
+            .filter(
+                func.upper(func.trim(ProductsProvider.product_code)) == func.upper(func.trim(Product.code)),
+                func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+            )
+            .exists()
         )
 
     product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
