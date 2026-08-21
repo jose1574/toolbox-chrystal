@@ -1,6 +1,7 @@
 import re
+from functools import wraps
 
-from flask import make_response, redirect, render_template, request, flash, url_for
+from flask import make_response, redirect, render_template, request, flash, session, url_for
 from flask_login import current_user, login_required
 
 from app import db
@@ -60,6 +61,16 @@ def username_is_registered(value):
         ).first()
         or User.query.filter(db.func.lower(User.code) == normalized).first()
     )
+
+
+def provider_session_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not session.get('provider_logged_in') or not session.get('provider_username'):
+            flash('Debes iniciar sesión como proveedor para acceder a este panel.', 'warning')
+            return redirect(url_for('shopping.provider_login'))
+        return view_func(*args, **kwargs)
+    return wrapped
 
 
 @shopping_bp.route('/provider_username_availability')
@@ -238,6 +249,27 @@ def provider_selection():
     )
 
 
+@shopping_bp.route('/provider_panel')
+@provider_session_required
+def provider_panel():
+    provider_username = session.get('provider_username')
+    provider_code = session.get('provider_code')
+    return render_template(
+        'providers/provider_panel.html',
+        provider_username=provider_username,
+        provider_code=provider_code,
+    )
+
+
+@shopping_bp.route('/provider_logout')
+def provider_logout():
+    session.pop('provider_logged_in', None)
+    session.pop('provider_username', None)
+    session.pop('provider_code', None)
+    flash('Sesión de proveedor cerrada correctamente.', 'success')
+    return redirect(url_for('shopping.provider_login'))
+
+
 @shopping_bp.route('/order')
 @login_required 
 def order():
@@ -282,6 +314,11 @@ def selected_provider_details():
         inventory_context=inventory_context,
     )
 
+
+@shopping_bp.route('/provider_catalog_modal')
+@provider_session_required
+def provider_catalog_modal():
+    return render_template('providers/provider_catalog_modal_products.html')
 
 @shopping_bp.route('/provider_login', methods=['GET', 'POST'])
 def provider_login():
@@ -341,6 +378,16 @@ def provider_login():
                 error_message='Usuario o clave incorrectos.',
             )
 
+        if registration.status == 'BLOCKED':
+            return render_template(
+                'providers/provider_login.html',
+                login_type=login_type,
+                login_value=submitted_login_value,
+                password=password,
+                show_demo_message=True,
+                error_message='Esta cuenta está bloqueada o inactiva. Contacte a soporte para reactivarla.',
+            )
+
         if registration.status == 'PENDING':
             return render_template(
                 'providers/provider_register_status.html',
@@ -348,14 +395,11 @@ def provider_login():
                 status_label='PENDIENTE',
             )
 
-        return render_template(
-            'providers/provider_login.html',
-            login_type=login_type,
-            login_value=submitted_login_value,
-            password=password,
-            show_demo_message=True,
-            error_message='Esta cuenta ya fue aprobada y puede continuar con el acceso.',
-        )
+        session['provider_logged_in'] = True
+        session['provider_username'] = registration.username
+        session['provider_code'] = registration.code
+
+        return redirect(url_for('shopping.provider_panel'))
 
     return render_template('providers/provider_login.html', login_type=login_type, login_value=submitted_login_value, password='')
 
@@ -378,6 +422,33 @@ def provider_register_status():
         registration=registration,
         status_label='PENDIENTE',
     )
+
+
+@shopping_bp.route('/provider_approvals')
+@login_required
+def provider_approvals():
+    registrations = ProviderRegistration.query.order_by(ProviderRegistration.registered_at.desc()).all()
+    return render_template('providers/provider_approvals.html', registrations=registrations)
+
+
+@shopping_bp.route('/provider_approval/<string:registration_code>', methods=['POST'])
+@login_required
+def provider_approval(registration_code):
+    registration = ProviderRegistration.query.filter_by(code=registration_code).first_or_404()
+    registration.status = 'APPROVED'
+    db.session.commit()
+    flash('El registro del proveedor fue aprobado correctamente.', 'success')
+    return redirect(url_for('shopping.provider_approvals'))
+
+
+@shopping_bp.route('/provider_block/<string:registration_code>', methods=['POST'])
+@login_required
+def provider_block(registration_code):
+    registration = ProviderRegistration.query.filter_by(code=registration_code).first_or_404()
+    registration.status = 'BLOCKED'
+    db.session.commit()
+    flash('El usuario proveedor fue bloqueado e inactivado correctamente.', 'warning')
+    return redirect(url_for('shopping.provider_approvals'))
 
 
 @shopping_bp.route('/provider_register', methods=['GET', 'POST'])

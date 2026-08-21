@@ -1,0 +1,149 @@
+<div class="modal fade" id="providerCatalogModal" tabindex="-1" aria-labelledby="providerCatalogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content provider-modal-shell border-0">
+            <div class="modal-header provider-modal-header border-0">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="provider-brand-dot d-inline-block"></span>
+                    <div>
+                        <div class="small text-uppercase fw-semibold text-body-secondary" style="letter-spacing: 0.12em;">Portal de proveedores</div>
+                        <h2 id="providerCatalogModalLabel" class="h5 mb-0 fw-semibold">Catálogo de Productos</h2>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm provider-modal-btn px-2" aria-label="Filtrar productos">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-sm provider-primary-btn px-3 py-2 fw-semibold">Agregar productos</button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+
+            <div class="modal-body provider-modal-body p-3 p-md-4">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
+                    <div class="input-group provider-modal-search" style="max-width: 420px;">
+                        <span class="input-group-text border-0 bg-transparent text-body-secondary px-3">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle cx="11" cy="11" r="5.5" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M16 16l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <input type="text" class="form-control border-0 bg-transparent text-light shadow-none" placeholder="Buscar código, nombre o categoría..." aria-label="Buscar producto">
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="provider-chip active">Disponibles</span>
+                        <span class="provider-chip">En stock</span>
+                        <span class="provider-chip">Por renovar</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="provider-chip active">Todos</span>
+                    <span class="provider-chip">Limpieza</span>
+                    <span class="provider-chip">Tecnología</span>
+                    <span class="provider-chip">Oficina</span>
+                    <span class="provider-chip">Mecánica</span>
+                    <span class="provider-chip">Hogar</span>
+                </div>
+
+                <div class="provider-table-wrap">
+                    <div class="table-responsive">
+                        <table class="table provider-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Categoria</th>
+                                    <th scope="col">Precio</th>
+                                    <th scope="col">Stock</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col" class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="provider-product-name">Papel Toalla Premium</div>
+                                        <div class="provider-product-sub">Marca: CleanMax</div>
+                                    </td>
+                                    <td>PRD-1021</td>
+                                    <td>Limpieza</td>
+                                    <td>$24.90</td>
+                                    <td>120</td>
+                                    <td><span class="provider-badge">Disponible</span></td>
+                                    <td class="text-end"><button type="button" class="btn provider-table-action">Agregar</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="provider-product-name">Mouse USB Pro</div>
+                                        <div class="provider-product-sub">Marca: Velocity</div>
+                                    </td>
+                                    <td>PRD-2057</td>
+                                    <td>Oficina</td>
+                                    <td>$38.50</td>
+                                    <td>65</td>
+                                    <td><span class="provider-badge">Disponible</span></td>
+                                    <td class="text-end"><button type="button" class="btn provider-table-action">Agregar</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="provider-product-name">Cinta Adhesiva Industrial</div>
+                                        <div class="provider-product-sub">Marca: FixBond</div>
+                                    </td>
+                                    <td>PRD-3089</td>
+                                    <td>Hogar</td>
+                                    <td>$12.20</td>
+                                    <td>87</td>
+                                    <td><span class="provider-badge">Disponible</span></td>
+                                    <td class="text-end"><button type="button" class="btn provider-table-action">Agregar</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="provider-product-name">Kit de Herramientas</div>
+                                        <div class="provider-product-sub">Marca: ToolPro</div>
+                                    </td>
+                                    <td>PRD-4102</td>
+                                    <td>Mecánica</td>
+                                    <td>$89.00</td>
+                                    <td>24</td>
+                                    <td><span class="provider-badge">Disponible</span></td>
+                                    <td class="text-end"><button type="button" class="btn provider-table-action">Agregar</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="provider-product-name">Monitor 24&quot; FHD</div>
+                                        <div class="provider-product-sub">Marca: VisionX</div>
+                                    </td>
+                                    <td>PRD-5118</td>
+                                    <td>Tecnología</td>
+                                    <td>$214.00</td>
+                                    <td>18</td>
+                                    <td><span class="provider-badge">Disponible</span></td>
+                                    <td class="text-end"><button type="button" class="btn provider-table-action">Agregar</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer provider-footer-panel border-0 justify-content-between">
+                <div class="small text-body-secondary">Mostrando 1-5 de 24 productos</div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm provider-modal-btn active" aria-label="Página 1">1</button>
+                    <button type="button" class="btn btn-sm provider-modal-btn" aria-label="Página 2">2</button>
+                    <button type="button" class="btn btn-sm provider-modal-btn" aria-label="Página 3">3</button>
+                    <button type="button" class="btn btn-sm provider-modal-btn" aria-label="Página siguiente">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M9 7l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

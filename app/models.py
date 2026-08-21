@@ -9690,7 +9690,7 @@ class ProviderRegistration(db.Model):
     __tablename__ = "provider_registrations"
     __table_args__ = (
         db.CheckConstraint(
-            "status IN ('PENDING', 'APPROVED')",
+            "status IN ('PENDING', 'APPROVED', 'BLOCKED')",
             name="ck_provider_registrations_status",
         ),
         {"schema": "toolbox"},

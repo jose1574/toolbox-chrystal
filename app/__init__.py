@@ -1,7 +1,7 @@
 import os
 import logging
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, session, flash
 from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
@@ -137,16 +137,20 @@ def ensure_toolbox_schema_columns(inspector):
                 IF EXISTS (
                     SELECT 1 FROM information_schema.tables
                     WHERE table_schema = 'toolbox' AND table_name = 'provider_registrations'
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM pg_constraint c
-                    JOIN pg_class t ON c.conrelid = t.oid
-                    JOIN pg_namespace n ON n.oid = t.relnamespace
-                    WHERE n.nspname = 'toolbox' AND t.relname = 'provider_registrations' AND c.conname = 'ck_provider_registrations_status'
                 ) THEN
+                    IF EXISTS (
+                        SELECT 1 FROM pg_constraint c
+                        JOIN pg_class t ON c.conrelid = t.oid
+                        JOIN pg_namespace n ON n.oid = t.relnamespace
+                        WHERE n.nspname = 'toolbox' AND t.relname = 'provider_registrations' AND c.conname = 'ck_provider_registrations_status'
+                    ) THEN
+                        ALTER TABLE toolbox.provider_registrations
+                        DROP CONSTRAINT ck_provider_registrations_status;
+                    END IF;
+
                     ALTER TABLE toolbox.provider_registrations
                     ADD CONSTRAINT ck_provider_registrations_status
-                    CHECK (status IN ('PENDING', 'APPROVED'));
+                    CHECK (status IN ('PENDING', 'APPROVED', 'BLOCKED'));
                 END IF;
             END $$;
         """))
@@ -189,6 +193,9 @@ def create_app():
             "static",
             "shopping.provider_login",
             "shopping.provider_register",
+            "shopping.provider_register_status",
+            "shopping.provider_username_availability",
+            "shopping.provider_logout",
         }
 
         if request.endpoint is None:
@@ -196,6 +203,22 @@ def create_app():
 
         if request.endpoint in public_endpoints or request.blueprint == "auth":
             return
+
+        provider_routes = {
+            "shopping.provider_panel",
+            "shopping.provider_catalog_modal",
+            "shopping.provider_approvals",
+            "shopping.provider_approval",
+            "shopping.provider_block",
+            "shopping.provider_purchases",
+            "shopping.provider_inventory",
+        }
+
+        if request.endpoint in provider_routes:
+            if session.get("provider_logged_in") and session.get("provider_username"):
+                return
+            flash("Debes iniciar sesión como proveedor para acceder a esta sección.", "warning")
+            return redirect(url_for("shopping.provider_login"))
 
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.url))

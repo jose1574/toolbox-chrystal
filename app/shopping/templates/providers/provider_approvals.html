@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Aprobaciones de proveedores | Toolbox{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-lg-4">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+        <div>
+          <span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle mb-2">Compras</span>
+          <h2 class="h3 mb-1">Aprobaciones de registro de proveedores</h2>
+          <p class="text-body-secondary mb-0">Revisa las solicitudes y aprueba únicamente los registros que cumplan con los requisitos.</p>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-4 d-grid gap-2">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'success' if category == 'success' else 'warning' if category == 'warning' else 'danger' if category == 'error' else 'info' }} alert-dismissible fade show mb-0" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% if registrations %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Empresa</th>
+                <th>RIF</th>
+                <th>Correo</th>
+                <th>Usuario</th>
+                <th>Teléfono</th>
+                <th>Registrado</th>
+                <th>Estado</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for registration in registrations %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ registration.description }}</div>
+                    <div class="small text-body-secondary">{{ registration.contact }}</div>
+                  </td>
+                  <td>{{ registration.provider_id }}</td>
+                  <td>{{ registration.email }}</td>
+                  <td>{{ registration.username }}</td>
+                  <td>{{ registration.phone }}</td>
+                  <td>{{ registration.registered_at.strftime('%d/%m/%Y %H:%M') if registration.registered_at else '-' }}</td>
+                  <td>
+                    {% if registration.status == 'APPROVED' %}
+                      <span class="badge text-bg-success">Aprobado</span>
+                    {% else %}
+                      <span class="badge text-bg-warning text-dark">Pendiente</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                      {% if registration.status != 'APPROVED' %}
+                        <form method="post" action="{{ url_for('shopping.provider_approval', registration_code=registration.code) }}">
+                          <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                        </form>
+                      {% endif %}
+                      {% if registration.status != 'BLOCKED' %}
+                        <form method="post" action="{{ url_for('shopping.provider_block', registration_code=registration.code) }}">
+                          <button type="submit" class="btn btn-outline-danger btn-sm">Bloquear</button>
+                        </form>
+                      {% else %}
+                        <span class="badge text-bg-secondary">Bloqueado</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="border border-dashed rounded-3 p-5 text-center bg-body-tertiary">
+          <h3 class="h5 mb-2">No hay solicitudes pendientes</h3>
+          <p class="text-body-secondary mb-0">Cuando un proveedor envíe su registro, aparecerá aquí para su revisión.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
