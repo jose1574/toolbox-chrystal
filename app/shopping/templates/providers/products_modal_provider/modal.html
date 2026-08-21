@@ -7,6 +7,9 @@
         }
 
         #providerCatalogModal .modal-content {
+            display: flex;
+            flex-direction: column;
+            height: min(88vh, 62rem);
             background: #1d232b;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 0.9rem;
@@ -94,6 +97,10 @@
         }
 
         #providerCatalogModal .provider-modal-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
             background: rgba(18, 21, 27, 0.96);
             padding: 1rem 1.35rem 0.65rem;
         }
@@ -281,15 +288,20 @@
         }
 
         #providerCatalogModal .provider-table-wrap {
+            display: flex;
+            flex: 1;
+            min-height: 0;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 0.7rem;
             overflow: hidden;
             background: rgba(255,255,255,0.01);
-            max-height: min(58vh, 46rem);
+            max-height: none;
         }
 
         #providerCatalogModal .provider-table-scroll {
-            max-height: min(58vh, 46rem);
+            flex: 1;
+            min-height: 0;
+            max-height: none;
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -471,8 +483,10 @@
                             value="{{ query or '' }}"
                             hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
                             hx-trigger="keyup changed delay:300ms"
-                            hx-target="#provider-catalog-modal-container"
-                            hx-swap="innerHTML"
+                            hx-include="#provider-catalog-filters"
+                            hx-vals='{"list_only":"1"}'
+                            hx-target="#provider-catalog-list"
+                            hx-swap="outerHTML"
                             name="q"
                         />
                     </div>
