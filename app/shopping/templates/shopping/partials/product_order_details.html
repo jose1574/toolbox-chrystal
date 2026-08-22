@@ -1,14 +1,15 @@
 <div class="container-fluid px-0 my-2" id="product-order-details-container">
     {% set order_provider_code = selected_provider_code|default(provider.code if provider else '') %}
+    {% set selected_review_item = selected_review_item|default(none) %}
     <section class="row g-2 rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
-        <div class="col-12 col-xl-2">
+        <div class="col-12 col-xl-2 min-w-0">
             <form class="h-100 d-flex flex-column gap-2"
                 hx-get="{{ url_for('shopping.product_order_details') }}" hx-trigger="submit, keyup changed delay:500ms"
                 hx-target="#product-order-details-container" hx-swap="outerHTML">
                 <label for="product-code-input" class="form-label mb-0 text-body-secondary fw-semibold">Ingrese codigo de producto</label>
                 <input type="hidden" name="provider_code" value="{{ order_provider_code }}">
                 <input type="text" class="form-control form-control-sm" id="product-code-input" name="code" value="{{ product.code if product else '' }}" autocomplete="off">
-                <div class="d-flex flex-column flex-sm-row gap-2 mt-1">
+                <div class="d-grid gap-2 mt-1">
                     <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
                         hx-get="{{ url_for('shopping.products_modal', provider_code=order_provider_code) }}" hx-target="#products-modal-container"
                         hx-swap="innerHTML">Abrir Catalogo</button>
@@ -19,7 +20,7 @@
             </form>
         </div>
 
-        <div class="col-12 col-xl-5">
+        <div class="col-12 col-xl-5 min-w-0">
             <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Atributos de un producto</h2>
@@ -31,27 +32,52 @@
                     <span class="text-body-secondary fw-semibold">Editar</span>
                     {% endif %}
                 </div>
-                <dl class="row mb-0 g-1">
+                <dl class="row mb-0 g-1 small">
                     <dt class="col-5 fw-semibold text-body-secondary">Codigo:</dt>
-                    <dd class="col-7 mb-0 text-body-secondary">{{ product.code if product else '-' }}</dd>
+                    <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.code if product else '-' }}</dd>
                     <dt class="col-5 fw-semibold text-body-secondary">Nombre del producto:</dt>
-                    <dd class="col-7 mb-0 text-body-secondary">{{ product.description if product else '-' }}</dd>
+                    <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.description if product else '-' }}</dd>
                     <dt class="col-5 fw-semibold text-body-secondary">Departamento:</dt>
-                    <dd class="col-7 mb-0 text-body-secondary">{{ product.department_description or product.department if product else '-' }}</dd>
+                    <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.department_description or product.department if product else '-' }}</dd>
                     <dt class="col-5 fw-semibold text-body-secondary">Referencia:</dt>
-                    <dd class="col-7 mb-0 text-body-secondary">{{ product.referenc if product else '-' }}</dd>
+                    <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.referenc if product else '-' }}</dd>
                     <dt class="col-5 fw-semibold text-body-secondary">Marca:</dt>
-                    <dd class="col-7 mb-0 text-body-secondary">{{ product.mark_description or product.mark if product else '-' }}</dd>
+                    <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.mark_description or product.mark if product else '-' }}</dd>
                 </dl>
             </div>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-3 min-w-0">
             {% include 'shopping/partials/product_shopping_params.html' %}
         </div>
 
-        <div class="col-12 col-md-6 col-xl-2">
+        <div class="col-12 col-md-6 col-xl-2 min-w-0">
             <div class="h-100 d-flex flex-column gap-1 rounded border border-secondary-subtle bg-body p-2">
+                {% if selected_review_item %}
+                <h2 class="section-title text-uppercase fw-semibold text-body mb-1 text-xl-center">Detalle en revisión</h2>
+                <dl class="row mb-0 g-1 small">
+                    <dt class="col-6 fw-semibold text-body-secondary">Cantidad:</dt>
+                    <dd class="col-6 mb-0 text-body-secondary text-end">{{ '%.2f'|format(selected_review_item.quantity|default(0)) }}</dd>
+                    <dt class="col-6 fw-semibold text-body-secondary">Unidad:</dt>
+                    <dd class="col-6 mb-0 text-body-secondary text-end">{{ selected_review_item.unit or '-' }}</dd>
+                    <dt class="col-6 fw-semibold text-body-secondary">Precio:</dt>
+                    <dd class="col-6 mb-0 text-body-secondary text-end">{{ '%.2f'|format(selected_review_item.unit_price|default(0)) }}</dd>
+                    <dt class="col-6 fw-semibold text-body-secondary">Subtotal:</dt>
+                    <dd class="col-6 mb-0 text-body-secondary text-end">{{ '%.2f'|format(selected_review_item.subtotal|default(0)) }}</dd>
+                    <dt class="col-6 fw-semibold text-body-secondary">Estado:</dt>
+                    <dd class="col-6 mb-0 text-body-secondary text-end">{{ selected_review_item.status_label or '-' }}</dd>
+                </dl>
+                {% if selected_review_item.note %}
+                <div class="rounded border border-info-subtle bg-info-subtle text-info-emphasis px-2 py-1 mt-2 small">
+                    <strong>Nota:</strong> {{ selected_review_item.note }}
+                </div>
+                {% endif %}
+                {% if selected_review_item.rejected_reason %}
+                <div class="rounded border border-danger-subtle bg-danger-subtle text-danger-emphasis px-2 py-1 mt-2 small">
+                    <strong>Motivo:</strong> {{ selected_review_item.rejected_reason }}
+                </div>
+                {% endif %}
+                {% else %}
                 <h2 class="section-title text-uppercase fw-semibold text-body mb-0 text-xl-center">Agregar</h2>
                 <label for="product-quantity-input" class="form-label mb-0 text-body-secondary fw-semibold">Cantidad</label>
                 <input type="number" class="form-control form-control-sm" id="product-quantity-input" min="1">
@@ -65,6 +91,7 @@
                     <button type="button" class="btn btn-sm btn-success flex-fill">Agregar</button>
                     <button type="button" class="btn btn-sm btn-outline-danger flex-fill">Rechazar</button>
                 </div>
+                {% endif %}
             </div>
         </div>
     </section>

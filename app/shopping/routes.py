@@ -152,12 +152,28 @@ def product_order_details():
     inventory_params = service.get_product_inventory_params(code)
     shopping_params = service.get_product_shopping_param(code)
     purchase_history = service.get_product_purchase_history(code)
+    selected_review_item = None
+    if any(
+        request.args.get(param)
+        for param in ('review_quantity', 'review_unit', 'review_unit_price', 'review_subtotal', 'review_status_label', 'review_note', 'review_rejected_reason')
+    ):
+        selected_review_item = {
+            'item_type': (request.args.get('review_item_type') or 'catalog').strip() or 'catalog',
+            'quantity': request.args.get('review_quantity', type=float),
+            'unit': (request.args.get('review_unit') or '').strip(),
+            'unit_price': request.args.get('review_unit_price', type=float),
+            'subtotal': request.args.get('review_subtotal', type=float),
+            'status_label': (request.args.get('review_status_label') or '').strip(),
+            'note': (request.args.get('review_note') or '').strip(),
+            'rejected_reason': (request.args.get('review_rejected_reason') or '').strip(),
+        }
     return render_template(
         'shopping/partials/product_order_details.html',
         product=product,
         inventory_params=inventory_params,
         shopping_params=shopping_params,
         purchase_history=purchase_history,
+        selected_review_item=selected_review_item,
         selected_provider_code=selected_provider_code,
         include_inventory_params_oob=True,
         include_sales_chart_oob=True,
@@ -306,6 +322,57 @@ def provider_selection():
     )
 
 
+@shopping_bp.route('/offer_list_provider')
+@login_required
+def offer_list_provider():
+    code_provider = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
+    review_list_correlative = request.args.get('review_list_correlative')
+    provider = service.get_provider_by_code(code_provider) if code_provider else None
+
+    if not code_provider:
+        return render_template(
+            'shopping/offer_list_provider.html',
+            provider=None,
+            selected_provider_code='',
+            review_lists=[],
+            selected_review_list=None,
+            offer_lists_content_endpoint='shopping.offer_list_provider_content',
+            offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+            offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+            provider_code_for_lists='',
+        )
+
+    if provider is None:
+        flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
+        return render_template(
+            'shopping/offer_list_provider.html',
+            provider=None,
+            selected_provider_code=code_provider,
+            review_lists=[],
+            selected_review_list=None,
+            offer_lists_content_endpoint='shopping.offer_list_provider_content',
+            offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+            offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+            provider_code_for_lists=code_provider,
+        )
+
+    review_lists_context = service.get_provider_review_lists_context(
+        provider.code,
+        selected_review_list_correlative=review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template(
+        'shopping/offer_list_provider.html',
+        provider=provider,
+        selected_provider_code=provider.code,
+        offer_lists_content_endpoint='shopping.offer_list_provider_content',
+        offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+        offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+        provider_code_for_lists=provider.code,
+        **review_lists_context,
+    )
+
+
 @shopping_bp.route('/provider_panel')
 @provider_session_required
 def provider_panel():
@@ -386,6 +453,26 @@ def provider_offer_lists_content():
         coin_symbol=_provider_offer_coin_symbol(),
     )
     return render_template('providers/partials/offer_lists_content.html', **review_lists_context)
+
+
+@shopping_bp.route('/offer_list_provider/content')
+@login_required
+def offer_list_provider_content():
+    provider_code = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
+    review_list_correlative = request.args.get('review_list_correlative')
+    review_lists_context = service.get_provider_review_lists_context(
+        provider_code,
+        selected_review_list_correlative=review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template(
+        'providers/partials/offer_lists_content.html',
+        offer_lists_content_endpoint='shopping.offer_list_provider_content',
+        offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+        offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+        provider_code_for_lists=provider_code,
+        **review_lists_context,
+    )
 
 
 @shopping_bp.route('/provider_offer_lists/<int:review_list_correlative>/pdf')
@@ -503,6 +590,191 @@ def provider_offer_list_excel_report(review_list_correlative):
     worksheet.merge_range('A1:F1', f"Detalle de oferta {review_list['reference']}", title_format)
     worksheet.write('A2', 'Proveedor', meta_label_format)
     worksheet.write('B2', provider_username or provider_code or '-', meta_value_format)
+    worksheet.write('D2', 'Codigo', meta_label_format)
+    worksheet.write('E2', provider_code or '-', meta_value_format)
+    worksheet.write('A3', 'Estado', meta_label_format)
+    worksheet.write('B3', review_list['status_label'], meta_value_format)
+    worksheet.write('D3', 'Enviada', meta_label_format)
+    worksheet.write('E3', review_list['submitted_at'].strftime('%d/%m/%Y %H:%M') if review_list['submitted_at'] else '-', meta_value_format)
+    worksheet.write('A4', 'Generado', meta_label_format)
+    worksheet.write('B4', datetime.now().strftime('%d/%m/%Y %H:%M'), meta_value_format)
+    worksheet.write('D4', 'Moneda', meta_label_format)
+    worksheet.write('E4', review_list['coin_symbol'], meta_value_format)
+
+    columns = ['Producto', 'Codigo / detalle', 'Cantidad', 'Unidad', 'Precio unitario', 'Subtotal', 'Estado']
+    for col_idx, title in enumerate(columns):
+        worksheet.write(5, col_idx, title, header_format)
+
+    worksheet.set_column('A:A', 34)
+    worksheet.set_column('B:B', 28)
+    worksheet.set_column('C:C', 12)
+    worksheet.set_column('D:D', 14)
+    worksheet.set_column('E:F', 15)
+    worksheet.set_column('G:G', 14)
+
+    row_idx = 6
+    for item in review_list['items']:
+        detail_parts = []
+        if item['item_type'] == 'new_product':
+            detail_parts.append('Nuevo producto')
+            if item.get('main_code'):
+                detail_parts.append(f"Codigo: {item['main_code']}")
+            if item.get('mark_name'):
+                detail_parts.append(item['mark_name'])
+            if item.get('department_name'):
+                detail_parts.append(item['department_name'])
+        else:
+            detail_parts.append(f"SKU: {item['code']}")
+        if item.get('note'):
+            detail_parts.append(f"Nota: {item['note']}")
+        if item.get('rejected_reason'):
+            detail_parts.append(f"Motivo: {item['rejected_reason']}")
+
+        worksheet.write(row_idx, 0, item['name'], text_format)
+        worksheet.write(row_idx, 1, ' | '.join(detail_parts), text_format)
+        worksheet.write_number(row_idx, 2, float(item['quantity'] or 0), amount_format)
+        worksheet.write(row_idx, 3, item['unit'], text_format)
+        worksheet.write_number(row_idx, 4, float(item['unit_price'] or 0), amount_format)
+        worksheet.write_number(row_idx, 5, float(item['subtotal'] or 0), amount_format)
+        worksheet.write(row_idx, 6, item['status_label'], text_format)
+        row_idx += 1
+
+    worksheet.merge_range(row_idx, 0, row_idx, 4, 'Total', total_label_format)
+    worksheet.write_number(row_idx, 5, float(review_list['total_amount'] or 0), total_amount_format)
+    worksheet.write(row_idx, 6, review_list['coin_symbol'], total_label_format)
+
+    workbook.close()
+    output.seek(0)
+
+    safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f'{safe_reference}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@shopping_bp.route('/offer_list_provider/<int:review_list_correlative>/pdf')
+@login_required
+def offer_list_provider_pdf_report(review_list_correlative):
+    provider_code = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
+    provider = service.get_provider_by_code(provider_code) if provider_code else None
+    provider_registration = ProviderRegistration.query.filter_by(code=provider_code).first() if provider_code else None
+    review_list = service.get_provider_review_list_detail_context(
+        provider_code,
+        review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    if review_list is None:
+        flash('No se encontro la lista de oferta solicitada.', 'warning')
+        return redirect(url_for('shopping.offer_list_provider', code_provider=provider_code))
+
+    safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
+    pdf = render_pdf(
+        'providers/reports/provider_offer_list_pdf.html',
+        {
+            'review_list': review_list,
+            'provider_company_name': provider_registration.description if provider_registration else (provider.description if provider else None),
+            'provider_username': provider_registration.username if provider_registration else None,
+            'provider_code': provider_code,
+            'generated_at': datetime.now(),
+        },
+        paper_format='Letter',
+        orientation='Portrait',
+        extra_options={
+            'margin-top': '0.35in',
+            'margin-right': '0.35in',
+            'margin-bottom': '0.35in',
+            'margin-left': '0.35in',
+        },
+    )
+    return Response(
+        pdf,
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'inline; filename={safe_reference}.pdf'},
+    )
+
+
+@shopping_bp.route('/offer_list_provider/<int:review_list_correlative>/excel')
+@login_required
+def offer_list_provider_excel_report(review_list_correlative):
+    provider_code = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
+    provider = service.get_provider_by_code(provider_code) if provider_code else None
+    provider_registration = ProviderRegistration.query.filter_by(code=provider_code).first() if provider_code else None
+    review_list = service.get_provider_review_list_detail_context(
+        provider_code,
+        review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    if review_list is None:
+        flash('No se encontro la lista de oferta solicitada.', 'warning')
+        return redirect(url_for('shopping.offer_list_provider', code_provider=provider_code))
+
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    worksheet = workbook.add_worksheet('Oferta')
+
+    worksheet.set_paper(1)
+    worksheet.set_portrait()
+    worksheet.fit_to_pages(1, 0)
+    worksheet.repeat_rows(0, 5)
+    worksheet.set_margins(0.3, 0.3, 0.4, 0.4)
+
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 16,
+        'align': 'left',
+        'valign': 'vcenter',
+    })
+    meta_label_format = workbook.add_format({
+        'bold': True,
+        'font_size': 10,
+        'font_color': '#44546A',
+    })
+    meta_value_format = workbook.add_format({
+        'font_size': 10,
+    })
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#D9E2F3',
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter',
+        'text_wrap': True,
+    })
+    text_format = workbook.add_format({
+        'border': 1,
+        'valign': 'top',
+        'text_wrap': True,
+    })
+    amount_format = workbook.add_format({
+        'border': 1,
+        'align': 'right',
+        'valign': 'top',
+        'num_format': '#,##0.00',
+    })
+    total_label_format = workbook.add_format({
+        'bold': True,
+        'border': 1,
+        'align': 'right',
+        'bg_color': '#EDEDED',
+    })
+    total_amount_format = workbook.add_format({
+        'bold': True,
+        'border': 1,
+        'align': 'right',
+        'bg_color': '#EDEDED',
+        'num_format': '#,##0.00',
+    })
+
+    provider_display_name = (
+        provider_registration.description if provider_registration else (provider.description if provider else None)
+    ) or provider_code or '-'
+
+    worksheet.merge_range('A1:F1', f"Detalle de oferta {review_list['reference']}", title_format)
+    worksheet.write('A2', 'Proveedor', meta_label_format)
+    worksheet.write('B2', provider_display_name, meta_value_format)
     worksheet.write('D2', 'Codigo', meta_label_format)
     worksheet.write('E2', provider_code or '-', meta_value_format)
     worksheet.write('A3', 'Estado', meta_label_format)
@@ -971,6 +1243,7 @@ def provider_logout():
 @login_required 
 def order():
     code_provider = (request.args.get('code_provider') or '').strip()
+    review_list_correlative = request.args.get('review_list_correlative')
 
 
     if not code_provider:
@@ -980,12 +1253,62 @@ def order():
     if not provider:
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
         return render_template('shopping/order.html', provider=None, selected_provider_code=code_provider)
+
+    selected_review_list = None
+    review_products = []
+    total_review_products = 0
+    selected_product = None
+    selected_review_item = None
+    inventory_params = []
+    shopping_params = None
+    purchase_history = []
+
+    if review_list_correlative:
+        selected_review_list = service.get_provider_review_list_detail_context(
+            provider.code,
+            review_list_correlative,
+            coin_symbol=_provider_offer_coin_symbol(),
+        )
+        if selected_review_list is None:
+            flash('No se encontró la lista de oferta seleccionada para este proveedor.', 'warning')
+        else:
+            review_products = selected_review_list.get('items', [])
+            total_review_products = len(review_products)
+            first_catalog_product = next(
+                (
+                    item for item in review_products
+                    if (item.get('item_type') == 'catalog' and (item.get('code') or '').strip())
+                ),
+                None,
+            )
+            if first_catalog_product:
+                selected_code = first_catalog_product.get('code', '').strip()
+                selected_product = service.get_product_order_details(selected_code)
+                selected_review_item = first_catalog_product
+                inventory_params = service.get_product_inventory_params(selected_code)
+                shopping_params = service.get_product_shopping_param(selected_code)
+                purchase_history = service.get_product_purchase_history(selected_code)
+
+    if not review_products:
+        review_products, total_review_products, _, _, _ = service.search_products(
+            provider_code=provider.code,
+            page=1,
+            per_page=12,
+        )
     
     return render_template(
         'shopping/order.html',
         provider=provider,
-        inventory_params=[],
-        purchase_history=[],
+        selected_provider_code=provider.code,
+        review_list_correlative=review_list_correlative,
+        selected_review_list=selected_review_list,
+        review_products=review_products,
+        review_products_total=total_review_products,
+        product=selected_product,
+        selected_review_item=selected_review_item,
+        inventory_params=inventory_params,
+        shopping_params=shopping_params,
+        purchase_history=purchase_history,
     )
 
 

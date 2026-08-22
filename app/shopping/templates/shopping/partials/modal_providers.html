@@ -57,13 +57,7 @@
 			}
 
 			providerModal.hide();
-
-			if (window.htmx) {
-				htmx.ajax('GET', `{{ url_for('shopping.selected_provider_details') }}?code_provider=${encodeURIComponent(providerCode)}`, {
-					target: '#provider-details-container',
-					swap: 'innerHTML',
-				});
-			}
+			window.location.href = `{{ url_for('shopping.offer_list_provider') }}?code_provider=${encodeURIComponent(providerCode)}`;
 		};
 
 		modalElement.addEventListener('click', (event) => {

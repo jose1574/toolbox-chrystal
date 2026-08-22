@@ -110,7 +110,7 @@
                 <button
                     type="button"
                     class="btn provider-history-item {{ 'is-selected' if review_list.is_selected else '' }} text-start p-3"
-                    hx-get="{{ url_for('shopping.provider_offer_lists_content', review_list_correlative=review_list.correlative) }}"
+                    hx-get="{{ url_for(offer_lists_content_endpoint|default('shopping.provider_offer_lists_content'), review_list_correlative=review_list.correlative, code_provider=provider_code_for_lists|default('')) }}"
                     hx-target="#provider-offer-lists-modal-content"
                     hx-swap="innerHTML"
                 >
@@ -167,7 +167,13 @@
 
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <a
-                    href="{{ url_for('shopping.provider_offer_list_pdf_report', review_list_correlative=selected_review_list['correlative']) }}"
+                    href="{{ url_for('shopping.order', code_provider=provider_code_for_lists|default(''), review_list_correlative=selected_review_list['correlative']) }}"
+                    class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2"
+                >
+                    <span>Revisar en compras</span>
+                </a>
+                <a
+                    href="{{ url_for(offer_list_pdf_endpoint|default('shopping.provider_offer_list_pdf_report'), review_list_correlative=selected_review_list['correlative'], code_provider=provider_code_for_lists|default('')) }}"
                     target="_blank"
                     rel="noopener"
                     class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
@@ -175,7 +181,7 @@
                     <span>Generar PDF</span>
                 </a>
                 <a
-                    href="{{ url_for('shopping.provider_offer_list_excel_report', review_list_correlative=selected_review_list['correlative']) }}"
+                    href="{{ url_for(offer_list_excel_endpoint|default('shopping.provider_offer_list_excel_report'), review_list_correlative=selected_review_list['correlative'], code_provider=provider_code_for_lists|default('')) }}"
                     class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-2"
                 >
                     <span>Generar Excel</span>

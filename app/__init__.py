@@ -239,9 +239,6 @@ def create_app():
             "shopping.provider_offer_items_unit",
             "shopping.provider_offer_items_remove",
             "shopping.provider_offer_items_clear",
-            "shopping.provider_approvals",
-            "shopping.provider_approval",
-            "shopping.provider_block",
             "shopping.provider_purchases",
             "shopping.provider_inventory",
         }
