@@ -672,16 +672,19 @@
     }
 
     function addSelectedProviderProducts() {
-        const selectedCodes = Array.from(
+        const selectedRows = Array.from(
             document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]:checked')
-        ).map((input) => input.value);
+        );
 
-        if (!selectedCodes.length) {
+        if (!selectedRows.length) {
             return;
         }
 
         const payload = new URLSearchParams();
-        selectedCodes.forEach((code) => payload.append('selected_product_codes', code));
+        selectedRows.forEach((input) => {
+            payload.append('selected_product_codes', input.value);
+            payload.append('selected_product_units', input.dataset.unitCorrelative || '');
+        });
 
         fetch('{{ url_for("shopping.provider_offer_items_add") }}', {
             method: 'POST',
@@ -696,6 +699,10 @@
                 const detailsContainer = document.getElementById('provider-offer-details-container');
                 if (detailsContainer) {
                     detailsContainer.outerHTML = html;
+                    const updatedDetailsContainer = document.getElementById('provider-offer-details-container');
+                    if (window.htmx && updatedDetailsContainer) {
+                        window.htmx.process(updatedDetailsContainer);
+                    }
                 }
 
                 if (typeof window.updateProviderOfferSummaryFromContainer === 'function') {

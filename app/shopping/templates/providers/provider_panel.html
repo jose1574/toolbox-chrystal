@@ -483,7 +483,7 @@
                         </div>
                         <div class="provider-summary-row mt-2">
                             <span>Estimado total</span>
-                            <strong id="provider-summary-total-amount">$ {{ '{:,.2f}'.format(offer_context.total_amount).replace(',', ' ') }}</strong>
+                            <strong id="provider-summary-total-amount">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(offer_context.total_amount).replace(',', ' ') }}</strong>
                         </div>
                         <div class="provider-summary-row mt-2 pt-2 border-top border-secondary-subtle">
                             <span>Estado</span>
@@ -548,6 +548,7 @@
             const productsCount = Number(detailsContainer.dataset.productsCount || 0);
             const totalItems = Number(detailsContainer.dataset.totalItems || 0);
             const totalAmount = Number(detailsContainer.dataset.totalAmount || 0);
+            const coinSymbol = detailsContainer.dataset.coinSymbol || '$';
 
             const badge = document.getElementById('provider-offer-products-count');
             if (badge) {
@@ -561,7 +562,7 @@
 
             const totalAmountLabel = document.getElementById('provider-summary-total-amount');
             if (totalAmountLabel) {
-                totalAmountLabel.textContent = `$ ${totalAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                totalAmountLabel.textContent = `${coinSymbol} ${totalAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
         }
 

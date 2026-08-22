@@ -6,6 +6,7 @@
             type="checkbox"
             name="selected_product_codes"
             value="{{ product.code }}"
+            data-unit-correlative="{{ product.unit_correlative or '' }}"
             aria-label="Seleccionar {{ product.code }}"
             onchange="handleProviderProductSelection()"
         >
@@ -17,10 +18,11 @@
     <td>{{ product.department }}</td>
     <td>{{ product.brand }}</td>
     <td>{{ product.reference }}</td>
-    <td>{{ product.stock_total }}</td>
-    <td>{{ product.minimum_stock }}</td>
-    <td>{{ product.maximum_stock }}</td>
-    <td>{{ product.replenishment_needed }}</td>
+    <td>{{ product.unit_description or 'UND' }}</td>
+    <td>{{ '%.2f'|format(product.stock_total) }}</td>
+    <td>{{ '%.2f'|format(product.minimum_stock) }}</td>
+    <td>{{ '%.2f'|format(product.maximum_stock) }}</td>
+    <td>{{ '%.2f'|format(product.replenishment_needed) }}</td>
     <td class="text-end">
         {% if product.last_provider_cost is not none %}
             {{ '%.2f'|format(product.last_provider_cost) }}
@@ -29,7 +31,7 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="10" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+    <td colspan="11" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
 </tr>
 {% endfor %}
 
@@ -40,7 +42,7 @@
     hx-target="this"
     hx-swap="outerHTML"
 >
-    <td colspan="10" class="text-center py-3 text-body-secondary">
+    <td colspan="11" class="text-center py-3 text-body-secondary">
         Cargando más productos...
     </td>
 </tr>

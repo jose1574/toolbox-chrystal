@@ -3,6 +3,7 @@
     data-products-count="{{ offer_context['products_count'] }}"
     data-total-items="{{ offer_context['total_items'] }}"
     data-total-amount="{{ '%.2f'|format(offer_context['total_amount']) }}"
+    data-coin-symbol="{{ offer_context['coin_symbol'] }}"
 >
     {% if offer_context['items'] %}
     <div class="provider-table-wrap">
@@ -11,6 +12,7 @@
                 <tr>
                     <th style="width: 26%;">Producto</th>
                     <th style="width: 10%;" class="text-end">Cantidad</th>
+                    <th style="width: 10%;">Unidad</th>
                     <th style="width: 14%;" class="text-end">Precio Unitario</th>
                     <th style="width: 14%;" class="text-end">Subtotal</th>
                     <th style="width: 12%;" class="text-end">Descuento</th>
@@ -23,13 +25,35 @@
                 <tr>
                     <td>
                         <div class="provider-product-name">{{ item.name }}</div>
-                        <div class="provider-product-sub">SKU: {{ item.reference }}</div>
+                        <div class="provider-product-sub">SKU: {{ item.code }}</div>
                     </td>
                     <td class="text-end">{{ '%.2f'|format(item.quantity) }}</td>
-                    <td class="text-end">$ {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
-                    <td class="text-end">$ {{ '{:,.2f}'.format(item.subtotal).replace(',', ' ') }}</td>
+                    <td>
+                        <select
+                            class="form-select form-select-sm"
+                            aria-label="Unidad de {{ item.code }}"
+                            hx-post="{{ url_for('shopping.provider_offer_items_unit') }}"
+                            hx-vals='js:{product_code: "{{ item.code }}", unit_code: event.target.value, unit_correlative: event.target.selectedOptions[0]?.dataset?.unitCorrelative || ""}'
+                            hx-trigger="change"
+                            hx-target="#provider-offer-details-container"
+                            hx-swap="outerHTML"
+                        >
+                            {% for unit in item.unit_options %}
+                            <option
+                                value="{{ unit.code }}"
+                                data-unit-correlative="{{ unit.correlative or '' }}"
+                                {% if unit.code == item.unit_code %}selected{% endif %}
+                            >{{ unit.description }}</option>
+                            {% endfor %}
+                            {% if not item.unit_options %}
+                            <option value="{{ item.unit_code }}" selected>{{ item.unit }}</option>
+                            {% endif %}
+                        </select>
+                    </td>
+                    <td class="text-end">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
+                    <td class="text-end">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(item.subtotal).replace(',', ' ') }}</td>
                     <td class="text-end">{{ '%.0f'|format(item.discount_percent) }}%</td>
-                    <td class="text-end">$ {{ '{:,.2f}'.format(item.total_with_discount).replace(',', ' ') }}</td>
+                    <td class="text-end">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(item.total_with_discount).replace(',', ' ') }}</td>
                     <td class="text-center">
                         <button
                             type="button"
@@ -49,8 +73,8 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="5" class="text-end">Total</th>
-                    <th class="text-end">$ {{ '{:,.2f}'.format(offer_context['total_amount']).replace(',', ' ') }}</th>
+                    <th colspan="6" class="text-end">Total</th>
+                    <th class="text-end">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(offer_context['total_amount']).replace(',', ' ') }}</th>
                     <th></th>
                 </tr>
             </tfoot>

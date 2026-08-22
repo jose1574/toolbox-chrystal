@@ -86,6 +86,12 @@ def _set_provider_offer_items(provider_code, items):
     session.modified = True
 
 
+def _provider_offer_coin_symbol():
+    coin_code = session.get('provider_offer_coin_code') or service.get_default_provider_coin_code()
+    coin = Coin.query.filter(Coin.code == coin_code, Coin.status == '01').first()
+    return (coin.symbol or coin.code) if coin else coin_code
+
+
 @shopping_bp.route('/provider_username_availability')
 def provider_username_availability():
     username = (request.args.get('username') or '').strip()
@@ -279,12 +285,13 @@ def provider_panel():
             coins[0].code if coins else '',
         )
 
-    offer_items = _get_provider_offer_items(provider_code)
-    offer_context = service.build_provider_offer_context(offer_items)
     selected_coin_symbol = next(
         (coin.symbol or coin.code for coin in coins if coin.code == selected_coin_code),
         selected_coin_code,
     )
+    session['provider_offer_coin_code'] = selected_coin_code
+    offer_items = _get_provider_offer_items(provider_code)
+    offer_context = service.build_provider_offer_context(offer_items, selected_coin_symbol)
 
     return render_template(
         'providers/provider_panel.html',
@@ -302,30 +309,160 @@ def provider_panel():
 def provider_offer_items_add():
     provider_code = session.get('provider_code', '')
     selected_codes = request.form.getlist('selected_product_codes')
+    selected_unit_correlatives = request.form.getlist('selected_product_units')
     if not selected_codes:
-        offer_context = service.build_provider_offer_context(_get_provider_offer_items(provider_code))
+        offer_context = service.build_provider_offer_context(
+            _get_provider_offer_items(provider_code), _provider_offer_coin_symbol()
+        )
         return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
     existing_items = _get_provider_offer_items(provider_code)
     existing_by_code = {normalize_upper(item.get('code')): item for item in existing_items}
 
-    products = service.get_provider_offer_products(provider_code, selected_codes)
+    products = service.get_provider_offer_products(provider_code, selected_codes, selected_unit_correlatives)
     for product in products:
         product_code = normalize_upper(product.get('code'))
         if product_code in existing_by_code:
             continue
 
+        selected_unit = next(
+            (
+                option for option in (product.get('unit_options') or [])
+                if str(option.get('correlative') or '') == str(product.get('unit_correlative') or '')
+                or (
+                    not product.get('unit_correlative') and
+                    normalize_upper(option.get('code')) == normalize_upper(product.get('unit_code'))
+                )
+            ),
+            None,
+        )
+        if selected_unit is None:
+            selected_unit = next(
+                (
+                    option for option in (product.get('unit_options') or [])
+                    if normalize_upper(option.get('code')) == normalize_upper(product.get('unit_code'))
+                ),
+                None,
+            )
+        selected_unit_correlative = product.get('unit_correlative')
+        selected_unit_from_db = service.get_provider_product_unit_by_correlative(selected_unit_correlative)
+        if selected_unit_from_db:
+            selected_unit = selected_unit_from_db
+        base_quantity = float(product.get('suggested_quantity', 0) or 0)
+        conversion_factor = float((selected_unit or {}).get('conversion_factor') or product.get('conversion_factor') or 1)
+        unit_type = int((selected_unit or {}).get('unit_type') or product.get('unit_type') or 0)
+        units_per_main = service._units_per_main(conversion_factor, unit_type)
+        unit_price = float(product.get('last_provider_cost') or 0)
+        source_cost_unit = next(
+            (
+                option for option in (product.get('unit_options') or [])
+                if str(option.get('correlative') or '') == str(product.get('last_provider_cost_unit_correlative') or '')
+            ),
+            None,
+        )
+        source_cost_unit_from_db = service.get_provider_product_unit_by_correlative(
+            product.get('last_provider_cost_unit_correlative')
+        )
+        if source_cost_unit_from_db:
+            source_cost_unit = source_cost_unit_from_db
+        if source_cost_unit and selected_unit:
+            unit_price = service.convert_unit_price(
+                unit_price,
+                float((source_cost_unit or {}).get('conversion_factor') or 1),
+                int((source_cost_unit or {}).get('unit_type') or 0),
+                float((selected_unit or {}).get('conversion_factor') or 1),
+                int((selected_unit or {}).get('unit_type') or 0),
+            )
+
         existing_items.append({
             'code': product.get('code'),
             'name': product.get('name'),
             'reference': product.get('reference'),
-            'quantity': product.get('suggested_quantity', 0),
-            'unit_price': product.get('last_provider_cost') or 0,
+            'quantity': base_quantity / units_per_main if units_per_main else base_quantity,
+            'main_quantity': base_quantity,
+            'unit_price': unit_price,
+            'unit': product.get('unit') or 'UND',
+            'unit_code': product.get('unit_code') or '',
+            'unit_correlative': product.get('unit_correlative'),
+            'unit_options': product.get('unit_options') or [],
+            'conversion_factor': conversion_factor,
+            'unit_type': unit_type,
             'discount_percent': 0,
         })
 
     _set_provider_offer_items(provider_code, existing_items)
-    offer_context = service.build_provider_offer_context(existing_items)
+    offer_context = service.build_provider_offer_context(existing_items, _provider_offer_coin_symbol())
+    return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+
+@shopping_bp.route('/provider_offer_items/unit', methods=['POST'])
+@provider_session_required
+def provider_offer_items_unit():
+    provider_code = session.get('provider_code', '')
+    product_code = normalize_upper(request.form.get('product_code'))
+    unit_code = normalize_upper(request.form.get('unit_code'))
+    unit_correlative = (request.form.get('unit_correlative') or '').strip()
+    offer_items = _get_provider_offer_items(provider_code)
+
+    for item in offer_items:
+        if normalize_upper(item.get('code')) != product_code:
+            continue
+        unit = next(
+            (
+                option for option in item.get('unit_options', [])
+                if str(option.get('correlative') or '') == str(unit_correlative or '')
+                or (
+                    not unit_correlative and
+                    normalize_upper(option.get('code')) == unit_code
+                )
+            ),
+            None,
+        )
+        if unit is None:
+            unit = next(
+                (
+                    option for option in service.get_provider_product_units(product_code)
+                    if str(option.get('correlative') or '') == str(unit_correlative or '')
+                    or (
+                        not unit_correlative and
+                        normalize_upper(option.get('code')) == unit_code
+                    )
+                ),
+                None,
+            )
+        if unit:
+            selected_unit_from_db = service.get_provider_product_unit_by_correlative(
+                unit.get('correlative') or unit_correlative
+            )
+            if selected_unit_from_db:
+                unit = selected_unit_from_db
+            previous_unit = service.get_provider_product_unit_by_correlative(item.get('unit_correlative'))
+            previous_units_per_main = service._units_per_main(
+                (previous_unit or {}).get('conversion_factor') or item.get('conversion_factor'),
+                (previous_unit or {}).get('unit_type') if previous_unit is not None else item.get('unit_type')
+            )
+            new_units_per_main = service._units_per_main(
+                unit.get('conversion_factor'), unit.get('unit_type')
+            )
+            current_main_quantity = float(item.get('main_quantity') or (float(item.get('quantity') or 0) * previous_units_per_main))
+            current_unit_price = float(item.get('unit_price') or 0)
+
+            item['unit_code'] = unit.get('code') or unit.get('unit') or unit.get('unit_code') or item.get('unit_code')
+            item['unit'] = unit.get('description') or unit.get('unit') or item.get('unit')
+            item['unit_correlative'] = unit.get('correlative') or item.get('unit_correlative')
+            item['conversion_factor'] = unit.get('conversion_factor') or 1
+            item['unit_type'] = unit.get('unit_type') or 0
+            item['main_quantity'] = current_main_quantity
+            item['quantity'] = current_main_quantity / new_units_per_main if new_units_per_main else current_main_quantity
+            item['unit_price'] = (
+                current_unit_price * new_units_per_main / previous_units_per_main
+                if previous_units_per_main and new_units_per_main
+                else current_unit_price
+            )
+        break
+
+    _set_provider_offer_items(provider_code, offer_items)
+    offer_context = service.build_provider_offer_context(offer_items, _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
 
@@ -338,7 +475,7 @@ def provider_offer_items_remove():
     remaining_items = [item for item in existing_items if normalize_upper(item.get('code')) != product_code]
 
     _set_provider_offer_items(provider_code, remaining_items)
-    offer_context = service.build_provider_offer_context(remaining_items)
+    offer_context = service.build_provider_offer_context(remaining_items, _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
 

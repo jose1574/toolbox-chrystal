@@ -593,11 +593,18 @@ def get_provider_catalog_products(
     page = min(page, total_pages)
 
     rows = product_query.limit(per_page).offset((page - 1) * per_page).all()
+    product_codes = [row.code for row in rows]
+    catalog_units = _get_provider_catalog_units(product_codes, provider_code)
     products = []
     for row in rows:
-        stock_total = float(row.stock_total or 0)
-        minimum_stock = float(row.minimum_stock or 0)
-        maximum_stock = float(row.maximum_stock or 0)
+        unit = catalog_units.get(normalize_code(row.code))
+        units_per_main = _units_per_main(
+            unit['conversion_factor'] if unit else 1,
+            unit['unit_type'] if unit else 0,
+        )
+        stock_total = float(row.stock_total or 0) / units_per_main
+        minimum_stock = float(row.minimum_stock or 0) / units_per_main
+        maximum_stock = float(row.maximum_stock or 0) / units_per_main
         replenishment_needed = max(0.0, maximum_stock - stock_total)
         products.append({
             'code': row.code,
@@ -610,9 +617,79 @@ def get_provider_catalog_products(
             'maximum_stock': maximum_stock,
             'replenishment_needed': replenishment_needed,
             'last_provider_cost': float(row.last_provider_cost) if row.last_provider_cost is not None else None,
+            'unit_code': unit['unit_code'] if unit else '',
+            'unit_description': unit['unit_description'] if unit else 'UND',
+            'conversion_factor': unit['conversion_factor'] if unit else 1.0,
+            'unit_type': unit['unit_type'] if unit else 0,
+            'unit_correlative': unit['unit_correlative'] if unit else None,
         })
 
     return products, total_products, total_pages, page
+
+
+def _get_provider_catalog_units(product_codes, provider_code):
+    normalized_codes = [normalize_code(code) for code in product_codes if normalize_code(code)]
+    if not normalized_codes:
+        return {}
+
+    latest_purchase = {}
+    if provider_code:
+        purchase_rows = (
+            db.session.query(
+                ProductsProvider.product_code,
+                ProductsProvider.unit,
+                ProductsProvider.emission_date,
+                ProductsProvider.line,
+                ProductsUnit.correlative.label('unit_correlative'),
+                ProductsUnit.unit.label('unit_code'),
+                ProductsUnit.conversion_factor,
+                ProductsUnit.unit_type,
+                Unit.description.label('unit_description'),
+            )
+            .outerjoin(ProductsUnit, ProductsUnit.correlative == ProductsProvider.unit)
+            .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+            .filter(
+                func.upper(func.trim(ProductsProvider.product_code)).in_(normalized_codes),
+                func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+            )
+            .order_by(
+                ProductsProvider.emission_date.desc().nullslast(),
+                ProductsProvider.line.desc(),
+            )
+            .all()
+        )
+        for row in purchase_rows:
+            latest_purchase.setdefault(normalize_code(row.product_code), row)
+
+    fallback_rows = (
+        db.session.query(
+            ProductsUnit.product_code,
+            ProductsUnit.correlative.label('unit_correlative'),
+            ProductsUnit.unit.label('unit_code'),
+            ProductsUnit.conversion_factor,
+            ProductsUnit.unit_type,
+            Unit.description.label('unit_description'),
+        )
+        .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+        .filter(
+            func.upper(func.trim(ProductsUnit.product_code)).in_(normalized_codes),
+            ProductsUnit.main_unit.is_(True),
+        )
+        .all()
+    )
+    fallback = {normalize_code(row.product_code): row for row in fallback_rows}
+    result = {}
+    for product_code in normalized_codes:
+        row = latest_purchase.get(product_code) or fallback.get(product_code)
+        if row:
+            result[product_code] = {
+                'unit_correlative': getattr(row, 'unit_correlative', None),
+                'unit_code': row.unit_code or '',
+                'unit_description': row.unit_description or row.unit_code or 'UND',
+                'conversion_factor': float(row.conversion_factor or 1),
+                'unit_type': row.unit_type or 0,
+            }
+    return result
 
 
 def get_product_shopping_param_form_context(code, errors=None, form_values=None):
@@ -773,13 +850,20 @@ def get_provider_by_code(code_provider):
     return provider 
 
 
-def get_provider_offer_products(provider_code, product_codes):
+def get_provider_offer_products(provider_code, product_codes, product_unit_correlatives=None):
     provider_code = normalize_code(provider_code)
     normalized_codes = [normalize_code(code) for code in (product_codes or []) if normalize_code(code)]
     if not normalized_codes:
         return []
 
     unique_codes = list(dict.fromkeys(normalized_codes))
+    selected_correlatives = [str(value or '').strip() for value in (product_unit_correlatives or [])]
+    requested_units_by_code = {}
+    for index, product_code in enumerate(normalized_codes):
+        if index < len(selected_correlatives):
+            unit_correlative = selected_correlatives[index]
+            if unit_correlative:
+                requested_units_by_code[product_code] = unit_correlative
 
     last_cost_subquery = (
         db.session.query(ProductsProvider.unitary_cost)
@@ -818,11 +902,85 @@ def get_provider_offer_products(provider_code, product_codes):
     )
 
     row_map = {normalize_code(row.code): row for row in rows}
+    catalog_units = _get_provider_catalog_units(unique_codes, provider_code)
+    unit_rows = (
+        db.session.query(
+            ProductsUnit.correlative,
+            ProductsUnit.product_code,
+            ProductsUnit.unit,
+            ProductsUnit.main_unit,
+            ProductsUnit.is_for_buy,
+            ProductsUnit.conversion_factor,
+            ProductsUnit.unit_type,
+            Unit.description.label('unit_description'),
+        )
+        .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+        .filter(func.upper(func.trim(ProductsUnit.product_code)).in_(unique_codes))
+        .all()
+    )
+    units_by_product = {}
+    for unit_row in unit_rows:
+        units_by_product.setdefault(normalize_code(unit_row.product_code), []).append(unit_row)
+
     products = []
     for product_code in unique_codes:
         row = row_map.get(product_code)
         if not row:
             continue
+
+        product_units = units_by_product.get(product_code, [])
+        catalog_unit = catalog_units.get(product_code, {})
+        selected_unit = None
+        requested_unit_correlative = requested_units_by_code.get(product_code)
+        if requested_unit_correlative:
+            selected_unit = next(
+                (unit for unit in product_units if str(getattr(unit, 'correlative', '') or '') == str(requested_unit_correlative)),
+                None,
+            )
+        if selected_unit is None and catalog_unit:
+            selected_unit = next(
+                (unit for unit in product_units if normalize_code(unit.unit) == normalize_code(catalog_unit.get('unit_code'))),
+                None,
+            )
+        if selected_unit is None:
+            selected_unit = next(
+                (unit for unit in product_units if unit.is_for_buy and unit.main_unit),
+                next((unit for unit in product_units if unit.is_for_buy), None),
+            ) or next(
+                (unit for unit in product_units if unit.main_unit),
+                product_units[0] if product_units else None,
+            )
+
+        selected_cost = row.last_provider_cost
+        selected_cost_unit_correlative = catalog_unit.get('unit_correlative') if catalog_unit else None
+        if requested_unit_correlative:
+            selected_cost = (
+                db.session.query(ProductsProvider.unitary_cost)
+                .filter(
+                    func.upper(func.trim(ProductsProvider.product_code)) == normalize_code(product_code),
+                    func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+                    ProductsProvider.unit == requested_unit_correlative,
+                )
+                .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
+                .limit(1)
+                .scalar()
+            )
+            if selected_cost is not None:
+                selected_cost_unit_correlative = requested_unit_correlative
+        if selected_cost is None and catalog_unit and catalog_unit.get('unit_correlative'):
+            selected_cost = (
+                db.session.query(ProductsProvider.unitary_cost)
+                .filter(
+                    func.upper(func.trim(ProductsProvider.product_code)) == normalize_code(product_code),
+                    func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+                    ProductsProvider.unit == catalog_unit.get('unit_correlative'),
+                )
+                .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
+                .limit(1)
+                .scalar()
+            )
+            if selected_cost is not None:
+                selected_cost_unit_correlative = catalog_unit.get('unit_correlative')
 
         stock_total = float(row.stock_total or 0)
         maximum_stock = float(row.maximum_stock or 0)
@@ -832,21 +990,49 @@ def get_provider_offer_products(provider_code, product_codes):
             'name': row.name or row.code,
             'reference': row.reference or '-',
             'suggested_quantity': suggested_quantity,
-            'last_provider_cost': float(row.last_provider_cost) if row.last_provider_cost is not None else None,
+            'last_provider_cost': float(selected_cost) if selected_cost is not None else None,
+            'last_provider_cost_unit_correlative': selected_cost_unit_correlative,
+            'unit': selected_unit.unit_description if selected_unit else (catalog_unit.get('unit_description') or 'UND'),
+            'unit_code': selected_unit.unit if selected_unit else (catalog_unit.get('unit_code') or ''),
+            'unit_correlative': getattr(selected_unit, 'correlative', None) if selected_unit else catalog_unit.get('unit_correlative'),
+            'conversion_factor': float((selected_unit.conversion_factor if selected_unit else catalog_unit.get('conversion_factor')) or 1) if (selected_unit or catalog_unit) else 1.0,
+            'unit_type': (selected_unit.unit_type if selected_unit is not None else catalog_unit.get('unit_type')) or 0,
+            'unit_options': [
+                {
+                    'code': unit.unit,
+                    'description': unit.unit_description or unit.unit,
+                    'conversion_factor': float(unit.conversion_factor or 1),
+                    'unit_type': unit.unit_type or 0,
+                    'main_unit': bool(unit.main_unit),
+                    'correlative': getattr(unit, 'correlative', None),
+                }
+                for unit in product_units
+            ],
         })
 
     return products
 
 
-def build_provider_offer_context(items):
+def build_provider_offer_context(items, coin_symbol='$'):
     normalized_items = []
     total_amount = 0.0
 
     for item in items or []:
         quantity = float(item.get('quantity') or 0)
         unit_price = float(item.get('unit_price') or 0)
+        unit_options = item.get('unit_options') or get_provider_product_units(item.get('code'))
+        current_units_per_main = _units_per_main(
+            item.get('conversion_factor'), item.get('unit_type')
+        )
+        main_quantity = float(item.get('main_quantity') or (quantity * current_units_per_main))
+        main_unit_price = unit_price / current_units_per_main
+        conversion_factor = max(float(item.get('conversion_factor') or 1), 0.0001)
+        unit_type = int(item.get('unit_type') or 0)
+        units_per_main = _units_per_main(conversion_factor, unit_type)
+        purchase_quantity = main_quantity / units_per_main
+        purchase_unit_price = main_unit_price * units_per_main
         discount_percent = float(item.get('discount_percent') or 0)
-        subtotal = quantity * unit_price
+        subtotal = purchase_quantity * purchase_unit_price
         total_with_discount = subtotal * (1 - (discount_percent / 100))
         total_amount += total_with_discount
 
@@ -854,8 +1040,12 @@ def build_provider_offer_context(items):
             'code': item.get('code') or '',
             'name': item.get('name') or item.get('code') or '-',
             'reference': item.get('reference') or '-',
-            'quantity': quantity,
-            'unit_price': unit_price,
+            'quantity': purchase_quantity,
+            'unit': item.get('unit') or 'UND',
+            'unit_code': item.get('unit_code') or '',
+            'unit_options': unit_options,
+            'conversion_factor': conversion_factor,
+            'unit_price': purchase_unit_price,
             'discount_percent': discount_percent,
             'subtotal': subtotal,
             'total_with_discount': total_with_discount,
@@ -866,6 +1056,87 @@ def build_provider_offer_context(items):
         'products_count': len(normalized_items),
         'total_items': len(normalized_items),
         'total_amount': total_amount,
+        'coin_symbol': coin_symbol or '$',
+    }
+
+
+def _units_per_main(conversion_factor, unit_type):
+    factor = max(float(conversion_factor or 1), 0.0001)
+    unit_type = int(unit_type or 0)
+    return factor if unit_type == 1 else (1 / factor if unit_type == 2 else 1)
+
+
+def convert_unit_price(price, from_conversion_factor, from_unit_type, to_conversion_factor, to_unit_type):
+    """Convert a unit price from one product unit into another using ProductUnit factors."""
+    if price is None:
+        return 0.0
+
+    from_units_per_main = _units_per_main(from_conversion_factor, from_unit_type)
+    to_units_per_main = _units_per_main(to_conversion_factor, to_unit_type)
+    if not from_units_per_main or not to_units_per_main:
+        return float(price)
+
+    return float(price) * to_units_per_main / from_units_per_main
+
+
+def get_provider_product_units(product_code):
+    rows = (
+        db.session.query(
+            ProductsUnit.correlative,
+            ProductsUnit.unit,
+            ProductsUnit.conversion_factor,
+            ProductsUnit.unit_type,
+            ProductsUnit.main_unit,
+            ProductsUnit.is_for_buy,
+            Unit.description.label('unit_description'),
+        )
+        .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+        .filter(func.upper(func.trim(ProductsUnit.product_code)) == normalize_code(product_code))
+        .all()
+    )
+    return [
+        {
+            'code': row.unit,
+            'description': row.unit_description or row.unit,
+            'conversion_factor': float(row.conversion_factor or 1),
+            'unit_type': row.unit_type or 0,
+            'main_unit': bool(row.main_unit),
+            'is_for_buy': bool(row.is_for_buy),
+            'correlative': getattr(row, 'correlative', None),
+        }
+        for row in rows
+    ]
+
+
+def get_provider_product_unit_by_correlative(unit_correlative):
+    if not unit_correlative:
+        return None
+
+    row = (
+        db.session.query(
+            ProductsUnit.correlative,
+            ProductsUnit.unit,
+            ProductsUnit.conversion_factor,
+            ProductsUnit.unit_type,
+            ProductsUnit.main_unit,
+            ProductsUnit.is_for_buy,
+            Unit.description.label('unit_description'),
+        )
+        .outerjoin(Unit, Unit.code == ProductsUnit.unit)
+        .filter(ProductsUnit.correlative == unit_correlative)
+        .first()
+    )
+    if not row:
+        return None
+
+    return {
+        'code': row.unit,
+        'description': row.unit_description or row.unit,
+        'conversion_factor': float(row.conversion_factor or 1),
+        'unit_type': row.unit_type or 0,
+        'main_unit': bool(row.main_unit),
+        'is_for_buy': bool(row.is_for_buy),
+        'correlative': getattr(row, 'correlative', None),
     }
 
 

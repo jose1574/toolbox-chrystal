@@ -208,6 +208,7 @@ def create_app():
             "shopping.provider_panel",
             "shopping.provider_catalog_modal",
             "shopping.provider_offer_items_add",
+            "shopping.provider_offer_items_unit",
             "shopping.provider_offer_items_remove",
             "shopping.provider_approvals",
             "shopping.provider_approval",
