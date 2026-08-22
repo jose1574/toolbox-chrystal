@@ -5,7 +5,7 @@ from flask import make_response, redirect, render_template, request, flash, sess
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import ProviderRegistration, User
+from app.models import Coin, ProviderRegistration, User
 from app.shopping import shopping_bp
 from app.shopping.services import shopping_service as service
 
@@ -254,10 +254,17 @@ def provider_selection():
 def provider_panel():
     provider_username = session.get('provider_username')
     provider_code = session.get('provider_code')
+    coins = Coin.query.filter(Coin.status == '01').order_by(Coin.description.asc(), Coin.code.asc()).all()
+    selected_coin_code = request.args.get('coin_code') or next(
+        (coin.code for coin in coins if (coin.symbol or '').upper() == 'USD'),
+        coins[0].code if coins else '',
+    )
     return render_template(
         'providers/provider_panel.html',
         provider_username=provider_username,
         provider_code=provider_code,
+        coins=coins,
+        selected_coin_code=selected_coin_code,
     )
 
 

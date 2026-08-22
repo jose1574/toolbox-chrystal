@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
-from sqlalchemy import and_, case, func, or_, text
+from sqlalchemy import and_, case, func, literal, or_, text
 
 from app import db
 from app.models import (
@@ -470,6 +470,19 @@ def get_provider_catalog_products(
     page = max(page or 1, 1)
     per_page = max(min(per_page or 20, 100), 1)
 
+    provider_last_cost_subquery = None
+    if provider_code:
+        provider_last_cost_subquery = (
+            db.session.query(ProductsProvider.unitary_cost)
+            .filter(
+                func.upper(func.trim(ProductsProvider.product_code)) == func.upper(func.trim(Product.code)),
+                func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+            )
+            .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
+            .limit(1)
+            .scalar_subquery()
+        )
+
     product_query = (
         db.session.query(
             Product.code.label('code'),
@@ -551,6 +564,14 @@ def get_provider_catalog_products(
 
     product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
     total_products = product_query.count()
+
+    if provider_last_cost_subquery is not None:
+        product_query = product_query.add_columns(
+            provider_last_cost_subquery.label('last_provider_cost')
+        )
+    else:
+        product_query = product_query.add_columns(literal(None).label('last_provider_cost'))
+
     total_pages = max((total_products + per_page - 1) // per_page, 1)
     page = min(page, total_pages)
 
@@ -571,6 +592,7 @@ def get_provider_catalog_products(
             'minimum_stock': minimum_stock,
             'maximum_stock': maximum_stock,
             'replenishment_needed': replenishment_needed,
+            'last_provider_cost': float(row.last_provider_cost) if row.last_provider_cost is not None else None,
         })
 
     return products, total_products, total_pages, page

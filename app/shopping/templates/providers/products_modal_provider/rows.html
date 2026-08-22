@@ -21,10 +21,15 @@
     <td>{{ product.minimum_stock }}</td>
     <td>{{ product.maximum_stock }}</td>
     <td>{{ product.replenishment_needed }}</td>
+    <td class="text-end">
+        {% if product.last_provider_cost is not none %}
+            {{ '%.2f'|format(product.last_provider_cost) }}
+        {% endif %}
+    </td>
 </tr>
 {% else %}
 <tr>
-    <td colspan="9" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+    <td colspan="10" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
 </tr>
 {% endfor %}
 
@@ -35,7 +40,7 @@
     hx-target="this"
     hx-swap="outerHTML"
 >
-    <td colspan="9" class="text-center py-3 text-body-secondary">
+    <td colspan="10" class="text-center py-3 text-body-secondary">
         Cargando más productos...
     </td>
 </tr>
