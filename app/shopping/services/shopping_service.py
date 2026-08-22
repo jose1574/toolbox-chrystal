@@ -1035,7 +1035,10 @@ def build_provider_offer_context(items, coin_symbol='$'):
     for item in items or []:
         quantity = _to_decimal(item.get('quantity') or 0)
         unit_price = _to_decimal(item.get('unit_price') or 0)
-        unit_options = item.get('unit_options') or get_provider_product_units(item.get('code'))
+        item_type = item.get('item_type') or 'catalog'
+        unit_options = item.get('unit_options') or (
+            [] if item_type == 'new_product' else get_provider_product_units(item.get('code'))
+        )
         current_units_per_main = _to_decimal(_units_per_main(
             item.get('conversion_factor'), item.get('unit_type')
         ))
@@ -1053,18 +1056,26 @@ def build_provider_offer_context(items, coin_symbol='$'):
         total_amount += total_with_discount
 
         normalized_items.append({
+            'item_id': item.get('item_id') or item.get('code') or '',
+            'item_type': item_type,
             'code': item.get('code') or '',
             'name': item.get('name') or item.get('code') or '-',
+            'main_code': item.get('proposed_main_code') or item.get('code') or '',
             'reference': item.get('reference') or '-',
             'quantity': float(purchase_quantity),
             'unit': item.get('unit') or 'UND',
             'unit_code': item.get('unit_code') or '',
+            'unit_correlative': item.get('unit_correlative'),
             'unit_options': unit_options,
             'conversion_factor': conversion_factor,
+            'unit_type': unit_type,
             'unit_price': float(purchase_unit_price),
             'discount_percent': float(discount_percent),
             'subtotal': float(subtotal),
             'total_with_discount': float(total_with_discount),
+            'note': item.get('note') or '',
+            'mark_name': item.get('mark_name') or '',
+            'department_name': item.get('department_name') or '',
         })
 
     return {

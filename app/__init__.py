@@ -117,6 +117,11 @@ def ensure_toolbox_schema_columns(inspector):
             "status": "ALTER TABLE toolbox.provider_registrations ADD COLUMN status VARCHAR(30) NOT NULL DEFAULT 'PENDING'",
         }
 
+    if "purchase_review_new_product_items" in table_names:
+        table_columns_sql["purchase_review_new_product_items"] = {
+            "proposed_main_code": "ALTER TABLE toolbox.purchase_review_new_product_items ADD COLUMN proposed_main_code VARCHAR",
+        }
+
     added_columns = []
     with db.engine.begin() as connection:
         connection.execute(text("SET statement_timeout = 15000"))
@@ -151,6 +156,22 @@ def ensure_toolbox_schema_columns(inspector):
                     ALTER TABLE toolbox.provider_registrations
                     ADD CONSTRAINT ck_provider_registrations_status
                     CHECK (status IN ('PENDING', 'APPROVED', 'BLOCKED'));
+                END IF;
+            END $$;
+        """))
+
+        connection.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'toolbox'
+                      AND table_name = 'purchase_review_lists'
+                      AND column_name = 'created_by'
+                      AND is_nullable = 'NO'
+                ) THEN
+                    ALTER TABLE toolbox.purchase_review_lists
+                    ALTER COLUMN created_by DROP NOT NULL;
                 END IF;
             END $$;
         """))
@@ -207,7 +228,10 @@ def create_app():
         provider_routes = {
             "shopping.provider_panel",
             "shopping.provider_catalog_modal",
+            "shopping.provider_new_product_modal",
             "shopping.provider_offer_items_add",
+            "shopping.provider_offer_items_add_new_product",
+            "shopping.provider_offer_items_submit_review",
             "shopping.provider_offer_items_unit",
             "shopping.provider_offer_items_remove",
             "shopping.provider_approvals",

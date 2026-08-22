@@ -9587,7 +9587,7 @@ class PurchaseReviewList(db.Model):
     )
     created_by = db.Column(
         db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     buyer_code = db.Column(
@@ -9683,6 +9683,93 @@ class PurchaseReviewListItem(db.Model):
         "User",
         primaryjoin="PurchaseReviewListItem.reviewed_by == User.code",
         backref="reviewed_purchase_review_list_items",
+    )
+
+
+class PurchaseReviewNewProductItem(db.Model):
+    __tablename__ = "purchase_review_new_product_items"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('PENDING','ACCEPTED','REJECTED')",
+            name="ck_purchase_review_new_product_items_status",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    main_correlative = db.Column(
+        db.ForeignKey(
+            "toolbox.purchase_review_lists.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    proposed_description = db.Column(db.String, nullable=False)
+    proposed_main_code = db.Column(db.String)
+    proposed_reference = db.Column(db.String)
+    proposed_mark_code = db.Column(
+        db.ForeignKey("public.marks.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    proposed_department_code = db.Column(
+        db.ForeignKey("public.department.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    proposed_unit_code = db.Column(
+        db.ForeignKey("public.units.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    requested_amount = db.Column(db.Double(53), nullable=False, server_default="0")
+    unitary_cost = db.Column(db.Double(53), nullable=False, server_default="0")
+    provider_note = db.Column(db.String)
+    status = db.Column(db.String(16), nullable=False, server_default="PENDING")
+    rejected_reason = db.Column(db.String)
+    reviewed_by = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    reviewed_at = db.Column(db.DateTime)
+    approved_product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    review_list = db.relationship(
+        "PurchaseReviewList",
+        primaryjoin="PurchaseReviewNewProductItem.main_correlative == PurchaseReviewList.correlative",
+        backref="new_product_items",
+    )
+    mark = db.relationship(
+        "Mark",
+        primaryjoin="PurchaseReviewNewProductItem.proposed_mark_code == Mark.code",
+        backref="purchase_review_new_product_items",
+    )
+    department = db.relationship(
+        "Department",
+        primaryjoin="PurchaseReviewNewProductItem.proposed_department_code == Department.code",
+        backref="purchase_review_new_product_items",
+    )
+    unit = db.relationship(
+        "Unit",
+        primaryjoin="PurchaseReviewNewProductItem.proposed_unit_code == Unit.code",
+        backref="purchase_review_new_product_items",
+    )
+    reviewer = db.relationship(
+        "User",
+        primaryjoin="PurchaseReviewNewProductItem.reviewed_by == User.code",
+        backref="reviewed_purchase_review_new_product_items",
+    )
+    approved_product = db.relationship(
+        "Product",
+        primaryjoin="PurchaseReviewNewProductItem.approved_product_code == Product.code",
+        backref="approved_purchase_review_new_product_items",
     )
 
 

@@ -24,8 +24,19 @@
                 {% for item in offer_context['items'] %}
                 <tr>
                     <td>
-                        <div class="provider-product-name">{{ item.name }}</div>
-                        <div class="provider-product-sub">SKU: {{ item.code }}</div>
+                        <div class="provider-product-name">
+                            {{ item.name }}
+                            {% if item.item_type == 'new_product' %}
+                            <span class="provider-badge ms-2">Nuevo producto</span>
+                            {% endif %}
+                        </div>
+                        <div class="provider-product-sub">
+                            {% if item.item_type == 'new_product' %}
+                            Codigo: {{ item.main_code or 'Sin codigo' }} · {{ item.mark_name or 'Sin marca' }} · {{ item.department_name or 'Sin departamento' }}
+                            {% else %}
+                            SKU: {{ item.code }}
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="text-end">
                     <input type="number" 
@@ -33,35 +44,39 @@
                         min="0" 
                         step="any" 
                         value="{{ '%.2f'|format(item.quantity) }}" 
-                        aria-label="Cantidad de {{ item.code }}"
+                        aria-label="Cantidad de {{ item.name }}"
                         hx-post="{{ url_for('shopping.provider_offer_items_add') }}"
-                        hx-vals='js:{product_code: "{{ item.code }}", quantity: event.target.value, unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
+                        hx-vals='js:{item_id: "{{ item.item_id }}", product_code: "{{ item.code }}", quantity: event.target.value, unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
                         hx-trigger="change"
                         hx-target="#provider-offer-details-container"
                         hx-swap="outerHTML"> 
                     
                     </td>
                     <td>
-                        <select
-                            class="form-select form-select-sm"
-                            aria-label="Unidad de {{ item.code }}"
-                            hx-post="{{ url_for('shopping.provider_offer_items_unit') }}"
-                            hx-vals='js:{product_code: "{{ item.code }}", unit_code: event.target.value, unit_correlative: event.target.selectedOptions[0]?.dataset?.unitCorrelative || ""}'
-                            hx-trigger="change"
-                            hx-target="#provider-offer-details-container"
-                            hx-swap="outerHTML"
-                        >
-                            {% for unit in item.unit_options %}
-                            <option
-                                value="{{ unit.code }}"
-                                data-unit-correlative="{{ unit.correlative or '' }}"
-                                {% if unit.code == item.unit_code %}selected{% endif %}
-                            >{{ unit.description }}</option>
-                            {% endfor %}
-                            {% if not item.unit_options %}
-                            <option value="{{ item.unit_code }}" selected>{{ item.unit }}</option>
+                            {% if item.item_type == 'new_product' %}
+                            <span class="small text-muted fw-semibold">{{ item.unit or 'UND' }}</span>
+                            {% else %}
+                            <select
+                                class="form-select form-select-sm"
+                                aria-label="Unidad de {{ item.name }}"
+                                hx-post="{{ url_for('shopping.provider_offer_items_unit') }}"
+                                hx-vals='js:{item_id: "{{ item.item_id }}", product_code: "{{ item.code }}", unit_code: event.target.value, unit_correlative: event.target.selectedOptions[0]?.dataset?.unitCorrelative || ""}'
+                                hx-trigger="change"
+                                hx-target="#provider-offer-details-container"
+                                hx-swap="outerHTML"
+                            >
+                                {% for unit in item.unit_options %}
+                                <option
+                                    value="{{ unit.code }}"
+                                    data-unit-correlative="{{ unit.correlative or '' }}"
+                                    {% if unit.code == item.unit_code %}selected{% endif %}
+                                >{{ unit.description }}</option>
+                                {% endfor %}
+                                {% if not item.unit_options %}
+                                <option value="{{ item.unit_code }}" selected>{{ item.unit }}</option>
+                                {% endif %}
+                            </select>
                             {% endif %}
-                        </select>
                     </td>
                     <td class="text-end">
                     <div class="input-group input-group-sm">
@@ -71,9 +86,9 @@
                             min="0"
                             step="any"
                             value="{{ '%.2f'|format(item.unit_price) }}"
-                            aria-label="Precio unitario de {{ item.code }}"
+                                aria-label="Precio unitario de {{ item.name }}"
                             hx-post="{{ url_for('shopping.provider_offer_items_add') }}"
-                            hx-vals='js:{product_code: "{{ item.code }}", unit_price: event.target.value, quantity: "{{ '%.2f'|format(item.quantity) }}", unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
+                                hx-vals='js:{item_id: "{{ item.item_id }}", product_code: "{{ item.code }}", unit_price: event.target.value, quantity: "{{ '%.2f'|format(item.quantity) }}", unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
                             hx-trigger="change"
                             hx-target="#provider-offer-details-container"
                             hx-swap="outerHTML">
@@ -88,9 +103,9 @@
                             max="100"
                             step="any"
                             value="{{ '%.2f'|format(item.discount_percent) }}"
-                            aria-label="Descuento de {{ item.code }}"
+                            aria-label="Descuento de {{ item.name }}"
                             hx-post="{{ url_for('shopping.provider_offer_items_add') }}"
-                            hx-vals='js:{product_code: "{{ item.code }}", discount_percent: event.target.value, quantity: "{{ '%.2f'|format(item.quantity) }}", unit_price: "{{ '%.2f'|format(item.unit_price) }}", unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
+                            hx-vals='js:{item_id: "{{ item.item_id }}", product_code: "{{ item.code }}", discount_percent: event.target.value, quantity: "{{ '%.2f'|format(item.quantity) }}", unit_price: "{{ '%.2f'|format(item.unit_price) }}", unit_code: "{{ item.unit_code }}", unit_correlative: "{{ item.unit_correlative or "" }}"}'
                             hx-trigger="change"
                             hx-target="#provider-offer-details-container"
                             hx-swap="outerHTML">
@@ -103,9 +118,9 @@
                             type="button"
                             class="btn btn-sm provider-secondary-btn px-2 py-1"
                             title="Quitar producto"
-                            aria-label="Quitar producto {{ item.code }}"
+                            aria-label="Quitar producto {{ item.name }}"
                             hx-post="{{ url_for('shopping.provider_offer_items_remove') }}"
-                            hx-vals='{"product_code":"{{ item.code }}"}'
+                            hx-vals='{"item_id":"{{ item.item_id }}","product_code":"{{ item.code }}"}'
                             hx-target="#provider-offer-details-container"
                             hx-swap="outerHTML"
                         >

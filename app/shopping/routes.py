@@ -1,11 +1,23 @@
 import re
+import uuid
+from datetime import datetime
 from functools import wraps
 
 from flask import make_response, redirect, render_template, request, flash, session, url_for
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import Coin, ProviderRegistration, User
+from app.models import (
+    Coin,
+    Department,
+    Mark,
+    ProviderRegistration,
+    PurchaseReviewList,
+    PurchaseReviewListItem,
+    PurchaseReviewNewProductItem,
+    Unit,
+    User,
+)
 from app.shopping import shopping_bp
 from app.shopping.services import shopping_service as service
 
@@ -90,6 +102,29 @@ def _provider_offer_coin_symbol():
     coin_code = session.get('provider_offer_coin_code') or service.get_default_provider_coin_code()
     coin = Coin.query.filter(Coin.code == coin_code, Coin.status == '01').first()
     return (coin.symbol or coin.code) if coin else coin_code
+
+
+def _normalize_offer_item_id(value):
+    return (value or '').strip()
+
+
+def _find_offer_item(items, item_id=None, product_code=None):
+    normalized_item_id = _normalize_offer_item_id(item_id)
+    normalized_product_code = normalize_upper(product_code)
+
+    for item in items:
+        current_item_id = _normalize_offer_item_id(item.get('item_id'))
+        if normalized_item_id and current_item_id == normalized_item_id:
+            return item
+        if not normalized_item_id and normalized_product_code and normalize_upper(item.get('code')) == normalized_product_code:
+            return item
+    return None
+
+
+def _build_provider_review_reference(provider_code):
+    normalized_provider_code = normalize_upper(provider_code) or 'PROVIDER'
+    timestamp_suffix = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    return f"PRV-{normalized_provider_code}-{timestamp_suffix}"
 
 
 @shopping_bp.route('/provider_username_availability')
@@ -304,6 +339,177 @@ def provider_panel():
     )
 
 
+@shopping_bp.route('/provider_new_product_modal')
+@provider_session_required
+def provider_new_product_modal():
+    marks = Mark.query.order_by(Mark.description.asc(), Mark.code.asc()).all()
+    departments = Department.query.order_by(Department.description.asc(), Department.code.asc()).all()
+    units = Unit.query.order_by(Unit.description.asc(), Unit.code.asc()).all()
+    return render_template(
+        'providers/new_product_modal.html',
+        marks=marks,
+        departments=departments,
+        units=units,
+        form_data={},
+        error_message='',
+    )
+
+
+@shopping_bp.route('/provider_offer_items/add_new_product', methods=['POST'])
+@provider_session_required
+def provider_offer_items_add_new_product():
+    provider_code = session.get('provider_code', '')
+    offer_items = _get_provider_offer_items(provider_code)
+
+    proposed_description = (request.form.get('proposed_description') or '').strip()
+    proposed_main_code = normalize_upper(request.form.get('proposed_main_code'))
+    proposed_reference = (request.form.get('proposed_reference') or '').strip()
+    proposed_mark_code = normalize_upper(request.form.get('proposed_mark_code'))
+    proposed_department_code = normalize_upper(request.form.get('proposed_department_code'))
+    proposed_unit_code = normalize_upper(request.form.get('proposed_unit_code'))
+    provider_note = (request.form.get('provider_note') or '').strip()
+    raw_requested_amount = (request.form.get('requested_amount') or '').strip()
+    raw_unitary_cost = (request.form.get('unitary_cost') or '').strip()
+
+    form_data = {
+        'proposed_description': proposed_description,
+        'proposed_main_code': proposed_main_code,
+        'proposed_reference': proposed_reference,
+        'proposed_mark_code': proposed_mark_code,
+        'proposed_department_code': proposed_department_code,
+        'proposed_unit_code': proposed_unit_code,
+        'provider_note': provider_note,
+        'requested_amount': raw_requested_amount,
+        'unitary_cost': raw_unitary_cost,
+    }
+
+    try:
+        requested_amount = max(float(raw_requested_amount), 0)
+    except ValueError:
+        requested_amount = -1
+
+    try:
+        unitary_cost = max(float(raw_unitary_cost), 0)
+    except ValueError:
+        unitary_cost = -1
+
+    if not proposed_description or not proposed_main_code or requested_amount <= 0 or unitary_cost < 0:
+        marks = Mark.query.order_by(Mark.description.asc(), Mark.code.asc()).all()
+        departments = Department.query.order_by(Department.description.asc(), Department.code.asc()).all()
+        units = Unit.query.order_by(Unit.description.asc(), Unit.code.asc()).all()
+        response = make_response(
+            render_template(
+                'providers/new_product_modal.html',
+                marks=marks,
+                departments=departments,
+                units=units,
+                form_data=form_data,
+                error_message='Completa el código principal, la descripción, una cantidad válida y un precio unitario válido.',
+            ),
+            422,
+        )
+        response.headers['HX-Retarget'] = '#provider-new-product-modal-container'
+        response.headers['HX-Reswap'] = 'innerHTML'
+        return response
+
+    selected_mark = Mark.query.filter(Mark.code == proposed_mark_code).first() if proposed_mark_code else None
+    selected_department = Department.query.filter(Department.code == proposed_department_code).first() if proposed_department_code else None
+    selected_unit = Unit.query.filter(Unit.code == proposed_unit_code).first() if proposed_unit_code else None
+
+    offer_items.append({
+        'item_id': f"NEW-{uuid.uuid4().hex[:8]}",
+        'item_type': 'new_product',
+        'code': proposed_main_code,
+        'name': proposed_description,
+        'reference': proposed_reference or '-',
+        'quantity': requested_amount,
+        'main_quantity': requested_amount,
+        'unit_price': unitary_cost,
+        'unit': (selected_unit.description if selected_unit else proposed_unit_code) or 'UND',
+        'unit_code': proposed_unit_code or '',
+        'unit_options': [],
+        'conversion_factor': 1,
+        'unit_type': 0,
+        'discount_percent': 0,
+        'note': provider_note,
+        'proposed_main_code': proposed_main_code,
+        'mark_code': selected_mark.code if selected_mark else '',
+        'mark_name': selected_mark.description if selected_mark else '',
+        'department_code': selected_department.code if selected_department else '',
+        'department_name': selected_department.description if selected_department else '',
+    })
+
+    _set_provider_offer_items(provider_code, offer_items)
+    offer_context = service.build_provider_offer_context(offer_items, _provider_offer_coin_symbol())
+    return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+
+@shopping_bp.route('/provider_offer_items/submit_review', methods=['POST'])
+@provider_session_required
+def provider_offer_items_submit_review():
+    provider_code = session.get('provider_code', '')
+    offer_items = _get_provider_offer_items(provider_code)
+
+    if not offer_items:
+        flash('Agrega al menos un producto antes de enviar a revisión.', 'warning')
+        return redirect(url_for('shopping.provider_panel'))
+
+    review_list = PurchaseReviewList(
+        list_type='PROVIDER_SUBMISSION',
+        provider_code=provider_code or None,
+        created_by=None,
+        buyer_code=None,
+        reference=_build_provider_review_reference(provider_code),
+        status='SUBMITTED',
+        provider_notes=None,
+        submitted_at=datetime.utcnow(),
+    )
+    db.session.add(review_list)
+    db.session.flush()
+
+    for item in offer_items:
+        item_type = item.get('item_type') or 'catalog'
+        if item_type == 'new_product':
+            db.session.add(
+                PurchaseReviewNewProductItem(
+                    main_correlative=review_list.correlative,
+                    proposed_description=item.get('name') or '',
+                    proposed_main_code=item.get('proposed_main_code') or item.get('code') or None,
+                    proposed_reference=(item.get('reference') or '').strip() or None,
+                    proposed_mark_code=item.get('mark_code') or None,
+                    proposed_department_code=item.get('department_code') or None,
+                    proposed_unit_code=item.get('unit_code') or None,
+                    requested_amount=float(item.get('quantity') or 0),
+                    unitary_cost=float(item.get('unit_price') or 0),
+                    provider_note=(item.get('note') or '').strip() or None,
+                    status='PENDING',
+                )
+            )
+            continue
+
+        product_code = normalize_upper(item.get('code'))
+        if not product_code:
+            continue
+
+        unit_correlative = item.get('unit_correlative')
+        db.session.add(
+            PurchaseReviewListItem(
+                main_correlative=review_list.correlative,
+                product_code=product_code,
+                unit=int(unit_correlative) if str(unit_correlative or '').strip() else None,
+                requested_amount=float(item.get('quantity') or 0),
+                unitary_cost=float(item.get('unit_price') or 0),
+                status='PENDING',
+                note=(item.get('note') or '').strip() or None,
+            )
+        )
+
+    db.session.commit()
+    _set_provider_offer_items(provider_code, [])
+    flash(f'Se envió la oferta a revisión con la referencia {review_list.reference}.', 'success')
+    return redirect(url_for('shopping.provider_panel'))
+
+
 @shopping_bp.route('/provider_offer_items/add', methods=['POST'])
 @provider_session_required
 def provider_offer_items_add():
@@ -311,13 +517,14 @@ def provider_offer_items_add():
     selected_codes = request.form.getlist('selected_product_codes')
     selected_unit_correlatives = request.form.getlist('selected_product_units')
     if not selected_codes:
+        item_id = _normalize_offer_item_id(request.form.get('item_id'))
         product_code = normalize_upper(request.form.get('product_code'))
         raw_quantity = (request.form.get('quantity') or '').strip()
         raw_unit_price = (request.form.get('unit_price') or '').strip()
         raw_discount_percent = (request.form.get('discount_percent') or '').strip()
         offer_items = _get_provider_offer_items(provider_code)
 
-        if product_code:
+        if item_id or product_code:
             try:
                 quantity = max(float(raw_quantity), 0) if raw_quantity else None
             except ValueError:
@@ -333,10 +540,8 @@ def provider_offer_items_add():
             except ValueError:
                 discount_percent = None
 
-            for item in offer_items:
-                if normalize_upper(item.get('code')) != product_code:
-                    continue
-
+            item = _find_offer_item(offer_items, item_id=item_id, product_code=product_code)
+            if item:
                 if quantity is not None:
                     units_per_main = service._units_per_main(
                         item.get('conversion_factor'), item.get('unit_type')
@@ -349,9 +554,8 @@ def provider_offer_items_add():
 
                 if discount_percent is not None:
                     item['discount_percent'] = discount_percent
-                break
 
-            if quantity is not None or unit_price is not None or discount_percent is not None:
+            if item and (quantity is not None or unit_price is not None or discount_percent is not None):
                 _set_provider_offer_items(provider_code, offer_items)
 
         offer_context = service.build_provider_offer_context(
@@ -418,6 +622,8 @@ def provider_offer_items_add():
             )
 
         existing_items.append({
+            'item_id': f"CAT-{product_code}",
+            'item_type': 'catalog',
             'code': product.get('code'),
             'name': product.get('name'),
             'reference': product.get('reference'),
@@ -442,14 +648,18 @@ def provider_offer_items_add():
 @provider_session_required
 def provider_offer_items_unit():
     provider_code = session.get('provider_code', '')
+    item_id = _normalize_offer_item_id(request.form.get('item_id'))
     product_code = normalize_upper(request.form.get('product_code'))
     unit_code = normalize_upper(request.form.get('unit_code'))
     unit_correlative = (request.form.get('unit_correlative') or '').strip()
     offer_items = _get_provider_offer_items(provider_code)
 
-    for item in offer_items:
-        if normalize_upper(item.get('code')) != product_code:
-            continue
+    item = _find_offer_item(offer_items, item_id=item_id, product_code=product_code)
+    if item and item.get('item_type') == 'new_product':
+        offer_context = service.build_provider_offer_context(offer_items, _provider_offer_coin_symbol())
+        return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+    if item:
         unit = next(
             (
                 option for option in item.get('unit_options', [])
@@ -502,7 +712,6 @@ def provider_offer_items_unit():
                 if previous_units_per_main and new_units_per_main
                 else current_unit_price
             )
-        break
 
     _set_provider_offer_items(provider_code, offer_items)
     offer_context = service.build_provider_offer_context(offer_items, _provider_offer_coin_symbol())
@@ -513,9 +722,14 @@ def provider_offer_items_unit():
 @provider_session_required
 def provider_offer_items_remove():
     provider_code = session.get('provider_code', '')
+    item_id = _normalize_offer_item_id(request.form.get('item_id'))
     product_code = normalize_upper(request.form.get('product_code'))
     existing_items = _get_provider_offer_items(provider_code)
-    remaining_items = [item for item in existing_items if normalize_upper(item.get('code')) != product_code]
+    remaining_items = [
+        item for item in existing_items
+        if _normalize_offer_item_id(item.get('item_id')) != item_id
+        and (item_id or normalize_upper(item.get('code')) != product_code)
+    ]
 
     _set_provider_offer_items(provider_code, remaining_items)
     offer_context = service.build_provider_offer_context(remaining_items, _provider_offer_coin_symbol())
