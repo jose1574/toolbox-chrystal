@@ -1,21 +1,53 @@
-<div id="product-shopping-params" class="h-100 rounded border border-secondary-subtle bg-body p-2">
-    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-        <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Parametro de compra</h2>
+<section id="product-shopping-params" class="h-100 rounded border border-secondary-subtle bg-body p-3 shadow-sm d-flex flex-column overflow-hidden" style="min-height: 0;">
+    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <h2 class="section-title text-uppercase fw-bold text-body mb-0 fs-6 lh-1">Parámetros de compras</h2>
         {% if product %}
-        <a href="#" class="link-primary fw-semibold text-decoration-none"
+        <a href="#" class="link-primary small fw-semibold text-decoration-none"
             hx-get="{{ url_for('shopping.product_shopping_param_modal', code=product.code) }}"
             hx-target="#product-shopping-param-modal-container" hx-swap="innerHTML">Editar</a>
         {% else %}
-        <span class="text-body-secondary fw-semibold">Editar</span>
+        <span class="small text-body-secondary fw-semibold">Editar</span>
         {% endif %}
     </div>
-    <dl class="row mb-0 g-1">
-        <dt class="col-5 fw-semibold text-body-secondary">Minima:</dt>
-        <dd class="col-7 mb-0 text-body-secondary">{{ shopping_params.minimum_stock if shopping_params else '-' }}</dd>
-        <dt class="col-5 fw-semibold text-body-secondary">Maxima:</dt>
-        <dd class="col-7 mb-0 text-body-secondary">{{ shopping_params.maximum_stock if shopping_params else '-' }}</dd>
-    </dl>
-</div>
+
+    {% if shopping_params %}
+    {% set minimum_stock = shopping_params.minimum_stock if shopping_params.minimum_stock is not none else '-' %}
+    {% set maximum_stock = shopping_params.maximum_stock if shopping_params.maximum_stock is not none else '-' %}
+    <div class="rounded border border-secondary-subtle overflow-hidden bg-body-tertiary flex-grow-1">
+        <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 border-bottom border-secondary-subtle small">
+            <span class="text-body-secondary">Compra Mínima</span>
+            <span class="fw-bold text-body">{{ minimum_stock }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 border-bottom border-secondary-subtle small">
+            <span class="text-body-secondary">Compra Máxima</span>
+            <span class="fw-bold text-body">{{ maximum_stock }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 border-bottom border-secondary-subtle small">
+            <span class="text-body-secondary">Última actualización</span>
+            <span class="fw-semibold text-body text-end">{{ shopping_params.update_at.strftime('%d/%m/%Y') if shopping_params.update_at else '-' }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 small">
+            <span class="text-body-secondary">Estado</span>
+            <span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle">Configurado</span>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center gap-3 pt-3 small mt-auto">
+        <span class="text-body-secondary">Rango de compra</span>
+        <span class="fw-bold text-body">
+            {% if shopping_params.minimum_stock is not none and shopping_params.maximum_stock is not none %}
+            {{ '%.2f'|format(shopping_params.maximum_stock - shopping_params.minimum_stock) }}
+            {% else %}
+            -
+            {% endif %}
+        </span>
+    </div>
+    {% else %}
+    <div class="rounded border border-secondary-subtle bg-body-tertiary px-3 py-4 text-center small text-body-secondary flex-grow-1 d-flex align-items-center justify-content-center">
+        Selecciona un producto para ver sus parámetros de compra.
+    </div>
+    {% endif %}
+</section>
 
 <script>
     (() => {

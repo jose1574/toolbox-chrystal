@@ -1,7 +1,7 @@
 <div class="container-fluid px-0 my-2" id="product-order-details-container">
     {% set order_provider_code = selected_provider_code|default(provider.code if provider else '') %}
     {% set selected_review_item = selected_review_item|default(none) %}
-    <section class="row g-2 rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
+    <section class="row g-3 rounded border border-secondary-subtle bg-body-tertiary p-3 shadow-sm">
         <div class="col-12 col-xl-2 min-w-0">
             <form class="h-100 d-flex flex-column gap-2"
                 hx-get="{{ url_for('shopping.product_order_details') }}" hx-trigger="submit, keyup changed delay:500ms"
@@ -20,7 +20,7 @@
             </form>
         </div>
 
-        <div class="col-12 col-xl-5 min-w-0">
+        <div class="col-12 col-xl-7 min-w-0">
             <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <h2 class="section-title text-uppercase fw-semibold text-body mb-0">Atributos de un producto</h2>
@@ -48,10 +48,6 @@
         </div>
 
         <div class="col-12 col-md-6 col-xl-3 min-w-0">
-            {% include 'shopping/partials/product_shopping_params.html' %}
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-2 min-w-0">
             <div class="h-100 d-flex flex-column gap-1 rounded border border-secondary-subtle bg-body p-2">
                 {% if selected_review_item %}
                 <h2 class="section-title text-uppercase fw-semibold text-body mb-1 text-xl-center">Detalle en revisión</h2>
@@ -100,6 +96,11 @@
     <div id="product-edit-modal-container"></div>
     <div id="product-shopping-param-modal-container"></div>
 </div>
+{% if include_shopping_params_oob|default(false) %}
+<div id="product-shopping-params-container" hx-swap-oob="innerHTML">
+    {% include 'shopping/partials/product_shopping_params.html' %}
+</div>
+{% endif %}
 {% if include_inventory_params_oob|default(false) %}
 <div id="product_inventory_params" hx-swap-oob="innerHTML">
     {% include 'shopping/partials/product_inventory_params.html' %}

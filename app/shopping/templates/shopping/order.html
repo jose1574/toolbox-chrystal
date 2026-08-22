@@ -8,36 +8,85 @@
 <style>
     .shopping-order-workspace {
         font-size: 0.72rem;
-        overflow-x: hidden;
+        overflow: hidden;
+        height: calc(100dvh - 1rem);
     }
 
-    .shopping-order-workspace .form-control-sm,
-    .shopping-order-workspace .form-select-sm,
-    .shopping-order-workspace .btn-sm {
-        font-size: 0.7rem;
-        min-height: 1.85rem;
+    .shopping-order-shell {
+        height: 100%;
+        min-height: 0;
     }
 
-    .shopping-order-workspace .section-title {
-        font-size: 0.78rem;
-        letter-spacing: 0;
-    }
-
-    .shopping-order-panel {
-        min-height: 8.5rem;
+    .shopping-order-content {
+        min-height: 0;
         overflow: hidden;
     }
 
-    .shopping-order-table-wrap {
-        max-width: 100%;
-        overflow: auto;
+    .shopping-order-main-row,
+    .shopping-order-main-col,
+    .shopping-order-sidebar-col,
+    .shopping-order-panels-stack,
+    .shopping-order-lower-grid,
+    .shopping-order-lower-grid .row,
+    .shopping-order-lower-grid [class*="col-"] {
+        min-height: 0;
+    }
+
+    .shopping-order-panels-stack {
+        grid-template-rows: auto auto auto minmax(0, 1fr);
+    }
+
+    .shopping-order-lower-grid {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .shopping-order-lower-grid #product-shopping-params-container,
+    .shopping-order-lower-grid #product_inventory_params,
+    .shopping-order-lower-grid #product-purchase-history,
+    .shopping-order-lower-grid #product-sales-chart-container {
+        height: 100%;
+    }
+
+    .shopping-order-lower-grid #product-shopping-params-container > *,
+    .shopping-order-lower-grid #product_inventory_params > *,
+    .shopping-order-lower-grid #product-purchase-history > *,
+    .shopping-order-lower-grid #product-sales-chart-container > * {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    @media (min-width: 1400px) {
+        .shopping-order-main-row {
+            display: grid;
+            grid-template-columns: minmax(0, 3fr) minmax(17rem, 1fr);
+            align-items: stretch;
+        }
+
+        .shopping-order-main-row > .shopping-order-main-col,
+        .shopping-order-main-row > .shopping-order-sidebar-col {
+            width: auto;
+            max-width: none;
+        }
+
+        .shopping-order-lower-grid > .row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: stretch;
+        }
+
+        .shopping-order-lower-grid > .row > [class*="col-"] {
+            width: auto;
+            max-width: none;
+        }
     }
 
     .shopping-order-chart {
         min-height: 9rem;
         background:
-            linear-gradient(var(--bs-border-color-translucent) 1px, transparent 1px),
-            linear-gradient(90deg, var(--bs-border-color-translucent) 1px, transparent 1px);
+            linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+            #0f1117;
         background-size: 3rem 3rem;
     }
 
@@ -61,7 +110,7 @@
     .shopping-sales-loading-bar {
         height: 0.35rem;
         overflow: hidden;
-        background-color: var(--bs-border-color-translucent);
+        background-color: rgba(255, 255, 255, 0.08);
     }
 
     .shopping-sales-loading-bar::before {
@@ -92,217 +141,26 @@
         }
     }
 
-    .product-review-banner {
-        min-height: 11rem;
-        background:
-            radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 42%),
-            #0f1117 !important;
-        border-color: rgba(255, 255, 255, 0.06) !important;
-        padding: 1rem !important;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-
-    .product-review-index {
-        font-size: 0.72rem;
-        color: #9ca3af !important;
-    }
-
-    .product-review-stage {
-        max-width: 100%;
-        margin: 0;
-        overflow: hidden;
-    }
-
-    .product-review-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .product-review-title {
-        font-size: 1.2rem;
-        line-height: 1.15;
-        color: #f9fafb;
-        margin: 0;
-        word-break: break-word;
-    }
-
-    .product-review-actions {
-        font-size: 0.72rem;
-    }
-
-    .product-review-code {
-        font-size: 0.74rem;
-        letter-spacing: 0.04em;
-        color: #9ca3af !important;
-    }
-
-    .product-review-frame {
-        display: flex;
-        flex-direction: column;
-        gap: 0.9rem;
-        padding: 0.35rem;
-        border-radius: 1rem;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .product-review-summary {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        align-items: center;
-        text-align: center;
-        padding: 0.65rem 0.5rem 0.35rem;
-    }
-
-    .product-review-name {
-        font-size: 1rem;
-        color: #f9fafb;
-        margin: 0;
-    }
-
-    .product-review-metrics {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.75rem;
-        color: #d1d5db;
-        font-size: 0.74rem;
-        max-width: 58rem;
-        width: 100%;
-    }
-
-    .product-review-metric {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        max-width: 100%;
-        text-align: left;
-    }
-
-    .product-review-nav-center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.2rem;
-        flex: 1;
-        min-width: 0;
-        padding: 0 0.35rem;
-    }
-
-    .product-review-link {
-        color: #60a5fa;
-        text-decoration: underline;
-        font-size: 0.72rem;
-        font-weight: 600;
-    }
-
-    .product-review-link:hover {
-        color: #93c5fd;
-    }
-
-    .product-review-nav-btn {
-        min-width: 0;
-        width: 5.4rem;
-        flex: 0 1 5.4rem;
-        border-radius: 0.55rem;
-        border-color: rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.03);
-        color: #f9fafb;
-    }
-
-    .product-review-nav-btn:hover,
-    .product-review-nav-btn:focus {
-        background: rgba(255, 255, 255, 0.07);
-        color: #f9fafb;
-    }
-
-    .product-review-nav-btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
-
-    .product-review-primary-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.6rem;
-        padding: 0 0.35rem 0.35rem;
-        width: 100%;
-    }
-
-    .product-review-primary-btn {
-        min-height: 3rem;
-        border-radius: 0.7rem;
-        font-size: 0.84rem;
-        font-weight: 700;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        min-width: 0;
-        text-align: center;
-        white-space: normal;
-    }
-
-    .product-review-primary-btn.is-accept {
-        background: #22c55e;
-        border: 1px solid #22c55e;
-        color: #0f1117;
-    }
-
-    .product-review-primary-btn.is-accept:hover {
-        background: #16a34a;
-        border-color: #16a34a;
-        color: #0f1117;
-    }
-
-    .product-review-primary-btn.is-secondary {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid #ef4444;
-        color: #ef4444;
-    }
-
-    .product-review-primary-btn.is-secondary:hover {
-        background: rgba(239, 68, 68, 0.08);
-        color: #f87171;
-    }
-
-    .product-review-primary-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .product-review-detail-note {
-        color: #9ca3af;
-        text-align: center;
-        font-size: 0.72rem;
-        padding-bottom: 0.2rem;
-        word-break: break-word;
-    }
-
-    .shopping-order-workspace .row.g-3 > [class*="col-"] {
-        min-width: 0;
-    }
-
-    .shopping-order-workspace .row.g-3 > [class*="col-"] > * {
-        min-width: 0;
+    .shopping-order-cart-items {
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding-right: 0.15rem;
     }
 
     .product-review-frame.is-active {
-        border-color: rgba(96, 165, 250, 0.35);
-        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        border-color: rgba(96, 165, 250, 0.28);
+        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.12);
     }
 
     @media (max-width: 768px) {
         .shopping-order-workspace {
             font-size: 0.69rem;
+            height: calc(100dvh - 0.75rem);
+        }
+
+        .shopping-order-cart {
+            position: static;
         }
 
         .product-review-controls {
@@ -320,184 +178,252 @@
 
         .product-review-metric {
             width: 100%;
-            justify-content: center;
+            justify-content: flex-start;
         }
     }
 </style>
 
-<div class="container-fluid py-3 px-3 px-lg-4 shopping-order-workspace">
-{% include 'shopping/partials/order_in_wait.html' %}
+{% set review_products = review_products|default([]) %}
+{% set coin_symbol = selected_review_list.coin_symbol if selected_review_list else '$' %}
+{% set first_review_product = review_products|first if review_products else none %}
+{% set first_review_can_accept = ((selected_review_list and first_review_product and first_review_product.item_type == 'catalog' and first_review_product.code) or (not selected_review_list and first_review_product and first_review_product.code)) %}
+{% set cart_totals = namespace(subtotal=0) %}
+{% for item in review_products %}
+    {% set line_subtotal = item.subtotal if item.subtotal is not none else ((item.quantity|default(0)) * (item.unit_price|default(0))) %}
+    {% set cart_totals.subtotal = cart_totals.subtotal + (line_subtotal or 0) %}
+{% endfor %}
+{% set cart_total = selected_review_list.total_amount if selected_review_list and selected_review_list.total_amount is not none else cart_totals.subtotal %}
+{% set cart_discount = cart_totals.subtotal - cart_total %}
 
-<div class="container-fluid px-0 my-2">
-    <div class="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-2 rounded border border-secondary-subtle bg-body px-2 px-lg-3 py-2 shadow-sm w-100">
-        <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 flex-grow-1">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2 flex-grow-1 min-w-0">
-                <span class="text-body-secondary text-uppercase fw-semibold text-nowrap">Nombre del proveedor:</span>
-                <p class="mb-0 fw-semibold text-body text-truncate">{{ provider.description }}</p>
-            </div>
-            <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) if selected_review_list else url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="btn btn-sm btn-outline-secondary px-4 shadow-sm align-self-lg-center">Ver detalles</a>
-        </div>
-        <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 ms-xl-auto">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2">
-                <label for="expected-reception-date" class="form-label mb-0 text-body-secondary fw-semibold text-nowrap">Fecha aproximada de recepcion</label>
-                <input type="date" class="form-control form-control-sm" id="expected-reception-date" value="{{ expected_reception_date }}" >
-            </div>
-            <a href="#" class="btn btn-sm btn-primary px-4 shadow-sm text-uppercase fw-semibold">Carrito</a>
-        </div>
-    </div>
-</div>
+<div class="container-fluid py-3 px-3 px-lg-4 shopping-order-workspace" data-bs-theme="dark">
+    <div class="shopping-order-shell rounded-4 border border-secondary-subtle overflow-hidden bg-body-tertiary shadow-lg d-flex flex-column">
+        {% include 'shopping/partials/order_in_wait.html' %}
 
-{% if selected_review_list %}
-<div class="container-fluid px-0 my-2">
-    <div class="rounded border border-primary-subtle bg-primary-subtle px-3 py-2 shadow-sm">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
-            <div>
-                <div class="small text-uppercase fw-semibold text-primary-emphasis">Lista en revisión</div>
-                <div class="fw-semibold text-body">{{ selected_review_list.reference }}</div>
-                <div class="small text-body-secondary">
-                    {{ selected_review_list.products_count }} productos · {{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(selected_review_list.total_amount).replace(',', ' ') }}
+        <div class="px-3 px-lg-4 py-3 bg-dark-subtle border-bottom border-secondary-subtle">
+            <div class="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-3">
+                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-3 flex-grow-1 min-w-0">
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2 flex-grow-1 min-w-0">
+                        <span class="text-uppercase fw-semibold text-body-secondary text-nowrap">Nombre del proveedor:</span>
+                        <p class="mb-0 fw-semibold text-truncate text-light">{{ provider.description }}</p>
+                    </div>
+                    <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) if selected_review_list else url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="btn btn-sm btn-outline-secondary rounded-pill align-self-lg-center text-truncate">{{ selected_review_list.reference if selected_review_list else 'Ver listas del proveedor' }}</a>
+                </div>
+                <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-3 ms-xl-auto">
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-1 gap-sm-2">
+                        <label for="expected-reception-date" class="form-label mb-0 fw-semibold text-body-secondary text-nowrap">Fecha estimada de recepción:</label>
+                        <input type="date" class="form-control form-control-sm" id="expected-reception-date" value="{{ expected_reception_date|default('') }}">
+                    </div>
+                    <div class="small text-body-secondary text-nowrap align-self-md-center">Estimado de compra: {{ coin_symbol }} {{ '{:,.2f}'.format(cart_total).replace(',', ' ') }}</div>
+                    <a href="#purchase-cart-panel" class="btn btn-warning btn-sm rounded-pill text-uppercase fw-bold">Carrito</a>
                 </div>
             </div>
-            <span class="badge text-bg-{{ selected_review_list.status_badge_class }} align-self-start align-self-lg-center">{{ selected_review_list.status_label }}</span>
         </div>
-    </div>
-</div>
-{% endif %}
 
-<div>
-     {% include 'shopping/partials/product_order_details.html' %}
-</div>
-<div class="container-fluid px-0 my-2">
-    <section class="product-review-banner rounded border border-secondary-subtle bg-body-tertiary p-2 shadow-sm">
-        {% set review_products = review_products|default([]) %}
-        {% if review_products %}
-        <div id="product-review-carousel" class="carousel slide product-review-stage text-center" data-bs-ride="false">
-            <div class="carousel-inner">
-                {% for product in review_products %}
-                <div class="carousel-item {% if loop.first %}active{% endif %}" data-review-product-code="{{ product.code if product.item_type == 'catalog' and product.code else '' }}" data-review-item-type="{{ product.item_type|default('catalog') }}" data-review-quantity="{{ product.quantity|default('') }}" data-review-unit="{{ product.unit|default('') }}" data-review-unit-price="{{ product.unit_price|default('') }}" data-review-subtotal="{{ product.subtotal|default('') }}" data-review-status-label="{{ product.status_label|default('') }}" data-review-note="{{ product.note|default('') }}" data-review-rejected-reason="{{ product.rejected_reason|default('') }}">
-                    <div class="product-review-frame {% if loop.first %}is-active{% endif %}">
-                        <div class="product-review-summary">
-                            <div class="product-review-code text-uppercase">{{ product.code or product.main_code or 'SIN CODIGO' }}</div>
-                            <h3 class="product-review-title">{{ product.description }}</h3>
-                            <div class="product-review-metrics">
-                                <span class="product-review-metric">Cantidad: {{ '%.2f'|format(product.quantity|default(0)) }} {{ product.unit|default('UND') }}</span>
-                                <span class="product-review-metric">Precio: {{ selected_review_list.coin_symbol if selected_review_list else '$' }} {{ '%.2f'|format(product.unit_price|default(0)) }}</span>
-                                <span class="product-review-metric">Subtotal: {{ selected_review_list.coin_symbol if selected_review_list else '$' }} {{ '%.2f'|format(product.subtotal|default(0)) }}</span>
-                                {% if product.status_label %}
-                                <span class="product-review-metric">Estado: {{ product.status_label }}</span>
-                                {% endif %}
+        <div class="shopping-order-content px-2 px-lg-3 py-3 py-xl-4 d-flex flex-column">
+            <div class="shopping-order-main-row row g-3 align-items-start flex-grow-1 overflow-hidden">
+                <div class="shopping-order-main-col col-12 col-xxl-9 d-flex flex-column overflow-hidden">
+                    <div class="shopping-order-panels-stack d-grid gap-3 flex-grow-1 overflow-hidden">
+                        <section class="rounded-4 border border-secondary-subtle bg-dark-subtle p-3 p-lg-4 shadow-sm">
+                            {% if review_products %}
+                            <div id="product-review-carousel" class="carousel slide" data-bs-ride="false">
+                                <div class="carousel-inner overflow-visible">
+                                    {% for product in review_products %}
+                                    <div class="carousel-item {% if loop.first %}active{% endif %}" data-review-product-code="{{ product.code if product.item_type == 'catalog' and product.code else '' }}" data-review-item-type="{{ product.item_type|default('catalog') }}" data-review-quantity="{{ product.quantity|default('') }}" data-review-unit="{{ product.unit|default('') }}" data-review-unit-price="{{ product.unit_price|default('') }}" data-review-subtotal="{{ product.subtotal|default('') }}" data-review-status-label="{{ product.status_label|default('') }}" data-review-note="{{ product.note|default('') }}" data-review-rejected-reason="{{ product.rejected_reason|default('') }}" data-review-can-accept="{% if (selected_review_list and product.item_type == 'catalog' and product.code) or (not selected_review_list and product.code) %}true{% else %}false{% endif %}" data-review-detail-url="{% if (selected_review_list and product.item_type == 'catalog' and product.code) or (not selected_review_list and product.code) %}{{ url_for('shopping.product_order_details', code=product.code, provider_code=provider.code, review_item_type=product.item_type|default('catalog'), review_quantity=product.quantity|default(''), review_unit=product.unit|default(''), review_unit_price=product.unit_price|default(''), review_subtotal=product.subtotal|default(''), review_status_label=product.status_label|default(''), review_note=product.note|default(''), review_rejected_reason=product.rejected_reason|default('')) }}{% endif %}">
+                                        <div class="product-review-frame {% if loop.first %}is-active{% endif %}">
+                                            <div class="d-flex flex-column gap-2 text-start">
+                                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 w-100">
+                                                    <div class="min-w-0">
+                                                        <div class="small text-uppercase text-body-secondary mb-1">{{ product.code or product.main_code or 'SIN CODIGO' }}</div>
+                                                        <h3 class="h5 mb-0 text-light">{{ product.description or product.name or 'Producto sin descripción' }}</h3>
+                                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                                            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle fw-normal px-3 py-2">Cantidad: {{ '%.2f'|format(product.quantity|default(0)) }} {{ product.unit|default('UND') }}</span>
+                                                            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle fw-normal px-3 py-2">Precio: {{ coin_symbol }} {{ '%.2f'|format(product.unit_price|default(0)) }}</span>
+                                                            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle fw-normal px-3 py-2">Subtotal: {{ coin_symbol }} {{ '%.2f'|format(product.subtotal|default(0)) }}</span>
+                                                            {% if product.status_label %}
+                                                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2">Estado: {{ product.status_label }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    {% if product.note or product.rejected_reason %}
+                                                    <div class="small text-body-secondary text-lg-end">
+                                                        {% if product.note %}
+                                                        <div><strong>Nota:</strong> {{ product.note }}</div>
+                                                        {% endif %}
+                                                        {% if product.rejected_reason %}
+                                                        <div><strong>Motivo:</strong> {{ product.rejected_reason }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="product-review-controls">
-                            <button type="button" class="btn btn-sm product-review-nav-btn" data-bs-target="#product-review-carousel" data-bs-slide="prev">Anterior</button>
-                            <div class="product-review-nav-center">
-                                <div class="product-review-index">Producto {{ loop.index }} de {{ review_products_total or loop.length }}</div>
-                                <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) if selected_review_list else url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="product-review-link">ver lista</a>
-                            </div>
-                            <button type="button" class="btn btn-sm product-review-nav-btn" data-bs-target="#product-review-carousel" data-bs-slide="next">Siguiente</button>
-                        </div>
-
-                        <div class="product-review-primary-actions">
-                            {% if (selected_review_list and product.item_type == 'catalog' and product.code) or (not selected_review_list and product.code) %}
-                            <a
-                                href="{{ url_for('shopping.order', code_provider=provider.code, review_list_correlative=review_list_correlative) }}"
-                                class="product-review-primary-btn is-accept"
-                                hx-get="{{ url_for('shopping.product_order_details', code=product.code, provider_code=provider.code, review_item_type=product.item_type|default('catalog'), review_quantity=product.quantity|default(''), review_unit=product.unit|default(''), review_unit_price=product.unit_price|default(''), review_subtotal=product.subtotal|default(''), review_status_label=product.status_label|default(''), review_note=product.note|default(''), review_rejected_reason=product.rejected_reason|default('')) }}"
-                                hx-target="#product-order-details-container"
-                                hx-swap="outerHTML"
-                            >Aceptar</a>
                             {% else %}
-                            <button type="button" class="product-review-primary-btn is-accept" disabled>Sin ficha interna</button>
+                            <div>
+                                <div class="product-review-frame is-active">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" style="min-width: 6rem;" disabled>Anterior</button>
+                                        <div class="flex-grow-1 text-center">
+                                            <div class="small text-body-secondary">Producto 0 de 0</div>
+                                            <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="link-primary small fw-semibold">ver listas del proveedor</a>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" style="min-width: 6rem;" disabled>Siguiente</button>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2 text-start">
+                                        <div class="small text-uppercase text-body-secondary">SIN LISTA</div>
+                                        <h3 class="h5 mb-0 text-light">Selecciona una lista de oferta para iniciar la revisión</h3>
+                                    </div>
+                                    <div class="row row-cols-1 row-cols-md-2 g-2 mt-3">
+                                        <div class="col d-grid"><button type="button" class="btn btn-success py-2 fw-bold" disabled>Aceptar</button></div>
+                                        <div class="col d-grid"><a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="btn btn-outline-secondary py-2 fw-bold">Ver listas</a></div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endif %}
+                        </section>
+
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-1 mb-0">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="min-width: 6rem;" data-review-nav="prev" data-bs-target="#product-review-carousel" data-bs-slide="prev" {% if not review_products %}disabled{% endif %}>Anterior</button>
+                            <div class="flex-grow-1 text-center">
+                                <div class="small text-body-secondary" id="product-review-index-display">Producto {{ 1 if review_products else 0 }} de {{ review_products_total or review_products|length }}</div>
+                                <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) if selected_review_list else url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="link-primary small fw-semibold">ver lista</a>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" style="min-width: 6rem;" data-review-nav="next" data-bs-target="#product-review-carousel" data-bs-slide="next" {% if (review_products|length) <= 1 %}disabled{% endif %}>Siguiente</button>
+                        </div>
+
+                        <div>
+                            {% include 'shopping/partials/product_order_details.html' %}
+                        </div>
+
+                        <div class="row row-cols-1 row-cols-md-2 g-2 mt-0">
+                            <div class="col d-grid">
+                                <button
+                                    type="button"
+                                    id="product-review-accept-action"
+                                    class="btn btn-success py-2 fw-bold"
+                                    {% if not first_review_can_accept %}disabled{% endif %}
+                                    {% if first_review_can_accept %}hx-get="{{ url_for('shopping.product_order_details', code=first_review_product.code, provider_code=provider.code, review_item_type=first_review_product.item_type|default('catalog'), review_quantity=first_review_product.quantity|default(''), review_unit=first_review_product.unit|default(''), review_unit_price=first_review_product.unit_price|default(''), review_subtotal=first_review_product.subtotal|default(''), review_status_label=first_review_product.status_label|default(''), review_note=first_review_product.note|default(''), review_rejected_reason=first_review_product.rejected_reason|default('')) }}"{% endif %}
+                                    hx-target="#product-order-details-container"
+                                    hx-swap="outerHTML"
+                                >{% if first_review_can_accept %}Aceptar{% else %}Sin ficha interna{% endif %}</button>
+                            </div>
 
                             {% if selected_review_list %}
-                            <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) }}" class="product-review-primary-btn is-secondary">Volver a lista</a>
+                            <div class="col d-grid"><a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) }}" class="btn btn-outline-danger py-2 fw-bold">Rechazar</a></div>
                             {% else %}
-                            <button
-                                type="button"
-                                class="product-review-primary-btn is-secondary"
-                                hx-get="{{ url_for('shopping.products_modal', provider_code=provider.code) }}"
-                                hx-target="#products-modal-container"
-                                hx-swap="innerHTML"
-                            >Ver catálogo</button>
+                            <div class="col d-grid">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary py-2 fw-bold"
+                                    hx-get="{{ url_for('shopping.products_modal', provider_code=provider.code) }}"
+                                    hx-target="#products-modal-container"
+                                    hx-swap="innerHTML"
+                                >Ver catálogo</button>
+                            </div>
                             {% endif %}
                         </div>
 
-                        <div class="product-review-actions d-flex flex-wrap justify-content-center gap-2 text-body-secondary">
-                            {% if (selected_review_list and product.item_type == 'catalog' and product.code) or (not selected_review_list and product.code) %}
-                            <a
-                                href="{{ url_for('shopping.order', code_provider=provider.code, review_list_correlative=review_list_correlative) }}"
-                                class="link-dark text-decoration-none"
-                                hx-get="{{ url_for('shopping.product_order_details', code=product.code, provider_code=provider.code, review_item_type=product.item_type|default('catalog'), review_quantity=product.quantity|default(''), review_unit=product.unit|default(''), review_unit_price=product.unit_price|default(''), review_subtotal=product.subtotal|default(''), review_status_label=product.status_label|default(''), review_note=product.note|default(''), review_rejected_reason=product.rejected_reason|default('')) }}"
-                                hx-target="#product-order-details-container"
-                                hx-swap="outerHTML"
-                            >Ver detalle del producto</a>
-                            {% else %}
-                            <span>Producto nuevo propuesto</span>
-                            {% endif %}
-                        </div>
-
-                        <div class="product-review-detail-note">
+                        <div class="small text-body-secondary">
                             Los paneles inferiores muestran el detalle del producto activo en revisión.
                         </div>
+
+                        <div class="shopping-order-lower-grid container-fluid px-0 my-1 d-flex flex-column">
+                            <div class="row g-3 h-100">
+                                <div class="col-12 col-md-6 col-xl-3 d-flex">
+                                    <div id="product-shopping-params-container" class="w-100 d-flex">
+                                        {% include 'shopping/partials/product_shopping_params.html' %}
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-xl-3 d-flex">
+                                    <div id="product_inventory_params" class="w-100 d-flex">
+                                        {% include 'shopping/partials/product_inventory_params.html' %}
+                                    </div>
+                                    <div id="product-inventory-param-modal-container"></div>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-xl-3 d-flex">
+                                    <div id="product-purchase-history" class="w-100 d-flex">
+                                        {% include 'shopping/partials/product_purchase_history.html' %}
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-xl-3 d-flex">
+                                    <div id="product-sales-chart-container" class="w-100 d-flex">
+                                        {% set selected_code = product.code if product else '' %}
+                                        {% include 'shopping/partials/product_sales_chart_loader.html' %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% else %}
-        <div class="product-review-stage text-center">
-            <div class="product-review-frame">
-                <div class="product-review-summary">
-                    <div class="product-review-code text-uppercase">SIN LISTA</div>
-                    <h3 class="product-review-title">Selecciona una lista de oferta para iniciar la revisión</h3>
-                </div>
-                <div class="product-review-controls">
-                    <button type="button" class="btn btn-sm product-review-nav-btn" disabled>Anterior</button>
-                    <div class="product-review-nav-center">
-                        <div class="product-review-index">Producto 0 de 0</div>
-                        <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="product-review-link">ver listas del proveedor</a>
-                    </div>
-                    <button type="button" class="btn btn-sm product-review-nav-btn" disabled>Siguiente</button>
-                </div>
-                <div class="product-review-primary-actions">
-                    <button type="button" class="product-review-primary-btn is-accept" disabled>Aceptar</button>
-                    <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code) }}" class="product-review-primary-btn is-secondary">Ver listas</a>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </section>
-</div>
 
-<div class="container-fluid px-0 my-3">
-    <div class="row g-3">
-        <div class="col-12 col-xl-4">
-            <div class="d-grid gap-3">
-            <div id="product_inventory_params">
-                {% include 'shopping/partials/product_inventory_params.html' %}
-            </div>
-                <div id="product-inventory-param-modal-container"></div>
+                <div class="shopping-order-sidebar-col col-12 col-xxl-3 d-flex flex-column overflow-hidden">
+                    <aside id="purchase-cart-panel" class="h-100 rounded-4 border border-secondary-subtle bg-dark-subtle p-3 shadow-sm d-flex flex-column gap-3 overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div>
+                                <h2 class="section-title text-uppercase fw-semibold mb-1">Carrito de compras</h2>
+                                <div class="text-body-secondary small">{{ review_products|length }} productos en revisión</div>
+                            </div>
+                            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle">{{ review_products|length }}</span>
+                        </div>
 
-                <div id="product-purchase-history">
-                    {% include 'shopping/partials/product_purchase_history.html' %}
+                        <div class="shopping-order-cart-items d-grid gap-2">
+                            {% for item in review_products %}
+                            {% set item_subtotal = item.subtotal if item.subtotal is not none else ((item.quantity|default(0)) * (item.unit_price|default(0))) %}
+                            <article class="rounded-4 border border-secondary-subtle bg-body p-3">
+                                <div class="d-flex justify-content-between gap-2 align-items-start">
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-truncate">{{ item.description or item.name or 'Producto sin descripción' }}</div>
+                                        <div class="small text-body-secondary text-truncate">{{ item.code or item.main_code or 'Sin código' }}</div>
+                                    </div>
+                                    <div class="text-end small">
+                                        <div class="text-body-secondary">{{ coin_symbol }} {{ '%.2f'|format(item.unit_price|default(0)) }}</div>
+                                        <div class="fw-bold">{{ coin_symbol }} {{ '%.2f'|format(item_subtotal|default(0)) }}</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
+                                    <span class="badge rounded-pill text-bg-dark border border-secondary-subtle px-2 py-1">{{ '%.0f'|format(item.quantity|default(0)) }} {{ item.unit|default('UND') }}</span>
+                                    {% if item.status_label %}
+                                    <span class="badge rounded-pill text-bg-secondary">{{ item.status_label }}</span>
+                                    {% endif %}
+                                </div>
+                            </article>
+                            {% else %}
+                            <div class="rounded-4 border border-secondary-subtle p-3 text-body-secondary text-center">
+                                Aún no hay productos cargados para este pedido.
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-grid gap-2 border-top border-secondary-subtle pt-3 mt-auto">
+                            <div class="d-flex justify-content-between gap-2 text-body-secondary">
+                                <span>Subtotal</span>
+                                <span>{{ coin_symbol }} {{ '{:,.2f}'.format(cart_totals.subtotal).replace(',', ' ') }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2 text-body-secondary">
+                                <span>Descuento</span>
+                                <span>{% if cart_discount > 0 %}-{% endif %}{{ coin_symbol }} {{ '{:,.2f}'.format(cart_discount|abs).replace(',', ' ') }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2 align-items-center">
+                                <span class="fw-semibold">Total</span>
+                                <span class="fs-4 fw-bold text-success">{{ coin_symbol }} {{ '{:,.2f}'.format(cart_total).replace(',', ' ') }}</span>
+                            </div>
+                            {% if selected_review_list %}
+                            <a href="{{ url_for('shopping.offer_list_provider', code_provider=provider.code, review_list_correlative=selected_review_list.correlative) }}" class="btn btn-success py-2 fw-bold">Aprobar pedido</a>
+                            {% else %}
+                            <button type="button" class="btn btn-success py-2 fw-bold" disabled>Aprobar pedido</button>
+                            {% endif %}
+                        </div>
+                    </aside>
                 </div>
             </div>
-        </div>
-
-        <div class="col-12 col-xl-8">
-            <section class="rounded border border-secondary-subtle bg-body p-3 shadow-sm h-100">
-                <h2 class="section-title text-uppercase fw-semibold text-body text-center mb-2">Ventas</h2>
-                <div id="product-sales-chart-container">
-                    {% set selected_code = product.code if product else '' %}
-                    {% include 'shopping/partials/product_sales_chart_loader.html' %}
-                </div>
-            </section>
         </div>
     </div>
-</div>
-
 </div>
 
 <script>
@@ -514,6 +440,10 @@
         const getSlides = () => Array.from(carouselElement.querySelectorAll('.carousel-item'));
         const getActiveSlide = () => carouselElement.querySelector('.carousel-item.active');
         const getDetailInput = () => document.getElementById('product-code-input');
+        const getPrevButton = () => document.querySelector('[data-review-nav="prev"]');
+        const getNextButton = () => document.querySelector('[data-review-nav="next"]');
+        const getIndexDisplay = () => document.getElementById('product-review-index-display');
+        const getAcceptButton = () => document.getElementById('product-review-accept-action');
 
         const syncFrameState = () => {
             getSlides().forEach((slide) => {
@@ -525,14 +455,41 @@
             const slides = getSlides();
             const activeSlide = getActiveSlide();
             const activeIndex = slides.indexOf(activeSlide);
-            const prevButton = carouselElement.querySelector('[data-bs-slide="prev"]');
-            const nextButton = carouselElement.querySelector('[data-bs-slide="next"]');
+            const prevButton = getPrevButton();
+            const nextButton = getNextButton();
+            const indexDisplay = getIndexDisplay();
 
             if (prevButton) {
                 prevButton.disabled = activeIndex <= 0;
             }
             if (nextButton) {
                 nextButton.disabled = activeIndex === -1 || activeIndex >= slides.length - 1;
+            }
+            if (indexDisplay) {
+                indexDisplay.textContent = `Producto ${activeIndex >= 0 ? activeIndex + 1 : 0} de ${slides.length}`;
+            }
+        };
+
+        const syncPrimaryActions = () => {
+            const acceptButton = getAcceptButton();
+            const activeSlide = getActiveSlide();
+            if (!acceptButton || !activeSlide) {
+                return;
+            }
+
+            const canAccept = (activeSlide.dataset.reviewCanAccept || 'false') === 'true';
+            const detailUrl = activeSlide.dataset.reviewDetailUrl || '';
+
+            acceptButton.disabled = !canAccept;
+            acceptButton.textContent = canAccept ? 'Aceptar' : 'Sin ficha interna';
+
+            if (canAccept && detailUrl) {
+                acceptButton.setAttribute('hx-get', detailUrl);
+                if (window.htmx) {
+                    window.htmx.process(acceptButton);
+                }
+            } else {
+                acceptButton.removeAttribute('hx-get');
             }
         };
 
@@ -581,6 +538,7 @@
         const syncReviewState = () => {
             syncFrameState();
             syncNavButtons();
+            syncPrimaryActions();
             syncDetailPanels();
         };
 
@@ -589,6 +547,7 @@
             if (event.detail.target?.id === 'product-order-details-container') {
                 syncFrameState();
                 syncNavButtons();
+                syncPrimaryActions();
             }
         });
 

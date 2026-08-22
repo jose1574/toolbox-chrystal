@@ -175,6 +175,7 @@ def product_order_details():
         purchase_history=purchase_history,
         selected_review_item=selected_review_item,
         selected_provider_code=selected_provider_code,
+        include_shopping_params_oob=True,
         include_inventory_params_oob=True,
         include_sales_chart_oob=True,
         include_purchase_history_oob=True,
@@ -321,6 +322,10 @@ def provider_selection():
         selected_provider_code=code_provider,
     )
 
+
+@shopping_bp.route('/test')
+def test():
+    return render_template('shopping/test.html')
 
 @shopping_bp.route('/offer_list_provider')
 @login_required
