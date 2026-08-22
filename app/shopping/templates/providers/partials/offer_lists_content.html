@@ -125,6 +125,9 @@
                         <span class="provider-history-meta">{{ review_list.products_count }} productos</span>
                         <strong>{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</strong>
                     </div>
+                    {% if review_list.provider_notes %}
+                    <div class="provider-history-note small mt-2">{{ review_list.provider_notes }}</div>
+                    {% endif %}
                 </button>
                 {% endfor %}
             </div>
@@ -236,6 +239,13 @@
                     </tfoot>
                 </table>
             </div>
+
+            {% if selected_review_list.provider_notes %}
+            <div class="provider-history-card p-3 mb-3">
+                <div class="small text-uppercase fw-semibold provider-history-meta mb-1">Descripcion enviada por el proveedor</div>
+                <div class="small mb-0">{{ selected_review_list.provider_notes }}</div>
+            </div>
+            {% endif %}
 
             {% if selected_review_list.buyer_notes %}
             <div class="provider-history-buyer-note p-3 mb-3">

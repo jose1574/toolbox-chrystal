@@ -326,51 +326,96 @@ def provider_selection():
 @login_required
 def offer_list_provider():
     code_provider = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
-    review_list_correlative = request.args.get('review_list_correlative')
     provider = service.get_provider_by_code(code_provider) if code_provider else None
 
-    if not code_provider:
-        return render_template(
-            'shopping/offer_list_provider.html',
-            provider=None,
-            selected_provider_code='',
-            review_lists=[],
-            selected_review_list=None,
-            offer_lists_content_endpoint='shopping.offer_list_provider_content',
-            offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
-            offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
-            provider_code_for_lists='',
-        )
-
-    if provider is None:
+    if code_provider and provider is None:
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
-        return render_template(
-            'shopping/offer_list_provider.html',
-            provider=None,
-            selected_provider_code=code_provider,
-            review_lists=[],
-            selected_review_list=None,
-            offer_lists_content_endpoint='shopping.offer_list_provider_content',
-            offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
-            offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
-            provider_code_for_lists=code_provider,
-        )
 
-    review_lists_context = service.get_provider_review_lists_context(
-        provider.code,
-        selected_review_list_correlative=review_list_correlative,
-        coin_symbol=_provider_offer_coin_symbol(),
-    )
+    review_lists = []
+    if provider:
+        review_lists = [
+            review_list
+            for review_list in service.get_provider_review_lists(
+                provider.code,
+                coin_symbol=_provider_offer_coin_symbol(),
+            )
+            if review_list.get('status') == 'SUBMITTED'
+        ]
+
     return render_template(
         'shopping/offer_list_provider.html',
         provider=provider,
-        selected_provider_code=provider.code,
-        offer_lists_content_endpoint='shopping.offer_list_provider_content',
-        offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
-        offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
-        provider_code_for_lists=provider.code,
-        **review_lists_context,
+        selected_provider_code=provider.code if provider else code_provider,
+        review_lists=review_lists,
     )
+
+
+# @shopping_bp.route('/offer_list_provider/list')
+# @login_required
+# def offer_list_provider_list():
+#     code_provider = (request.args.get('code_provider') or request.args.get('provider_code') or '').strip()
+#     provider = service.get_provider_by_code(code_provider) if code_provider else None
+
+#     review_lists = []
+#     if provider:
+#         review_lists = [
+#             review_list
+#             for review_list in service.get_provider_review_lists(
+#                 provider.code,
+#                 coin_symbol=_provider_offer_coin_symbol(),
+#             )
+#             if review_list.get('status') == 'SUBMITTED'
+#         ]
+
+#     return render_template(
+#         'shopping/partials/offer_list_provider_list.html',
+#         provider=provider,
+#         selected_provider_code=provider.code if provider else code_provider,
+#         review_lists=review_lists,
+#     )
+
+    # if not code_provider:
+    #     return render_template(
+    #         'shopping/offer_list_provider.html',
+    #         provider=None,
+    #         selected_provider_code='',
+    #         review_lists=[],
+    #         selected_review_list=None,
+    #         offer_lists_content_endpoint='shopping.offer_list_provider_content',
+    #         offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+    #         offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+    #         provider_code_for_lists='',
+    #     )
+
+    # if provider is None:
+    #     flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
+    #     return render_template(
+    #         'shopping/offer_list_provider.html',
+    #         provider=None,
+    #         selected_provider_code=code_provider,
+    #         review_lists=[],
+    #         selected_review_list=None,
+    #         offer_lists_content_endpoint='shopping.offer_list_provider_content',
+    #         offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+    #         offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+    #         provider_code_for_lists=code_provider,
+    #     )
+
+    # review_lists_context = service.get_provider_review_lists_context(
+    #     provider.code,
+    #     selected_review_list_correlative=review_list_correlative,
+    #     coin_symbol=_provider_offer_coin_symbol(),
+    # )
+    # return render_template(
+    #     'shopping/offer_list_provider.html',
+    #     provider=provider,
+    #     selected_provider_code=provider.code,
+    #     offer_lists_content_endpoint='shopping.offer_list_provider_content',
+    #     offer_list_pdf_endpoint='shopping.offer_list_provider_pdf_report',
+    #     offer_list_excel_endpoint='shopping.offer_list_provider_excel_report',
+    #     provider_code_for_lists=provider.code,
+    #     **review_lists_context,
+    # )
 
 
 @shopping_bp.route('/provider_panel')
@@ -934,6 +979,7 @@ def provider_offer_items_add_new_product():
 def provider_offer_items_submit_review():
     provider_code = session.get('provider_code', '')
     offer_items = _get_provider_offer_items(provider_code)
+    provider_description = (request.form.get('provider_description') or '').strip()
 
     if not offer_items:
         flash('Agrega al menos un producto antes de enviar a revisión.', 'warning')
@@ -946,7 +992,7 @@ def provider_offer_items_submit_review():
         buyer_code=None,
         reference=_build_provider_review_reference(provider_code),
         status='SUBMITTED',
-        provider_notes=None,
+        provider_notes=provider_description or None,
         submitted_at=datetime.utcnow(),
     )
     db.session.add(review_list)

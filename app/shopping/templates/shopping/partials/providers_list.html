@@ -4,24 +4,46 @@
         <span>Pagina {{ current_page }} de {{ total_pages }}</span>
     </div>
 
-    <div class="list-group" id="providers-listbox" role="listbox" aria-label="Lista de proveedores">
-        {% for provider in providers %}
-        <button type="button"
-            class="list-group-item list-group-item-action provider-option"
-            data-provider-option
-            data-provider-code="{{ provider.code }}"
-            data-provider-description="{{ provider.description or '' }}">
-            <span class="row g-2 align-items-center text-start">
-                <span class="col-12 col-md-3 fw-semibold text-body">{{ provider.code }}</span>
-                <span class="col-12 col-md-4 text-body-secondary">{{ provider.contact or 'Sin contacto' }}</span>
-                <span class="col-12 col-md-5 text-body">{{ provider.description or 'Proveedor sin descripcion' }}</span>
-            </span>
-        </button>
-        {% else %}
-        <div class="rounded border border-warning-subtle bg-warning-subtle text-warning-emphasis p-3" role="alert">
-            No se encontraron proveedores con ese filtro.
-        </div>
-        {% endfor %}
+    <div class="table-responsive border rounded" id="providers-listbox" aria-label="Lista de proveedores">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col" class="small text-body-secondary">Codigo</th>
+                    <th scope="col" class="small text-body-secondary">Contacto</th>
+                    <th scope="col" class="small text-body-secondary">Nombre o descripcion</th>
+                    <th scope="col" class="small text-body-secondary text-end">Accion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for provider in providers %}
+                <tr tabindex="0" data-provider-row>
+                    <td class="fw-semibold text-body">{{ provider.code }}</td>
+                    <td class="text-body-secondary">{{ provider.contact or 'Sin contacto' }}</td>
+                    <td class="text-body">{{ provider.description or 'Proveedor sin descripcion' }}</td>
+                    <td class="text-end">
+                        <button type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            data-provider-select
+                            hx-get="{{ url_for('shopping.offer_list_provider') }}"
+                            hx-vals='{"code_provider": "{{ provider.code }}"}'
+                            hx-target="body"
+                            hx-swap="innerHTML"
+                            hx-push-url="true">
+                            Seleccionar
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="p-0">
+                        <div class="rounded-0 border-0 bg-warning-subtle text-warning-emphasis p-3" role="alert">
+                            No se encontraron proveedores con ese filtro.
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">

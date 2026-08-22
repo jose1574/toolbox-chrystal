@@ -19,12 +19,6 @@
 						hx-target="#providers-list-content" hx-swap="outerHTML">
 				</div>
 
-				<div class="row g-2 px-3 py-2 border rounded-top bg-body-tertiary small fw-semibold text-body-secondary d-none d-md-flex">
-					<div class="col-md-3">Codigo</div>
-					<div class="col-md-4">Contacto</div>
-					<div class="col-md-5">Nombre o descripcion</div>
-				</div>
-
 				{% include 'shopping/partials/providers_list.html' %}
 			</div>
 			<div class="modal-footer justify-content-between">
@@ -46,26 +40,7 @@
 		const providerModal = bootstrap.Modal.getOrCreateInstance(modalElement);
 		const searchInput = modalElement.querySelector('#provider-modal-search');
 
-		const getOptions = () => Array.from(modalElement.querySelectorAll('[data-provider-option]'));
-
-		const selectProvider = (option) => {
-			const providerCode = option.dataset.providerCode;
-			const providerInput = document.getElementById('code-provider-input');
-
-			if (providerInput) {
-				providerInput.value = providerCode;
-			}
-
-			providerModal.hide();
-			window.location.href = `{{ url_for('shopping.offer_list_provider') }}?code_provider=${encodeURIComponent(providerCode)}`;
-		};
-
-		modalElement.addEventListener('click', (event) => {
-			const option = event.target.closest('[data-provider-option]');
-			if (option) {
-				selectProvider(option);
-			}
-		});
+		const getOptions = () => Array.from(modalElement.querySelectorAll('[data-provider-row]'));
 
 		modalElement.addEventListener('keydown', (event) => {
 			if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
@@ -77,13 +52,13 @@
 				return;
 			}
 
-			const activeOption = document.activeElement.closest('[data-provider-option]');
+			const activeOption = document.activeElement.closest('[data-provider-row]');
 			const activeIndex = options.indexOf(activeOption);
 
 			if (event.key === 'Enter') {
 				if (activeOption) {
 					event.preventDefault();
-					selectProvider(activeOption);
+					activeOption.querySelector('[data-provider-select]')?.click();
 				}
 				return;
 			}
@@ -97,6 +72,12 @@
 
 		modalElement.addEventListener('shown.bs.modal', () => {
 			searchInput?.focus();
+		});
+
+		modalElement.addEventListener('htmx:beforeRequest', (event) => {
+			if (event.target.matches('[data-provider-select]')) {
+				providerModal.hide();
+			}
 		});
 
 		modalElement.addEventListener('hidden.bs.modal', () => {

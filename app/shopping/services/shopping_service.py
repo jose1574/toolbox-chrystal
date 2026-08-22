@@ -1175,6 +1175,49 @@ def _build_provider_review_list_detail(review_list, coin_symbol='$'):
         'coin_symbol': coin_symbol or '$',
     }
 
+def get_provider_review_lists(provider_code, coin_symbol='$'):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return []
+
+    review_lists = (
+        PurchaseReviewList.query.options(
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.product),
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.unit_detail).selectinload(ProductsUnit.unit1),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.mark),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.department),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.unit),
+        )
+        .filter(PurchaseReviewList.provider_code == normalized_provider_code)
+        .filter(PurchaseReviewList.list_type == 'PROVIDER_SUBMISSION')
+        .order_by(
+            PurchaseReviewList.submitted_at.desc().nullslast(),
+            PurchaseReviewList.created_at.desc(),
+            PurchaseReviewList.correlative.desc(),
+        )
+        .all()
+    )
+
+    review_list_details = [_build_provider_review_list_detail(review_list, coin_symbol=coin_symbol) for review_list in review_lists]
+    return [
+        {
+            'correlative': review_list['correlative'],
+            'reference': review_list['reference'],
+            'status': review_list['status'],
+            'status_label': review_list['status_label'],
+            'status_badge_class': review_list['status_badge_class'],
+            'created_at': review_list['created_at'],
+            'submitted_at': review_list['submitted_at'],
+            'reviewed_at': review_list['reviewed_at'],
+            'provider_notes': review_list['provider_notes'],
+            'products_count': review_list['products_count'],
+            'total_items': review_list['total_items'],
+            'total_amount': review_list['total_amount'],
+            'coin_symbol': review_list['coin_symbol'],
+        }
+        for review_list in review_list_details
+    ]
+
 
 def get_provider_review_lists_context(provider_code, selected_review_list_correlative=None, coin_symbol='$'):
     normalized_provider_code = normalize_code(provider_code)
@@ -1226,6 +1269,7 @@ def get_provider_review_lists_context(provider_code, selected_review_list_correl
             'products_count': review_list['products_count'],
             'total_amount': review_list['total_amount'],
             'coin_symbol': review_list['coin_symbol'],
+            'provider_notes': review_list['provider_notes'],
             'is_selected': bool(selected_review_list and review_list['correlative'] == selected_review_list['correlative']),
         }
         for review_list in review_list_details
