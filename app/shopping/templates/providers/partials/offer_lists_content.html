@@ -1,0 +1,154 @@
+<div class="row g-0 h-100">
+    <aside class="provider-history-sidebar col-lg-4 col-xl-3">
+        <div class="provider-history-sidebar-inner p-3">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <div>
+                    <div class="small text-uppercase text-body-secondary fw-semibold">Listas enviadas</div>
+                    <div class="small text-body-secondary">{{ review_lists|length }} registradas</div>
+                </div>
+            </div>
+
+            {% if review_lists %}
+            <div class="d-grid gap-2">
+                {% for review_list in review_lists %}
+                <button
+                    type="button"
+                    class="btn text-start p-3 border {{ 'border-primary bg-primary-subtle text-primary-emphasis' if review_list.is_selected else 'border-secondary-subtle bg-body-tertiary text-body' }}"
+                    hx-get="{{ url_for('shopping.provider_offer_lists_content', review_list_correlative=review_list.correlative) }}"
+                    hx-target="#provider-offer-lists-modal-content"
+                    hx-swap="innerHTML"
+                >
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="fw-semibold small">{{ review_list.reference }}</div>
+                            <div class="text-body-secondary" style="font-size: 0.74rem;">{{ review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if review_list.submitted_at else review_list.created_at.strftime('%d/%m/%Y %H:%M') if review_list.created_at else '-' }}</div>
+                        </div>
+                        <span class="badge text-bg-{{ review_list.status_badge_class }}">{{ review_list.status_label }}</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between gap-2 small">
+                        <span class="text-body-secondary">{{ review_list.products_count }} productos</span>
+                        <strong>{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</strong>
+                    </div>
+                </button>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-4 text-center h-100 d-flex flex-column justify-content-center">
+                <h6 class="mb-2">Aun no has enviado listas</h6>
+                <p class="small text-body-secondary mb-0">Cuando envies una oferta a revision, aparecera aqui para que puedas consultarla luego.</p>
+            </div>
+            {% endif %}
+        </div>
+    </aside>
+
+    <section class="provider-history-detail col-lg-8 col-xl-9">
+        <div class="provider-history-detail-inner">
+            {% if selected_review_list %}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                        <h6 class="mb-0 fw-bold">{{ selected_review_list.reference }}</h6>
+                        <span class="badge text-bg-{{ selected_review_list.status_badge_class }}">{{ selected_review_list.status_label }}</span>
+                    </div>
+                    <div class="small text-body-secondary">Enviada: {{ selected_review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if selected_review_list.submitted_at else '-' }}</div>
+                </div>
+
+                <div class="row g-2 w-100 w-lg-auto" style="max-width: 26rem;">
+                    <div class="col-6">
+                        <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-3 h-100">
+                            <div class="small text-body-secondary">Productos</div>
+                            <div class="fs-5 fw-bold">{{ selected_review_list.products_count }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-3 h-100">
+                            <div class="small text-body-secondary">Monto estimado</div>
+                            <div class="fs-6 fw-bold">{{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(selected_review_list.total_amount).replace(',', ' ') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a
+                    href="{{ url_for('shopping.provider_offer_list_pdf_report', review_list_correlative=selected_review_list['correlative']) }}"
+                    target="_blank"
+                    rel="noopener"
+                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
+                >
+                    <span>Generar PDF</span>
+                </a>
+                <a
+                    href="{{ url_for('shopping.provider_offer_list_excel_report', review_list_correlative=selected_review_list['correlative']) }}"
+                    class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-2"
+                >
+                    <span>Generar Excel</span>
+                </a>
+            </div>
+
+            <div class="table-responsive border border-secondary-subtle rounded-4 overflow-hidden mb-3">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-end">Cantidad</th>
+                            <th>Unidad</th>
+                            <th class="text-end">Precio unitario</th>
+                            <th class="text-end">Subtotal</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in selected_review_list['items'] %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ item.name }}</div>
+                                <div class="small text-body-secondary">
+                                    {% if item.item_type == 'new_product' %}
+                                    Nuevo producto{% if item.main_code %} · Codigo: {{ item.main_code }}{% endif %}{% if item.mark_name %} · {{ item.mark_name }}{% endif %}{% if item.department_name %} · {{ item.department_name }}{% endif %}
+                                    {% else %}
+                                    SKU: {{ item.code }}
+                                    {% endif %}
+                                </div>
+                                {% if item.note %}
+                                <div class="small text-info-emphasis mt-1">Nota: {{ item.note }}</div>
+                                {% endif %}
+                                {% if item.rejected_reason %}
+                                <div class="small text-danger mt-1">Motivo: {{ item.rejected_reason }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ '{:,.2f}'.format(item.quantity).replace(',', ' ') }}</td>
+                            <td>{{ item.unit }}</td>
+                            <td class="text-end">{{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
+                            <td class="text-end">{{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(item.subtotal).replace(',', ' ') }}</td>
+                            <td><span class="badge text-bg-{{ item.status_badge_class }}">{{ item.status_label }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" class="text-end">Total</th>
+                            <th class="text-end">{{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(selected_review_list.total_amount).replace(',', ' ') }}</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            {% if selected_review_list.buyer_notes %}
+            <div class="border border-info-subtle bg-info-subtle rounded-4 p-3 mb-3">
+                <div class="small text-uppercase fw-semibold mb-1">Notas del comprador</div>
+                <div class="small mb-0">{{ selected_review_list.buyer_notes }}</div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="h-100 d-flex align-items-center justify-content-center text-center">
+                <div>
+                    <h6 class="mb-2">Selecciona una lista</h6>
+                    <p class="small text-body-secondary mb-0">El detalle de la oferta aparecera aqui.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>

@@ -1,0 +1,105 @@
+<div class="modal fade" id="providerOfferListsModal" tabindex="-1" aria-labelledby="providerOfferListsModalLabel" aria-hidden="true">
+    <style>
+        #providerOfferListsModal .modal-dialog {
+            width: min(82rem, calc(100vw - 1rem));
+            max-width: calc(100vw - 1rem);
+            margin: 0.75rem auto;
+        }
+
+        #providerOfferListsModal .modal-content {
+            height: min(86vh, 58rem);
+            background: #161b22;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+        }
+
+        #providerOfferListsModal .provider-history-header {
+            padding: 1rem 1.15rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+        }
+
+        #providerOfferListsModal .provider-history-kicker {
+            font-size: 0.68rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 700;
+        }
+
+        #providerOfferListsModal .provider-history-body {
+            min-height: 0;
+            flex: 1;
+            background: #10151b;
+        }
+
+        #providerOfferListsModal .provider-history-close {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.7rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        #providerOfferListsModal .provider-history-close:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        #providerOfferListsModal .provider-history-sidebar,
+        #providerOfferListsModal .provider-history-detail {
+            min-height: 0;
+        }
+
+        #providerOfferListsModal .provider-history-sidebar {
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        #providerOfferListsModal .provider-history-sidebar-inner,
+        #providerOfferListsModal .provider-history-detail-inner {
+            height: 100%;
+            overflow: auto;
+        }
+
+        #providerOfferListsModal .provider-history-detail-inner {
+            padding: 1rem 1.15rem 1.15rem;
+        }
+
+        @media (max-width: 991.98px) {
+            #providerOfferListsModal .modal-content {
+                height: auto;
+                max-height: calc(100vh - 1.5rem);
+            }
+
+            #providerOfferListsModal .provider-history-sidebar {
+                border-right: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        }
+    </style>
+
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0">
+            <div class="provider-history-header d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <div class="provider-history-kicker">Historial del proveedor</div>
+                    <h5 class="modal-title fw-bold mb-1" id="providerOfferListsModalLabel">Mis listas de ofertas</h5>
+                    <p class="text-body-secondary small mb-0">Selecciona una lista enviada para revisar su contenido, montos estimados y estado actual.</p>
+                </div>
+                <button type="button" class="provider-history-close d-inline-flex align-items-center justify-content-center" aria-label="Close" onclick="closeProviderOfferListsModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="provider-history-body" id="provider-offer-lists-modal-content">
+                {% include 'providers/partials/offer_lists_content.html' %}
+            </div>
+        </div>
+    </div>
+</div>

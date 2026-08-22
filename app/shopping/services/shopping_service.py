@@ -3,12 +3,16 @@ from decimal import Decimal, ROUND_HALF_UP
 from types import SimpleNamespace
 
 from sqlalchemy import and_, case, func, literal, or_, text
+from sqlalchemy.orm import selectinload
 
 from app import db
 from app.models import (
     Department,
     Mark,
     Product,
+    PurchaseReviewList,
+    PurchaseReviewListItem,
+    PurchaseReviewNewProductItem,
     ProductsProvider,
     ProductsCode,
     ProductsFailure,
@@ -1085,6 +1089,182 @@ def build_provider_offer_context(items, coin_symbol='$'):
         'total_amount': float(_quantize_money(total_amount)),
         'coin_symbol': coin_symbol or '$',
     }
+
+
+def _provider_review_status_meta(status):
+    normalized_status = normalize_code(status)
+    status_map = {
+        'DRAFT': ('Borrador', 'warning'),
+        'SUBMITTED': ('En revision', 'info'),
+        'REVIEWED': ('Revisada', 'primary'),
+        'APPROVED': ('Aprobada', 'success'),
+        'REJECTED': ('Rechazada', 'danger'),
+    }
+    return status_map.get(normalized_status, (normalized_status or 'Sin estado', 'secondary'))
+
+
+def _build_provider_review_list_detail(review_list, coin_symbol='$'):
+    detail_items = []
+    total_amount = Decimal('0')
+
+    catalog_items = sorted(review_list.items or [], key=lambda current: current.correlative or 0)
+    for item in catalog_items:
+        quantity = _to_decimal(item.requested_amount or 0)
+        unit_price = _to_decimal(item.unitary_cost or 0)
+        subtotal = _quantize_money(quantity * unit_price)
+        total_amount += subtotal
+
+        detail_items.append({
+            'item_type': 'catalog',
+            'code': item.product_code or '',
+            'name': (item.product.description if item.product else item.product_code) or '-',
+            'reference': (item.product.referenc if item.product else '') or '-',
+            'quantity': float(quantity),
+            'unit': (item.unit_detail.unit1.description if item.unit_detail and item.unit_detail.unit1 else None) or item.unit_detail.unit if item.unit_detail else 'UND',
+            'unit_price': float(_quantize_money(unit_price)),
+            'subtotal': float(subtotal),
+            'status': item.status or 'PENDING',
+            'status_label': _provider_review_status_meta(item.status)[0],
+            'status_badge_class': _provider_review_status_meta(item.status)[1],
+            'note': item.note or '',
+            'rejected_reason': item.rejected_reason or '',
+        })
+
+    new_product_items = sorted(review_list.new_product_items or [], key=lambda current: current.correlative or 0)
+    for item in new_product_items:
+        quantity = _to_decimal(item.requested_amount or 0)
+        unit_price = _to_decimal(item.unitary_cost or 0)
+        subtotal = _quantize_money(quantity * unit_price)
+        total_amount += subtotal
+
+        detail_items.append({
+            'item_type': 'new_product',
+            'code': item.proposed_main_code or '',
+            'name': item.proposed_description or '-',
+            'reference': item.proposed_reference or '-',
+            'quantity': float(quantity),
+            'unit': (item.unit.description if item.unit else item.proposed_unit_code) or 'UND',
+            'unit_price': float(_quantize_money(unit_price)),
+            'subtotal': float(subtotal),
+            'status': item.status or 'PENDING',
+            'status_label': _provider_review_status_meta(item.status)[0],
+            'status_badge_class': _provider_review_status_meta(item.status)[1],
+            'note': item.provider_note or '',
+            'rejected_reason': item.rejected_reason or '',
+            'main_code': item.proposed_main_code or '',
+            'mark_name': item.mark.description if item.mark else '',
+            'department_name': item.department.description if item.department else '',
+        })
+
+    status_label, status_badge_class = _provider_review_status_meta(review_list.status)
+    return {
+        'correlative': review_list.correlative,
+        'reference': review_list.reference or f'Lista #{review_list.correlative}',
+        'status': review_list.status or '',
+        'status_label': status_label,
+        'status_badge_class': status_badge_class,
+        'created_at': review_list.created_at,
+        'submitted_at': review_list.submitted_at,
+        'reviewed_at': review_list.reviewed_at,
+        'buyer_notes': review_list.buyer_notes or '',
+        'provider_notes': review_list.provider_notes or '',
+        'items': detail_items,
+        'products_count': len(detail_items),
+        'total_items': len(detail_items),
+        'total_amount': float(_quantize_money(total_amount)),
+        'coin_symbol': coin_symbol or '$',
+    }
+
+
+def get_provider_review_lists_context(provider_code, selected_review_list_correlative=None, coin_symbol='$'):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return {
+            'review_lists': [],
+            'selected_review_list': None,
+        }
+
+    review_lists = (
+        PurchaseReviewList.query.options(
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.product),
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.unit_detail).selectinload(ProductsUnit.unit1),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.mark),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.department),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.unit),
+        )
+        .filter(PurchaseReviewList.provider_code == normalized_provider_code)
+        .filter(PurchaseReviewList.list_type == 'PROVIDER_SUBMISSION')
+        .order_by(
+            PurchaseReviewList.submitted_at.desc().nullslast(),
+            PurchaseReviewList.created_at.desc(),
+            PurchaseReviewList.correlative.desc(),
+        )
+        .all()
+    )
+
+    selected_correlative = None
+    try:
+        selected_correlative = int(selected_review_list_correlative) if selected_review_list_correlative else None
+    except (TypeError, ValueError):
+        selected_correlative = None
+
+    review_list_details = [_build_provider_review_list_detail(review_list, coin_symbol=coin_symbol) for review_list in review_lists]
+    selected_review_list = next(
+        (review_list for review_list in review_list_details if review_list['correlative'] == selected_correlative),
+        review_list_details[0] if review_list_details else None,
+    )
+
+    review_list_summaries = [
+        {
+            'correlative': review_list['correlative'],
+            'reference': review_list['reference'],
+            'status': review_list['status'],
+            'status_label': review_list['status_label'],
+            'status_badge_class': review_list['status_badge_class'],
+            'created_at': review_list['created_at'],
+            'submitted_at': review_list['submitted_at'],
+            'products_count': review_list['products_count'],
+            'total_amount': review_list['total_amount'],
+            'coin_symbol': review_list['coin_symbol'],
+            'is_selected': bool(selected_review_list and review_list['correlative'] == selected_review_list['correlative']),
+        }
+        for review_list in review_list_details
+    ]
+
+    return {
+        'review_lists': review_list_summaries,
+        'selected_review_list': selected_review_list,
+    }
+
+
+def get_provider_review_list_detail_context(provider_code, review_list_correlative, coin_symbol='$'):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return None
+
+    try:
+        selected_correlative = int(review_list_correlative)
+    except (TypeError, ValueError):
+        return None
+
+    review_list = (
+        PurchaseReviewList.query.options(
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.product),
+            selectinload(PurchaseReviewList.items).selectinload(PurchaseReviewListItem.unit_detail).selectinload(ProductsUnit.unit1),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.mark),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.department),
+            selectinload(PurchaseReviewList.new_product_items).selectinload(PurchaseReviewNewProductItem.unit),
+        )
+        .filter(PurchaseReviewList.correlative == selected_correlative)
+        .filter(PurchaseReviewList.provider_code == normalized_provider_code)
+        .filter(PurchaseReviewList.list_type == 'PROVIDER_SUBMISSION')
+        .first()
+    )
+
+    if review_list is None:
+        return None
+
+    return _build_provider_review_list_detail(review_list, coin_symbol=coin_symbol)
 
 
 def _units_per_main(conversion_factor, unit_type):

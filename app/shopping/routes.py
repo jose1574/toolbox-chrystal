@@ -2,11 +2,14 @@ import re
 import uuid
 from datetime import datetime
 from functools import wraps
+from io import BytesIO
 
-from flask import make_response, redirect, render_template, request, flash, session, url_for
+import xlsxwriter
+from flask import Response, make_response, redirect, render_template, request, flash, session, send_file, url_for
 from flask_login import current_user, login_required
 
 from app import db
+from app.reports.utils import render_pdf
 from app.models import (
     Coin,
     Department,
@@ -352,6 +355,214 @@ def provider_new_product_modal():
         units=units,
         form_data={},
         error_message='',
+    )
+
+
+@shopping_bp.route('/provider_offer_lists_modal')
+@provider_session_required
+def provider_offer_lists_modal():
+    provider_code = session.get('provider_code', '')
+    review_list_correlative = request.args.get('review_list_correlative')
+    review_lists_context = service.get_provider_review_lists_context(
+        provider_code,
+        selected_review_list_correlative=review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template(
+        'providers/partials/offer_lists_modal.html',
+        provider_username=session.get('provider_username'),
+        **review_lists_context,
+    )
+
+
+@shopping_bp.route('/provider_offer_lists_content')
+@provider_session_required
+def provider_offer_lists_content():
+    provider_code = session.get('provider_code', '')
+    review_list_correlative = request.args.get('review_list_correlative')
+    review_lists_context = service.get_provider_review_lists_context(
+        provider_code,
+        selected_review_list_correlative=review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template('providers/partials/offer_lists_content.html', **review_lists_context)
+
+
+@shopping_bp.route('/provider_offer_lists/<int:review_list_correlative>/pdf')
+@provider_session_required
+def provider_offer_list_pdf_report(review_list_correlative):
+    provider_code = session.get('provider_code', '')
+    provider_username = session.get('provider_username')
+    review_list = service.get_provider_review_list_detail_context(
+        provider_code,
+        review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    if review_list is None:
+        flash('No se encontro la lista de oferta solicitada.', 'warning')
+        return redirect(url_for('shopping.provider_panel'))
+
+    safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
+    pdf = render_pdf(
+        'providers/reports/provider_offer_list_pdf.html',
+        {
+            'review_list': review_list,
+            'provider_username': provider_username,
+            'provider_code': provider_code,
+            'generated_at': datetime.now(),
+        },
+        paper_format='Letter',
+        orientation='Portrait',
+        extra_options={
+            'margin-top': '0.35in',
+            'margin-right': '0.35in',
+            'margin-bottom': '0.35in',
+            'margin-left': '0.35in',
+        },
+    )
+    return Response(
+        pdf,
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'inline; filename={safe_reference}.pdf'},
+    )
+
+
+@shopping_bp.route('/provider_offer_lists/<int:review_list_correlative>/excel')
+@provider_session_required
+def provider_offer_list_excel_report(review_list_correlative):
+    provider_code = session.get('provider_code', '')
+    provider_username = session.get('provider_username')
+    review_list = service.get_provider_review_list_detail_context(
+        provider_code,
+        review_list_correlative,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    if review_list is None:
+        flash('No se encontro la lista de oferta solicitada.', 'warning')
+        return redirect(url_for('shopping.provider_panel'))
+
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    worksheet = workbook.add_worksheet('Oferta')
+
+    worksheet.set_paper(1)
+    worksheet.set_portrait()
+    worksheet.fit_to_pages(1, 0)
+    worksheet.repeat_rows(0, 5)
+    worksheet.set_margins(0.3, 0.3, 0.4, 0.4)
+
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 16,
+        'align': 'left',
+        'valign': 'vcenter',
+    })
+    meta_label_format = workbook.add_format({
+        'bold': True,
+        'font_size': 10,
+        'font_color': '#44546A',
+    })
+    meta_value_format = workbook.add_format({
+        'font_size': 10,
+    })
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#D9E2F3',
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter',
+        'text_wrap': True,
+    })
+    text_format = workbook.add_format({
+        'border': 1,
+        'valign': 'top',
+        'text_wrap': True,
+    })
+    amount_format = workbook.add_format({
+        'border': 1,
+        'align': 'right',
+        'valign': 'top',
+        'num_format': '#,##0.00',
+    })
+    total_label_format = workbook.add_format({
+        'bold': True,
+        'border': 1,
+        'align': 'right',
+        'bg_color': '#EDEDED',
+    })
+    total_amount_format = workbook.add_format({
+        'bold': True,
+        'border': 1,
+        'align': 'right',
+        'bg_color': '#EDEDED',
+        'num_format': '#,##0.00',
+    })
+
+    worksheet.merge_range('A1:F1', f"Detalle de oferta {review_list['reference']}", title_format)
+    worksheet.write('A2', 'Proveedor', meta_label_format)
+    worksheet.write('B2', provider_username or provider_code or '-', meta_value_format)
+    worksheet.write('D2', 'Codigo', meta_label_format)
+    worksheet.write('E2', provider_code or '-', meta_value_format)
+    worksheet.write('A3', 'Estado', meta_label_format)
+    worksheet.write('B3', review_list['status_label'], meta_value_format)
+    worksheet.write('D3', 'Enviada', meta_label_format)
+    worksheet.write('E3', review_list['submitted_at'].strftime('%d/%m/%Y %H:%M') if review_list['submitted_at'] else '-', meta_value_format)
+    worksheet.write('A4', 'Generado', meta_label_format)
+    worksheet.write('B4', datetime.now().strftime('%d/%m/%Y %H:%M'), meta_value_format)
+    worksheet.write('D4', 'Moneda', meta_label_format)
+    worksheet.write('E4', review_list['coin_symbol'], meta_value_format)
+
+    columns = ['Producto', 'Codigo / detalle', 'Cantidad', 'Unidad', 'Precio unitario', 'Subtotal', 'Estado']
+    for col_idx, title in enumerate(columns):
+        worksheet.write(5, col_idx, title, header_format)
+
+    worksheet.set_column('A:A', 34)
+    worksheet.set_column('B:B', 28)
+    worksheet.set_column('C:C', 12)
+    worksheet.set_column('D:D', 14)
+    worksheet.set_column('E:F', 15)
+    worksheet.set_column('G:G', 14)
+
+    row_idx = 6
+    for item in review_list['items']:
+        detail_parts = []
+        if item['item_type'] == 'new_product':
+            detail_parts.append('Nuevo producto')
+            if item.get('main_code'):
+                detail_parts.append(f"Codigo: {item['main_code']}")
+            if item.get('mark_name'):
+                detail_parts.append(item['mark_name'])
+            if item.get('department_name'):
+                detail_parts.append(item['department_name'])
+        else:
+            detail_parts.append(f"SKU: {item['code']}")
+        if item.get('note'):
+            detail_parts.append(f"Nota: {item['note']}")
+        if item.get('rejected_reason'):
+            detail_parts.append(f"Motivo: {item['rejected_reason']}")
+
+        worksheet.write(row_idx, 0, item['name'], text_format)
+        worksheet.write(row_idx, 1, ' | '.join(detail_parts), text_format)
+        worksheet.write_number(row_idx, 2, float(item['quantity'] or 0), amount_format)
+        worksheet.write(row_idx, 3, item['unit'], text_format)
+        worksheet.write_number(row_idx, 4, float(item['unit_price'] or 0), amount_format)
+        worksheet.write_number(row_idx, 5, float(item['subtotal'] or 0), amount_format)
+        worksheet.write(row_idx, 6, item['status_label'], text_format)
+        row_idx += 1
+
+    worksheet.merge_range(row_idx, 0, row_idx, 4, 'Total', total_label_format)
+    worksheet.write_number(row_idx, 5, float(review_list['total_amount'] or 0), total_amount_format)
+    worksheet.write(row_idx, 6, review_list['coin_symbol'], total_label_format)
+
+    workbook.close()
+    output.seek(0)
+
+    safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f'{safe_reference}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
 
@@ -733,6 +944,15 @@ def provider_offer_items_remove():
 
     _set_provider_offer_items(provider_code, remaining_items)
     offer_context = service.build_provider_offer_context(remaining_items, _provider_offer_coin_symbol())
+    return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+
+@shopping_bp.route('/provider_offer_items/clear', methods=['POST'])
+@provider_session_required
+def provider_offer_items_clear():
+    provider_code = session.get('provider_code', '')
+    _set_provider_offer_items(provider_code, [])
+    offer_context = service.build_provider_offer_context([], _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
 
