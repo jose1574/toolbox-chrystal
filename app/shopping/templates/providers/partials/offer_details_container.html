@@ -1,0 +1,76 @@
+<div
+    id="provider-offer-details-container"
+    data-products-count="{{ offer_context['products_count'] }}"
+    data-total-items="{{ offer_context['total_items'] }}"
+    data-total-amount="{{ '%.2f'|format(offer_context['total_amount']) }}"
+>
+    {% if offer_context['items'] %}
+    <div class="provider-table-wrap">
+        <table class="table provider-table align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 26%;">Producto</th>
+                    <th style="width: 10%;" class="text-end">Cantidad</th>
+                    <th style="width: 14%;" class="text-end">Precio Unitario</th>
+                    <th style="width: 14%;" class="text-end">Subtotal</th>
+                    <th style="width: 12%;" class="text-end">Descuento</th>
+                    <th style="width: 16%;" class="text-end">Total con Descuento</th>
+                    <th style="width: 8%;" class="text-center">Accion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in offer_context['items'] %}
+                <tr>
+                    <td>
+                        <div class="provider-product-name">{{ item.name }}</div>
+                        <div class="provider-product-sub">SKU: {{ item.reference }}</div>
+                    </td>
+                    <td class="text-end">{{ '%.2f'|format(item.quantity) }}</td>
+                    <td class="text-end">$ {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
+                    <td class="text-end">$ {{ '{:,.2f}'.format(item.subtotal).replace(',', ' ') }}</td>
+                    <td class="text-end">{{ '%.0f'|format(item.discount_percent) }}%</td>
+                    <td class="text-end">$ {{ '{:,.2f}'.format(item.total_with_discount).replace(',', ' ') }}</td>
+                    <td class="text-center">
+                        <button
+                            type="button"
+                            class="btn btn-sm provider-secondary-btn px-2 py-1"
+                            title="Quitar producto"
+                            aria-label="Quitar producto {{ item.code }}"
+                            hx-post="{{ url_for('shopping.provider_offer_items_remove') }}"
+                            hx-vals='{"product_code":"{{ item.code }}"}'
+                            hx-target="#provider-offer-details-container"
+                            hx-swap="outerHTML"
+                        >
+                            Quitar
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="5" class="text-end">Total</th>
+                    <th class="text-end">$ {{ '{:,.2f}'.format(offer_context['total_amount']).replace(',', ' ') }}</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% else %}
+    <div class="provider-empty-state d-flex align-items-center justify-content-center text-center p-4">
+        <div class="d-flex flex-column align-items-center gap-3">
+            <div class="provider-empty-icon d-flex align-items-center justify-content-center" aria-hidden="true">
+                <svg width="35" height="35" viewBox="0 0 24 24" fill="none">
+                    <path d="M3.5 6.5h2.6l2.3 9.5h8.7l2.1-6.5H7.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="10" cy="17.5" r="1.3" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="16.5" cy="17.5" r="1.3" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+            </div>
+            <div>
+                <p class="mb-1 h6 text-body-secondary">No hay productos en tu lista</p>
+                <p class="mb-0 small text-body-tertiary">Busca con el catalogo para agregar un producto nuevo y continuar con la cotizacion.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

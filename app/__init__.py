@@ -207,6 +207,8 @@ def create_app():
         provider_routes = {
             "shopping.provider_panel",
             "shopping.provider_catalog_modal",
+            "shopping.provider_offer_items_add",
+            "shopping.provider_offer_items_remove",
             "shopping.provider_approvals",
             "shopping.provider_approval",
             "shopping.provider_block",

@@ -21,6 +21,7 @@ from app.models import (
     ShoppingProductsParam,
     ShoppingProductsParamsHistory,
     Store,
+    SystemProperty,
     Tax,
     Unit,
     User,
@@ -153,6 +154,22 @@ def _get_secondary_coin_code():
     return db.session.execute(
         text("SELECT r_system_value FROM get_system_properties(52, '001', '00', '00') LIMIT 1")
     ).scalar() or '02'
+
+
+def get_default_provider_coin_code():
+    configured_coin_code = (
+        db.session.query(SystemProperty.system_value)
+        .filter(SystemProperty.code == 65)
+        .filter(SystemProperty.system_value.isnot(None))
+        .filter(func.trim(SystemProperty.system_value) != '')
+        .order_by(
+            case((SystemProperty.properties_group == '001', 0), else_=1),
+            case((SystemProperty.profile == '00', 0), else_=1),
+        )
+        .limit(1)
+        .scalar()
+    )
+    return normalize_code(configured_coin_code)
 
 
 def _build_sales_amount_expressions():
@@ -754,6 +771,102 @@ def get_provider_by_code(code_provider):
 
     provider = Provider.query.filter_by(code=code_provider).first()
     return provider 
+
+
+def get_provider_offer_products(provider_code, product_codes):
+    provider_code = normalize_code(provider_code)
+    normalized_codes = [normalize_code(code) for code in (product_codes or []) if normalize_code(code)]
+    if not normalized_codes:
+        return []
+
+    unique_codes = list(dict.fromkeys(normalized_codes))
+
+    last_cost_subquery = (
+        db.session.query(ProductsProvider.unitary_cost)
+        .filter(
+            func.upper(func.trim(ProductsProvider.product_code)) == func.upper(func.trim(Product.code)),
+            func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+        )
+        .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+
+    rows = (
+        db.session.query(
+            Product.code.label('code'),
+            Product.description.label('name'),
+            Product.referenc.label('reference'),
+            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
+            func.coalesce(ShoppingProductsParam.maximum_stock, 0).label('maximum_stock'),
+            last_cost_subquery.label('last_provider_cost'),
+        )
+        .outerjoin(ProductsStock, ProductsStock.product_code == Product.code)
+        .outerjoin(
+            ShoppingProductsParam,
+            func.upper(func.trim(ShoppingProductsParam.code)) == func.upper(func.trim(Product.code)),
+        )
+        .filter(Product.status == '01')
+        .filter(func.upper(func.trim(Product.code)).in_(unique_codes))
+        .group_by(
+            Product.code,
+            Product.description,
+            Product.referenc,
+            ShoppingProductsParam.maximum_stock,
+        )
+        .all()
+    )
+
+    row_map = {normalize_code(row.code): row for row in rows}
+    products = []
+    for product_code in unique_codes:
+        row = row_map.get(product_code)
+        if not row:
+            continue
+
+        stock_total = float(row.stock_total or 0)
+        maximum_stock = float(row.maximum_stock or 0)
+        suggested_quantity = max(0.0, maximum_stock - stock_total)
+        products.append({
+            'code': row.code,
+            'name': row.name or row.code,
+            'reference': row.reference or '-',
+            'suggested_quantity': suggested_quantity,
+            'last_provider_cost': float(row.last_provider_cost) if row.last_provider_cost is not None else None,
+        })
+
+    return products
+
+
+def build_provider_offer_context(items):
+    normalized_items = []
+    total_amount = 0.0
+
+    for item in items or []:
+        quantity = float(item.get('quantity') or 0)
+        unit_price = float(item.get('unit_price') or 0)
+        discount_percent = float(item.get('discount_percent') or 0)
+        subtotal = quantity * unit_price
+        total_with_discount = subtotal * (1 - (discount_percent / 100))
+        total_amount += total_with_discount
+
+        normalized_items.append({
+            'code': item.get('code') or '',
+            'name': item.get('name') or item.get('code') or '-',
+            'reference': item.get('reference') or '-',
+            'quantity': quantity,
+            'unit_price': unit_price,
+            'discount_percent': discount_percent,
+            'subtotal': subtotal,
+            'total_with_discount': total_with_discount,
+        })
+
+    return {
+        'items': normalized_items,
+        'products_count': len(normalized_items),
+        'total_items': len(normalized_items),
+        'total_amount': total_amount,
+    }
 
 
 def _wildcard_pattern(value):

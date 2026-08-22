@@ -73,6 +73,19 @@ def provider_session_required(view_func):
     return wrapped
 
 
+def _provider_offer_session_key(provider_code):
+    return f"provider_offer_items:{normalize_upper(provider_code)}"
+
+
+def _get_provider_offer_items(provider_code):
+    return session.get(_provider_offer_session_key(provider_code), [])
+
+
+def _set_provider_offer_items(provider_code, items):
+    session[_provider_offer_session_key(provider_code)] = items
+    session.modified = True
+
+
 @shopping_bp.route('/provider_username_availability')
 def provider_username_availability():
     username = (request.args.get('username') or '').strip()
@@ -255,17 +268,78 @@ def provider_panel():
     provider_username = session.get('provider_username')
     provider_code = session.get('provider_code')
     coins = Coin.query.filter(Coin.status == '01').order_by(Coin.description.asc(), Coin.code.asc()).all()
-    selected_coin_code = request.args.get('coin_code') or next(
-        (coin.code for coin in coins if (coin.symbol or '').upper() == 'USD'),
-        coins[0].code if coins else '',
+    requested_coin_code = (request.args.get('coin_code') or '').strip()
+    default_coin_code = service.get_default_provider_coin_code()
+
+    selected_coin_code = requested_coin_code if requested_coin_code else default_coin_code
+    available_coin_codes = {coin.code for coin in coins}
+    if selected_coin_code not in available_coin_codes:
+        selected_coin_code = next(
+            (coin.code for coin in coins if (coin.symbol or '').upper() == 'USD'),
+            coins[0].code if coins else '',
+        )
+
+    offer_items = _get_provider_offer_items(provider_code)
+    offer_context = service.build_provider_offer_context(offer_items)
+    selected_coin_symbol = next(
+        (coin.symbol or coin.code for coin in coins if coin.code == selected_coin_code),
+        selected_coin_code,
     )
+
     return render_template(
         'providers/provider_panel.html',
         provider_username=provider_username,
         provider_code=provider_code,
         coins=coins,
         selected_coin_code=selected_coin_code,
+        selected_coin_symbol=selected_coin_symbol,
+        offer_context=offer_context,
     )
+
+
+@shopping_bp.route('/provider_offer_items/add', methods=['POST'])
+@provider_session_required
+def provider_offer_items_add():
+    provider_code = session.get('provider_code', '')
+    selected_codes = request.form.getlist('selected_product_codes')
+    if not selected_codes:
+        offer_context = service.build_provider_offer_context(_get_provider_offer_items(provider_code))
+        return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+    existing_items = _get_provider_offer_items(provider_code)
+    existing_by_code = {normalize_upper(item.get('code')): item for item in existing_items}
+
+    products = service.get_provider_offer_products(provider_code, selected_codes)
+    for product in products:
+        product_code = normalize_upper(product.get('code'))
+        if product_code in existing_by_code:
+            continue
+
+        existing_items.append({
+            'code': product.get('code'),
+            'name': product.get('name'),
+            'reference': product.get('reference'),
+            'quantity': product.get('suggested_quantity', 0),
+            'unit_price': product.get('last_provider_cost') or 0,
+            'discount_percent': 0,
+        })
+
+    _set_provider_offer_items(provider_code, existing_items)
+    offer_context = service.build_provider_offer_context(existing_items)
+    return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+
+@shopping_bp.route('/provider_offer_items/remove', methods=['POST'])
+@provider_session_required
+def provider_offer_items_remove():
+    provider_code = session.get('provider_code', '')
+    product_code = normalize_upper(request.form.get('product_code'))
+    existing_items = _get_provider_offer_items(provider_code)
+    remaining_items = [item for item in existing_items if normalize_upper(item.get('code')) != product_code]
+
+    _set_provider_offer_items(provider_code, remaining_items)
+    offer_context = service.build_provider_offer_context(remaining_items)
+    return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
 
 @shopping_bp.route('/provider_logout')

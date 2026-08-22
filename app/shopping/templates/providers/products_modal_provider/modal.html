@@ -463,7 +463,7 @@
                             <path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                         </svg>
                     </button>
-                    <button type="button" class="btn btn-sm provider-primary-btn">Agregar productos</button>
+                    <button type="button" class="btn btn-sm provider-primary-btn" onclick="addSelectedProviderProducts()">Agregar productos</button>
                     <button type="button" class="btn provider-close-btn" data-bs-dismiss="modal" aria-label="Cerrar">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -669,6 +669,43 @@
             input.checked = window.providerCatalogSelection.allFiltered;
         });
         updateProviderSelectedProductsCount();
+    }
+
+    function addSelectedProviderProducts() {
+        const selectedCodes = Array.from(
+            document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]:checked')
+        ).map((input) => input.value);
+
+        if (!selectedCodes.length) {
+            return;
+        }
+
+        const payload = new URLSearchParams();
+        selectedCodes.forEach((code) => payload.append('selected_product_codes', code));
+
+        fetch('{{ url_for("shopping.provider_offer_items_add") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'HX-Request': 'true',
+            },
+            body: payload.toString(),
+        })
+            .then((response) => response.text())
+            .then((html) => {
+                const detailsContainer = document.getElementById('provider-offer-details-container');
+                if (detailsContainer) {
+                    detailsContainer.outerHTML = html;
+                }
+
+                if (typeof window.updateProviderOfferSummaryFromContainer === 'function') {
+                    window.updateProviderOfferSummaryFromContainer();
+                }
+
+                if (typeof closeProviderCatalogModal === 'function') {
+                    closeProviderCatalogModal();
+                }
+            });
     }
 
     if (!document.body.dataset.providerCatalogSelectionBound) {
