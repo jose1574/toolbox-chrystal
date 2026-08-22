@@ -127,20 +127,19 @@
 <body>
     <div class="header">
         <h1 class="title">Detalle de lista de oferta</h1>
-        <p class="subtitle">Reporte generado desde el panel del proveedor.</p>
     </div>
 
     <table class="meta-table">
         <tr>
-            <td class="meta-label">Referencia</td>
+            <td class="meta-label">Documento</td>
             <td>{{ review_list.reference }}</td>
             <td class="meta-label">Estado</td>
             <td>{{ review_list.status_label }}</td>
         </tr>
         <tr>
             <td class="meta-label">Proveedor</td>
-            <td>{{ provider_username or provider_code or '-' }}</td>
-            <td class="meta-label">Codigo</td>
+            <td>{{ provider_company_name or provider_username or provider_code or '-' }}</td>
+            <td class="meta-label">RIF</td>
             <td>{{ provider_code or '-' }}</td>
         </tr>
         <tr>
@@ -169,38 +168,25 @@
     <table class="detail">
         <thead>
             <tr>
+                <th style="width: 23%;">Codigo</th>
                 <th style="width: 33%;">Producto</th>
-                <th style="width: 23%;">Detalle</th>
                 <th style="width: 8%;" class="text-right">Cantidad</th>
                 <th style="width: 10%;">Unidad</th>
                 <th style="width: 11%;" class="text-right">Precio unitario</th>
                 <th style="width: 11%;" class="text-right">Subtotal</th>
-                <th style="width: 9%;">Estado</th>
             </tr>
         </thead>
         <tbody>
             {% for item in review_list['items'] %}
             <tr>
+                <td>{{ item.code }}</td>
                 <td>
-                    <strong>{{ item.name }}</strong>
-                </td>
-                <td>
-                    {% if item.item_type == 'new_product' %}
-                    <span>Nuevo producto</span>
-                    {% if item.main_code %}<span class="note">Codigo: {{ item.main_code }}</span>{% endif %}
-                    {% if item.mark_name %}<span class="note">Marca: {{ item.mark_name }}</span>{% endif %}
-                    {% if item.department_name %}<span class="note">Departamento: {{ item.department_name }}</span>{% endif %}
-                    {% else %}
-                    <span>SKU: {{ item.code }}</span>
-                    {% endif %}
-                    {% if item.note %}<span class="note">Nota: {{ item.note }}</span>{% endif %}
-                    {% if item.rejected_reason %}<span class="note">Motivo: {{ item.rejected_reason }}</span>{% endif %}
-                </td>
+                    <strong>{{ item.name }}</strong>                </td>
+                
                 <td class="text-right">{{ '{:,.2f}'.format(item.quantity).replace(',', ' ') }}</td>
                 <td>{{ item.unit }}</td>
                 <td class="text-right">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
                 <td class="text-right">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(item.subtotal).replace(',', ' ') }}</td>
-                <td>{{ item.status_label }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -208,7 +194,7 @@
             <tr class="footer-total">
                 <td colspan="5" class="text-right">Total</td>
                 <td class="text-right">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</td>
-                <td></td>
+                
             </tr>
         </tfoot>
     </table>

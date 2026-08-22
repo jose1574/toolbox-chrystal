@@ -393,6 +393,7 @@ def provider_offer_lists_content():
 def provider_offer_list_pdf_report(review_list_correlative):
     provider_code = session.get('provider_code', '')
     provider_username = session.get('provider_username')
+    provider_registration = ProviderRegistration.query.filter_by(code=provider_code).first()
     review_list = service.get_provider_review_list_detail_context(
         provider_code,
         review_list_correlative,
@@ -407,6 +408,7 @@ def provider_offer_list_pdf_report(review_list_correlative):
         'providers/reports/provider_offer_list_pdf.html',
         {
             'review_list': review_list,
+            'provider_company_name': provider_registration.description if provider_registration else None,
             'provider_username': provider_username,
             'provider_code': provider_code,
             'generated_at': datetime.now(),
