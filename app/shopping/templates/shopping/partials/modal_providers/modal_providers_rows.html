@@ -24,8 +24,7 @@
                         <button type="button"
                             class="btn btn-sm btn-outline-primary"
                             data-provider-select
-                            hx-get="{{ url_for('shopping.offer_list_provider') }}"
-                            hx-vals='{"code_provider": "{{ provider.code }}"}'
+                            hx-get="{{ url_for('shopping.offer_list_provider', provider_code=provider.code) }}"
                             hx-target="body"
                             hx-swap="innerHTML"
                             hx-push-url="true">

@@ -331,6 +331,8 @@ def offer_list_provider():
     if code_provider and provider is None:
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
 
+
+
     review_lists = []
     if provider:
         review_lists = [
@@ -341,7 +343,15 @@ def offer_list_provider():
             )
             if review_list.get('status') == 'SUBMITTED'
         ]
-
+    if not review_lists:
+        flash('Este proveedor no tiene listas pendientes por revisar. Se abrió la compra directa.', 'info')
+        order_url = url_for('shopping.order', code_provider=provider.code if provider else code_provider)
+        if request.headers.get('HX-Request') == 'true':
+            response = make_response('', 200)
+            response.headers['HX-Redirect'] = order_url
+            return response
+        return redirect(order_url)
+    
     return render_template(
         'shopping/offer_list_provider.html',
         provider=provider,
@@ -1705,7 +1715,7 @@ def providers_modal():
     )
 
     return render_template(
-        'shopping/partials/modal_providers.html',
+        'shopping/partials/modal_providers/modal_providers.html',
         providers=providers,
         query=query,
         total_providers=total_providers,
@@ -1726,7 +1736,7 @@ def providers_list():
     )
 
     return render_template(
-        'shopping/partials/providers_list.html',
+        'shopping/partials/modal_providers/modal_providers_rows.html',
         providers=providers,
         query=query,
         total_providers=total_providers,

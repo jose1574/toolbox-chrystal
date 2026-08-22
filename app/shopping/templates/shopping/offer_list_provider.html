@@ -56,6 +56,7 @@
                         <th>Estado</th>
                         <th>Enviada</th>
                         <th class="text-end">Monto</th>
+                        <th class="text-end">Accion</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,10 +75,18 @@
                         </td>
                         <td>{{ review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if review_list.submitted_at else '-' }}</td>
                         <td class="text-end fw-semibold text-body">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</td>
+                        <td class="text-end">
+                            <a
+                                href="{{ url_for('shopping.order', code_provider=provider.code if provider else selected_provider_code, review_list_correlative=review_list.correlative) }}"
+                                class="btn btn-sm btn-primary"
+                            >
+                                Seleccionar
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-body-secondary py-5 bg-body-tertiary">No hay listas enviadas a revision para este proveedor.</td>
+                        <td colspan="7" class="text-center text-body-secondary py-5 bg-body-tertiary">No hay listas enviadas a revision para este proveedor.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
