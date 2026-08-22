@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from types import SimpleNamespace
 
 from sqlalchemy import and_, case, func, literal, or_, text
@@ -27,6 +28,20 @@ from app.models import (
     User,
     ShoppingOperation,
 )
+
+
+MONEY_QUANTUM = Decimal('0.01')
+
+
+def _to_decimal(value, default='0'):
+    try:
+        return Decimal(str(value))
+    except (ArithmeticError, ValueError, TypeError):
+        return Decimal(default)
+
+
+def _quantize_money(value):
+    return _to_decimal(value).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
 
 
 def normalize_code(code: str) -> str:
@@ -1015,47 +1030,48 @@ def get_provider_offer_products(provider_code, product_codes, product_unit_corre
 
 def build_provider_offer_context(items, coin_symbol='$'):
     normalized_items = []
-    total_amount = 0.0
+    total_amount = Decimal('0')
 
     for item in items or []:
-        quantity = float(item.get('quantity') or 0)
-        unit_price = float(item.get('unit_price') or 0)
+        quantity = _to_decimal(item.get('quantity') or 0)
+        unit_price = _to_decimal(item.get('unit_price') or 0)
         unit_options = item.get('unit_options') or get_provider_product_units(item.get('code'))
-        current_units_per_main = _units_per_main(
+        current_units_per_main = _to_decimal(_units_per_main(
             item.get('conversion_factor'), item.get('unit_type')
-        )
-        main_quantity = float(item.get('main_quantity') or (quantity * current_units_per_main))
-        main_unit_price = unit_price / current_units_per_main
+        ))
+        main_quantity = _to_decimal(item.get('main_quantity') or (quantity * current_units_per_main))
+        main_unit_price = unit_price / current_units_per_main if current_units_per_main else Decimal('0')
         conversion_factor = max(float(item.get('conversion_factor') or 1), 0.0001)
         unit_type = int(item.get('unit_type') or 0)
-        units_per_main = _units_per_main(conversion_factor, unit_type)
-        purchase_quantity = main_quantity / units_per_main
-        purchase_unit_price = main_unit_price * units_per_main
-        discount_percent = float(item.get('discount_percent') or 0)
-        subtotal = purchase_quantity * purchase_unit_price
-        total_with_discount = subtotal * (1 - (discount_percent / 100))
+        units_per_main = _to_decimal(_units_per_main(conversion_factor, unit_type))
+        purchase_quantity = (main_quantity / units_per_main) if units_per_main else main_quantity
+        purchase_unit_price = _quantize_money(main_unit_price * units_per_main)
+        discount_percent = _to_decimal(item.get('discount_percent') or 0)
+        subtotal = _quantize_money(purchase_quantity * purchase_unit_price)
+        discount_factor = Decimal('1') - (discount_percent / Decimal('100'))
+        total_with_discount = _quantize_money(subtotal * discount_factor)
         total_amount += total_with_discount
 
         normalized_items.append({
             'code': item.get('code') or '',
             'name': item.get('name') or item.get('code') or '-',
             'reference': item.get('reference') or '-',
-            'quantity': purchase_quantity,
+            'quantity': float(purchase_quantity),
             'unit': item.get('unit') or 'UND',
             'unit_code': item.get('unit_code') or '',
             'unit_options': unit_options,
             'conversion_factor': conversion_factor,
-            'unit_price': purchase_unit_price,
-            'discount_percent': discount_percent,
-            'subtotal': subtotal,
-            'total_with_discount': total_with_discount,
+            'unit_price': float(purchase_unit_price),
+            'discount_percent': float(discount_percent),
+            'subtotal': float(subtotal),
+            'total_with_discount': float(total_with_discount),
         })
 
     return {
         'items': normalized_items,
         'products_count': len(normalized_items),
         'total_items': len(normalized_items),
-        'total_amount': total_amount,
+        'total_amount': float(_quantize_money(total_amount)),
         'coin_symbol': coin_symbol or '$',
     }
 

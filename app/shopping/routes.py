@@ -311,8 +311,51 @@ def provider_offer_items_add():
     selected_codes = request.form.getlist('selected_product_codes')
     selected_unit_correlatives = request.form.getlist('selected_product_units')
     if not selected_codes:
+        product_code = normalize_upper(request.form.get('product_code'))
+        raw_quantity = (request.form.get('quantity') or '').strip()
+        raw_unit_price = (request.form.get('unit_price') or '').strip()
+        raw_discount_percent = (request.form.get('discount_percent') or '').strip()
+        offer_items = _get_provider_offer_items(provider_code)
+
+        if product_code:
+            try:
+                quantity = max(float(raw_quantity), 0) if raw_quantity else None
+            except ValueError:
+                quantity = None
+
+            try:
+                unit_price = max(float(raw_unit_price), 0) if raw_unit_price else None
+            except ValueError:
+                unit_price = None
+
+            try:
+                discount_percent = min(max(float(raw_discount_percent), 0), 100) if raw_discount_percent else None
+            except ValueError:
+                discount_percent = None
+
+            for item in offer_items:
+                if normalize_upper(item.get('code')) != product_code:
+                    continue
+
+                if quantity is not None:
+                    units_per_main = service._units_per_main(
+                        item.get('conversion_factor'), item.get('unit_type')
+                    )
+                    item['quantity'] = quantity
+                    item['main_quantity'] = quantity * units_per_main if units_per_main else quantity
+
+                if unit_price is not None:
+                    item['unit_price'] = unit_price
+
+                if discount_percent is not None:
+                    item['discount_percent'] = discount_percent
+                break
+
+            if quantity is not None or unit_price is not None or discount_percent is not None:
+                _set_provider_offer_items(provider_code, offer_items)
+
         offer_context = service.build_provider_offer_context(
-            _get_provider_offer_items(provider_code), _provider_offer_coin_symbol()
+            offer_items, _provider_offer_coin_symbol()
         )
         return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
