@@ -3,23 +3,28 @@
 {% set max_period_amount = sales_context.max_period_amount|default(0) %}
 {% set chart_series = sales_context.chart_series|default(sales_context.series|default([])) %}
 {% set store_legend = sales_context.store_legend|default([]) %}
-<div id="product-sales-chart-panel" class="shopping-sales-panel rounded border border-secondary-subtle bg-body-tertiary p-3 shadow-sm">
-    <div class="d-flex justify-content-end mb-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-sales-fullscreen-toggle="#product-sales-chart-panel">Ver ventana completa</button>
+{% set compact = compact|default(false) %}
+<div id="product-sales-chart-panel" class="shopping-sales-panel {% if compact %}is-compact h-100 d-flex flex-column{% endif %} rounded border border-secondary-subtle bg-body-tertiary p-3 shadow-sm">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <h2 class="section-title text-uppercase fw-bold text-body mb-0 fs-6 lh-1">Ventas</h2>
+        <a href="#" class="link-primary small fw-semibold text-decoration-none" data-sales-fullscreen-toggle="#product-sales-chart-panel">Pantalla completa</a>
     </div>
-    <form class="row g-2 align-items-end mb-3"
+    <form class="row g-2 align-items-end {% if compact %}mb-2{% else %}mb-3{% endif %}"
         hx-get="{{ url_for('shopping.product_sales_chart') }}" hx-target="#product-sales-chart-container"
         hx-swap="innerHTML" hx-trigger="submit, change delay:300ms" hx-indicator="#product-sales-loading-indicator">
         <input type="hidden" name="code" value="{{ selected_code }}">
-        <div class="col-12 col-md-2">
+        {% if compact %}
+        <input type="hidden" name="compact" value="1">
+        {% endif %}
+        <div class="{% if compact %}col-6{% else %}col-12 col-md-2{% endif %}">
             <label for="product-sales-date-from" class="form-label mb-1 text-body-secondary fw-semibold">Desde</label>
             <input type="date" class="form-control form-control-sm" id="product-sales-date-from" name="date_from" value="{{ sales_context.date_from|default('') }}">
         </div>
-        <div class="col-12 col-md-2">
+        <div class="{% if compact %}col-6{% else %}col-12 col-md-2{% endif %}">
             <label for="product-sales-date-to" class="form-label mb-1 text-body-secondary fw-semibold">Hasta</label>
             <input type="date" class="form-control form-control-sm" id="product-sales-date-to" name="date_to" value="{{ sales_context.date_to|default('') }}">
         </div>
-        <div class="col-12 col-md-2">
+        <div class="{% if compact %}col-6{% else %}col-12 col-md-2{% endif %}">
             <label for="product-sales-granularity" class="form-label mb-1 text-body-secondary fw-semibold">Agrupar</label>
             <select class="form-select form-select-sm" id="product-sales-granularity" name="granularity">
                 <option value="month" {% if sales_context.granularity|default('month') == 'month' %}selected{% endif %}>Meses</option>
@@ -27,7 +32,7 @@
                 <option value="day" {% if sales_context.granularity|default('month') == 'day' %}selected{% endif %}>Días</option>
             </select>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="{% if compact %}col-6{% else %}col-12 col-md-3{% endif %}">
             <label for="product-sales-chart-group" class="form-label mb-1 text-body-secondary fw-semibold">Graficar</label>
             <select class="form-select form-select-sm" id="product-sales-chart-group" name="chart_group">
                 <option value="period" {% if sales_context.chart_group|default('period') == 'period' %}selected{% endif %}>Ventas por fecha</option>
@@ -35,31 +40,35 @@
             </select>
         </div>
     </form>
-
+    {% if not compact %}
     <div id="product-sales-loading-indicator" class="shopping-sales-indicator mb-3">
         <div class="shopping-sales-loading-bar rounded-pill"></div>
     </div>
+    {% endif %}
 
-    <div class="shopping-order-chart rounded border border-secondary-subtle bg-body p-3 mb-3">
+    <div class="shopping-order-chart rounded border border-secondary-subtle bg-body p-3 {% if compact %}flex-grow-1{% else %}mb-3{% endif %}">
         {% if selected_code and chart_series %}
         <div class="shopping-sales-chart-bars d-flex align-items-end gap-2 overflow-auto pb-1" style="height: 10.5rem;">
             {% for item in chart_series %}
             {% set bar_height = ((item.amount / max_period_amount) * 100) if max_period_amount else 0 %}
-            <div class="d-flex flex-column align-items-center justify-content-end h-100 flex-shrink-0" style="width: 3.6rem;">
+            <div class="d-flex flex-column align-items-center justify-content-end h-100 flex-shrink-0" style="width: 7rem;">
                 <div class="small fw-semibold text-body">{{ '%.0f'|format(item.amount) }}</div>
                 <div class="w-75 rounded-top {% if not item.color|default('') %}bg-primary{% endif %}" style="height: {{ bar_height }}%; min-height: 0.25rem;{% if item.color|default('') %} background-color: {{ item.color }};{% endif %}"></div>
-                <div class="text-body-secondary text-center text-truncate w-100" title="{{ item.detail_label|default('') }} {{ item.label }}">{{ item.label }}</div>
+                <div class="text-body-secondary text-center text-nowrap w-100" title="{{ item.detail_label|default('') }} {{ item.label }}">{{ item.label }}</div>
             </div>
             {% endfor %}
         </div>
         {% if store_legend %}
         <div class="d-flex flex-wrap gap-2 mt-3">
+            <span class="text-body-secondary fw-semibold">Totales:</span>
             {% for item in store_legend %}
             <div class="d-flex align-items-center gap-1 text-body-secondary">
                 <span class="rounded-circle flex-shrink-0" style="width: 0.65rem; height: 0.65rem; background-color: {{ item.color }};"></span>
                 <span class="text-truncate" style="max-width: 10rem;" title="{{ item.label }}">{{ item.label }}</span>
+                <span class="fw-semibold">{{ '%.2f'|format(item.amount|default(0)) }}</span>
             </div>
             {% endfor %}
+            <span class="text-body-secondary">General: <strong class="text-body">{{ '%.2f'|format(sales_context.totals.amount|default(0)) }}</strong></span>
         </div>
         {% endif %}
         {% elif selected_code %}
@@ -73,6 +82,7 @@
         {% endif %}
     </div>
 
+    {% if not compact %}
     <div class="row g-3">
         <div class="col-12 col-lg-4">
             <div class="rounded border border-secondary-subtle bg-body p-2 h-100">
@@ -108,6 +118,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 <script>
     (() => {
@@ -119,9 +130,10 @@
         }
 
         button.dataset.salesFullscreenReady = 'true';
-        button.addEventListener('click', () => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
             const isFullscreen = panel.classList.toggle('is-fullscreen');
-            button.textContent = isFullscreen ? 'Cerrar ventana completa' : 'Ver ventana completa';
+            button.textContent = isFullscreen ? 'Cerrar pantalla completa' : 'Pantalla completa';
         });
     })();
 </script>

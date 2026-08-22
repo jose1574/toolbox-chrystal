@@ -9798,3 +9798,122 @@ class ProviderRegistration(db.Model):
         server_default=text("CURRENT_TIMESTAMP"),
     )
     status = db.Column(db.String(30), nullable=False, server_default="PENDING")
+
+
+class ShoppingCart(db.Model):
+    __tablename__ = "shopping_carts"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('DRAFT', 'APPROVED', 'CANCELLED')",
+            name="ck_shopping_carts_status",
+        ),
+        {"schema": "toolbox"},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    provider_code = db.Column(
+        db.ForeignKey("public.provider.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    buyer_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    source_review_list_id = db.Column(
+        db.ForeignKey(
+            "toolbox.purchase_review_lists.correlative",
+            ondelete="RESTRICT",
+            onupdate="CASCADE",
+        ),
+        nullable=True,
+        index=True,
+    )
+    status = db.Column(db.String(16), nullable=False, server_default="DRAFT")
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    provider = db.relationship(
+        "Provider",
+        primaryjoin="ShoppingCart.provider_code == Provider.code",
+        backref="shopping_carts",
+    )
+    buyer = db.relationship(
+        "User",
+        primaryjoin="ShoppingCart.buyer_code == User.code",
+        backref="shopping_carts",
+    )
+    source_review_list = db.relationship(
+        "PurchaseReviewList",
+        primaryjoin="ShoppingCart.source_review_list_id == PurchaseReviewList.correlative",
+        backref="shopping_carts",
+    )
+
+
+class ShoppingCartItem(db.Model):
+    __tablename__ = "shopping_cart_items"
+    __table_args__ = ({"schema": "toolbox"},)
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(
+        db.ForeignKey(
+            "toolbox.shopping_carts.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    unit_id = db.Column(
+        db.ForeignKey(
+            "public.products_units.correlative", ondelete="RESTRICT", onupdate="CASCADE"
+        ),
+        nullable=True,
+        index=True,
+    )
+    source_review_item_id = db.Column(
+        db.ForeignKey(
+            "toolbox.purchase_review_list_items.correlative",
+            ondelete="RESTRICT",
+            onupdate="CASCADE",
+        ),
+        nullable=True,
+        index=True,
+    )
+    quantity = db.Column(db.Double(53), nullable=False, server_default="0")
+    unitary_cost = db.Column(db.Double(53), nullable=False, server_default="0")
+    note = db.Column(db.String)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    cart = db.relationship(
+        "ShoppingCart",
+        primaryjoin="ShoppingCartItem.cart_id == ShoppingCart.correlative",
+        backref="items",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="ShoppingCartItem.product_code == Product.code",
+        backref="shopping_cart_items",
+    )
+    unit = db.relationship(
+        "ProductsUnit",
+        primaryjoin="ShoppingCartItem.unit_id == ProductsUnit.correlative",
+        backref="shopping_cart_items",
+    )
+    source_review_item = db.relationship(
+        "PurchaseReviewListItem",
+        primaryjoin="ShoppingCartItem.source_review_item_id == PurchaseReviewListItem.correlative",
+        backref="shopping_cart_items",
+    )

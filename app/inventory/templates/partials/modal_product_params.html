@@ -1,8 +1,15 @@
+{% if embedded|default(false) %}
+<section class="h-100" id="product-inventory-detail">
+    <div class="p-2 h-100 border-0 bg-body">
+{% else %}
 <div id="product-modal" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;" hx-target="this" hx-swap="outerHTML" role="dialog" aria-modal="true">
     <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 32rem;">
+{% endif %}
         <div class="d-flex align-items-start justify-content-between mb-2">
-            <h2 class="h5 fw-semibold text-body mb-0">Parametros del producto</h2>
+            <h2 class="h6 fw-semibold text-body mb-0">Parametros del producto</h2>
+            {% if not embedded|default(false) %}
             <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" data-close-product-modal>Cerrar</button>
+            {% endif %}
         </div>
 
         <div class="d-grid gap-1 small text-body-secondary">
@@ -24,9 +31,13 @@
                     <input type="number" id="maximum_stock" name="maximum_stock" value="{{ product_params.maximum_stock if product_params else 0 }}" class="form-control form-control-sm">
                 </div>
                 <div class="mt-2">
-                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                    <button type="submit" class="btn btn-primary btn-sm" {% if not product or not store %}disabled{% endif %}>Guardar</button>
                 </div>
             </form>
         </div>
     </div>
+{% if embedded|default(false) %}
+</section>
+{% else %}
 </div>
+{% endif %}

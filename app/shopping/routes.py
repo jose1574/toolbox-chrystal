@@ -18,6 +18,7 @@ from app.models import (
     PurchaseReviewList,
     PurchaseReviewListItem,
     PurchaseReviewNewProductItem,
+    ShoppingCart,
     Unit,
     User,
 )
@@ -168,17 +169,14 @@ def product_order_details():
             'rejected_reason': (request.args.get('review_rejected_reason') or '').strip(),
         }
     return render_template(
-        'shopping/partials/product_order_details.html',
+        'shopping/panel_shopping/product_order_details.html',
         product=product,
         inventory_params=inventory_params,
         shopping_params=shopping_params,
         purchase_history=purchase_history,
         selected_review_item=selected_review_item,
         selected_provider_code=selected_provider_code,
-        include_shopping_params_oob=True,
-        include_inventory_params_oob=True,
         include_sales_chart_oob=True,
-        include_purchase_history_oob=True,
     )
 
 
@@ -192,7 +190,11 @@ def product_sales_chart():
         granularity=request.args.get('granularity', 'month'),
         chart_group=request.args.get('chart_group', 'period'),
     )
-    return render_template('shopping/partials/product_sales_chart.html', sales_context=sales_context)
+    return render_template(
+        'shopping/panel_shopping/product_sales_chart.html',
+        sales_context=sales_context,
+        compact=request.args.get('compact') == '1',
+    )
 
 
 @shopping_bp.route('/product_edit_modal')
@@ -267,7 +269,8 @@ def save_product_shopping_param():
         response.headers['HX-Reswap'] = 'innerHTML'
         return response
 
-    return render_template('shopping/partials/product_shopping_params.html', **context)
+    context['inventory_total_stock'] = service.get_product_total_inventory(context['product'].code)
+    return render_template('shopping/panel_shopping/product_shopping_params.html', **context)
 
 
 @shopping_bp.route('/product_inventory_param_modal')
@@ -298,7 +301,10 @@ def save_product_inventory_param():
         response.headers['HX-Reswap'] = 'innerHTML'
         return response
 
-    return render_template('shopping/partials/product_inventory_params.html', inventory_params=context['inventory_params'])
+    return render_template(
+        'shopping/panel_shopping/product_inventory_params.html',
+        inventory_params=context['inventory_params'],
+    )
 
 
 
@@ -1305,15 +1311,28 @@ def provider_logout():
 def order():
     code_provider = (request.args.get('code_provider') or '').strip()
     review_list_correlative = request.args.get('review_list_correlative')
+    selected_product_code = (request.args.get('product_code') or '').strip()
 
 
     if not code_provider:
-        return render_template('shopping/order.html', provider=None, selected_provider_code='')
+        cart_context = service.get_shopping_cart_context('', current_user.get_id())
+        return render_template(
+            'shopping/panel_shopping/order.html',
+            provider=None,
+            selected_provider_code='',
+            **cart_context,
+        )
 
     provider = service.get_provider_by_code(code_provider)
     if not provider:
         flash(f'No se encontró un proveedor con el código {code_provider}.', 'error')
-        return render_template('shopping/order.html', provider=None, selected_provider_code=code_provider)
+        cart_context = service.get_shopping_cart_context('', current_user.get_id())
+        return render_template(
+            'shopping/panel_shopping/order.html',
+            provider=None,
+            selected_provider_code=code_provider,
+            **cart_context,
+        )
 
     selected_review_list = None
     review_products = []
@@ -1323,6 +1342,7 @@ def order():
     inventory_params = []
     shopping_params = None
     purchase_history = []
+    product_units = []
 
     if review_list_correlative:
         selected_review_list = service.get_provider_review_list_detail_context(
@@ -1349,6 +1369,7 @@ def order():
                 inventory_params = service.get_product_inventory_params(selected_code)
                 shopping_params = service.get_product_shopping_param(selected_code)
                 purchase_history = service.get_product_purchase_history(selected_code)
+                product_units = service.get_provider_product_units(selected_code)
 
     if not review_products:
         review_products, total_review_products, _, _, _ = service.search_products(
@@ -1356,9 +1377,41 @@ def order():
             page=1,
             per_page=12,
         )
+
+    navigable_products = [
+        item for item in review_products
+        if item.get('item_type', 'catalog') == 'catalog' and (item.get('code') or '').strip()
+    ]
+    selected_product_index = 0
+    if navigable_products:
+        selected_product_index = next(
+            (
+                index
+                for index, item in enumerate(navigable_products)
+                if item.get('code', '').strip() == selected_product_code
+            ),
+            0,
+        )
+        selected_navigation_item = navigable_products[selected_product_index]
+        selected_navigation_code = selected_navigation_item.get('code', '').strip()
+        if selected_navigation_code and (
+            selected_product is None or selected_product.get('code') != selected_navigation_code
+        ):
+            selected_product = service.get_product_order_details(selected_navigation_code)
+            selected_review_item = selected_navigation_item if review_list_correlative else None
+            inventory_params = service.get_product_inventory_params(selected_navigation_code)
+            shopping_params = service.get_product_shopping_param(selected_navigation_code)
+            purchase_history = service.get_product_purchase_history(selected_navigation_code)
+            product_units = service.get_provider_product_units(selected_navigation_code)
     
+    cart_context = service.get_shopping_cart_context(
+        provider.code,
+        current_user.get_id(),
+        review_list_correlative,
+    )
+    inventory_total_stock = sum(inventory_param['stock'] for inventory_param in inventory_params)
     return render_template(
-        'shopping/order.html',
+        'shopping/panel_shopping/order.html',
         provider=provider,
         selected_provider_code=provider.code,
         review_list_correlative=review_list_correlative,
@@ -1367,11 +1420,96 @@ def order():
         review_products_total=total_review_products,
         product=selected_product,
         selected_review_item=selected_review_item,
+        navigable_products=navigable_products,
+        selected_product_index=selected_product_index,
+        product_units=product_units,
         inventory_params=inventory_params,
+        inventory_total_stock=inventory_total_stock,
         shopping_params=shopping_params,
         purchase_history=purchase_history,
+        **cart_context,
     )
 
+@shopping_bp.route('/shopping_cart')
+@login_required
+def shopping_cart():
+    code_provider = (request.args.get('code_provider') or '').strip()
+    review_list_correlative = request.args.get('review_list_correlative')
+    cart_context = service.get_shopping_cart_context(
+        code_provider,
+        current_user.get_id(),
+        review_list_correlative,
+    )
+
+    return render_template('shopping/panel_shopping/shopping_cart.html', **cart_context)
+
+
+def _render_shopping_cart(provider_code, review_list_correlative=None):
+    cart_context = service.get_shopping_cart_context(
+        provider_code,
+        current_user.get_id(),
+        review_list_correlative,
+    )
+    return render_template('shopping/panel_shopping/shopping_cart.html', **cart_context)
+
+
+@shopping_bp.route('/shopping_cart/items', methods=['POST'])
+@login_required
+def shopping_cart_add_item():
+    provider_code = (request.form.get('code_provider') or '').strip()
+    review_list_correlative = request.form.get('review_list_correlative')
+    try:
+        cart = service.get_or_create_shopping_cart(
+            provider_code,
+            current_user.get_id(),
+            review_list_correlative,
+        )
+        service.add_shopping_cart_item(
+            cart,
+            product_code=request.form.get('product_code'),
+            unit_id=request.form.get('unit_id'),
+            quantity=request.form.get('quantity'),
+            unitary_cost=request.form.get('unitary_cost'),
+            note=request.form.get('note'),
+            source_review_item_id=request.form.get('source_review_item_id'),
+        )
+    except ValueError as error:
+        flash(str(error), 'error')
+    return _render_shopping_cart(provider_code, review_list_correlative)
+
+
+@shopping_bp.route('/shopping_cart/items/<int:item_id>', methods=['POST'])
+@login_required
+def shopping_cart_update_item(item_id):
+    provider_code = (request.form.get('code_provider') or '').strip()
+    review_list_correlative = request.form.get('review_list_correlative')
+    try:
+        cart = service.get_or_create_shopping_cart(
+            provider_code,
+            current_user.get_id(),
+            review_list_correlative,
+        )
+        service.update_shopping_cart_item(cart, item_id, request.form.get('quantity'))
+    except ValueError as error:
+        flash(str(error), 'error')
+    return _render_shopping_cart(provider_code, review_list_correlative)
+
+
+@shopping_bp.route('/shopping_cart/items/<int:item_id>/remove', methods=['POST'])
+@login_required
+def shopping_cart_remove_item(item_id):
+    provider_code = (request.form.get('code_provider') or '').strip()
+    review_list_correlative = request.form.get('review_list_correlative')
+    try:
+        cart = service.get_or_create_shopping_cart(
+            provider_code,
+            current_user.get_id(),
+            review_list_correlative,
+        )
+        service.remove_shopping_cart_item(cart, item_id)
+    except ValueError as error:
+        flash(str(error), 'error')
+    return _render_shopping_cart(provider_code, review_list_correlative)
 
 @shopping_bp.route('/selected_provider_details')
 @login_required

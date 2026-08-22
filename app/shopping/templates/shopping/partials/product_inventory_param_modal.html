@@ -1,7 +1,7 @@
 <div class="modal fade" id="productInventoryParamModal" tabindex="-1" aria-labelledby="productInventoryParamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form hx-post="{{ url_for('shopping.save_product_inventory_param') }}" hx-target="#product_inventory_params" hx-swap="innerHTML"
+            <form hx-post="{{ url_for('shopping.save_product_inventory_param') }}" hx-target="#product-inventory-params-section" hx-swap="outerHTML"
                 hx-on::before-swap="if (event.detail.xhr.status === 422) { event.detail.shouldSwap = true; event.detail.isError = false; }"
                 hx-on::after-swap="if (event.detail.xhr.status !== 422 && window.cleanupProductInventoryParamModal) { window.cleanupProductInventoryParamModal(); }">
                 <div class="modal-header">

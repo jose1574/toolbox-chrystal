@@ -1,7 +1,8 @@
 {% set selected_code = selected_code|default('') %}
+{% set compact = compact|default(false) %}
 <div class="rounded border border-secondary-subtle bg-body-tertiary p-3 h-100 d-flex flex-column overflow-hidden"
     {% if selected_code %}
-    hx-get="{{ url_for('shopping.product_sales_chart', code=selected_code) }}" hx-trigger="load"
+    hx-get="{{ url_for('shopping.product_sales_chart', code=selected_code, compact='1' if compact else none, chart_group='store' if compact else none) }}" hx-trigger="load"
     hx-target="#product-sales-chart-container" hx-swap="innerHTML"
     {% endif %}>
     <div class="shopping-order-chart rounded border border-secondary-subtle bg-body d-flex align-items-center justify-content-center text-body-secondary text-center flex-grow-1">

@@ -31,10 +31,193 @@ from app.models import (
     Unit,
     User,
     ShoppingOperation,
+    ShoppingCart,
+    ShoppingCartItem,
 )
 
 
 MONEY_QUANTUM = Decimal('0.01')
+
+
+def _parse_positive_quantity(value):
+    try:
+        quantity = float(value)
+    except (TypeError, ValueError):
+        raise ValueError('La cantidad debe ser un número mayor que cero.')
+    if quantity <= 0:
+        raise ValueError('La cantidad debe ser mayor que cero.')
+    return quantity
+
+
+def _parse_optional_integer(value):
+    if value in (None, ''):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValueError('El identificador indicado no es válido.')
+
+
+def get_or_create_shopping_cart(provider_code, buyer_code, source_review_list_id=None):
+    provider_code = normalize_code(provider_code)
+    buyer_code = normalize_code(buyer_code)
+    source_review_list_id = _parse_optional_integer(source_review_list_id)
+    if not provider_code or not buyer_code:
+        raise ValueError('Debes indicar un proveedor y un comprador.')
+
+    cart_query = ShoppingCart.query.filter(
+        ShoppingCart.provider_code == provider_code,
+        ShoppingCart.buyer_code == buyer_code,
+        ShoppingCart.status == 'DRAFT',
+    )
+    if source_review_list_id is None:
+        cart_query = cart_query.filter(ShoppingCart.source_review_list_id.is_(None))
+    else:
+        cart_query = cart_query.filter(ShoppingCart.source_review_list_id == source_review_list_id)
+
+    cart = cart_query.order_by(ShoppingCart.correlative.desc()).first()
+    if cart:
+        return cart
+
+    if source_review_list_id is not None:
+        review_list = PurchaseReviewList.query.filter(
+            PurchaseReviewList.correlative == source_review_list_id,
+            PurchaseReviewList.provider_code == provider_code,
+        ).first()
+        if review_list is None:
+            raise ValueError('La lista de revisión no pertenece al proveedor seleccionado.')
+
+    cart = ShoppingCart(
+        provider_code=provider_code,
+        buyer_code=buyer_code,
+        source_review_list_id=source_review_list_id,
+        status='DRAFT',
+    )
+    db.session.add(cart)
+    db.session.flush()
+    return cart
+
+
+def get_shopping_cart_context(provider_code, buyer_code, source_review_list_id=None):
+    if not provider_code:
+        return {'cart': None, 'items': [], 'subtotal': 0.0, 'total': 0.0}
+
+    cart = get_or_create_shopping_cart(provider_code, buyer_code, source_review_list_id)
+    items = (
+        ShoppingCartItem.query.options(
+            selectinload(ShoppingCartItem.product),
+            selectinload(ShoppingCartItem.unit).selectinload(ProductsUnit.unit1),
+        )
+        .filter(ShoppingCartItem.cart_id == cart.correlative)
+        .order_by(ShoppingCartItem.correlative.asc())
+        .all()
+    )
+    item_context = []
+    subtotal = Decimal('0')
+    for item in items:
+        line_total = _quantize_money(item.quantity * item.unitary_cost)
+        subtotal += line_total
+        item_context.append({
+            'correlative': item.correlative,
+            'product_code': item.product_code,
+            'description': item.product.description if item.product else item.product_code,
+            'unit': item.unit.unit1.description if item.unit and item.unit.unit1 else 'UND',
+            'quantity': float(item.quantity or 0),
+            'unitary_cost': float(item.unitary_cost or 0),
+            'line_total': float(line_total),
+        })
+    total = float(_quantize_money(subtotal))
+    return {'cart': cart, 'items': item_context, 'subtotal': total, 'total': total}
+
+
+def add_shopping_cart_item(cart, product_code=None, unit_id=None, quantity=None, unitary_cost=0, note=None, source_review_item_id=None):
+    source_review_item_id = _parse_optional_integer(source_review_item_id)
+    if source_review_item_id is not None:
+        review_item = (
+            PurchaseReviewListItem.query.join(PurchaseReviewList)
+            .filter(
+                PurchaseReviewListItem.correlative == source_review_item_id,
+                PurchaseReviewListItem.main_correlative == cart.source_review_list_id,
+                PurchaseReviewList.provider_code == cart.provider_code,
+                PurchaseReviewListItem.status == 'ACCEPTED',
+            )
+            .first()
+        )
+        if review_item is None:
+            raise ValueError('El producto no fue aprobado para esta lista de compra.')
+        product_code = review_item.product_code
+        unit_id = _parse_optional_integer(unit_id) or review_item.unit
+        if unit_id is not None and ProductsUnit.query.filter(
+            ProductsUnit.correlative == unit_id,
+            ProductsUnit.product_code == product_code,
+        ).first() is None:
+            raise ValueError('La unidad no corresponde al producto aprobado.')
+        quantity = _parse_positive_quantity(quantity)
+        try:
+            unitary_cost = float(unitary_cost or 0)
+        except (TypeError, ValueError):
+            raise ValueError('El precio unitario no es válido.')
+    else:
+        if cart.source_review_list_id is not None:
+            raise ValueError(
+                'Los carritos asociados a una lista solo admiten productos aprobados.'
+            )
+        product_code = normalize_code(product_code)
+        if not product_code or Product.query.filter(Product.code == product_code).first() is None:
+            raise ValueError('El producto seleccionado no es válido.')
+        unit_id = _parse_optional_integer(unit_id)
+        if unit_id is not None and ProductsUnit.query.filter(
+            ProductsUnit.correlative == unit_id,
+            ProductsUnit.product_code == product_code,
+        ).first() is None:
+            raise ValueError('La unidad no corresponde al producto seleccionado.')
+        quantity = _parse_positive_quantity(quantity)
+        try:
+            unitary_cost = float(unitary_cost or 0)
+        except (TypeError, ValueError):
+            raise ValueError('El precio unitario no es válido.')
+
+    existing_item = ShoppingCartItem.query.filter(
+        ShoppingCartItem.cart_id == cart.correlative,
+        ShoppingCartItem.source_review_item_id == source_review_item_id,
+    ).first() if source_review_item_id is not None else None
+    if existing_item:
+        existing_item.quantity = quantity
+        existing_item.unitary_cost = unitary_cost
+        existing_item.note = note or None
+    else:
+        db.session.add(ShoppingCartItem(
+            cart_id=cart.correlative,
+            product_code=product_code,
+            unit_id=unit_id,
+            source_review_item_id=source_review_item_id,
+            quantity=quantity,
+            unitary_cost=unitary_cost,
+            note=note or None,
+        ))
+    db.session.commit()
+
+
+def update_shopping_cart_item(cart, item_id, quantity):
+    item = ShoppingCartItem.query.filter(
+        ShoppingCartItem.correlative == item_id,
+        ShoppingCartItem.cart_id == cart.correlative,
+    ).first()
+    if item is None:
+        raise ValueError('El producto no pertenece al carrito actual.')
+    item.quantity = _parse_positive_quantity(quantity)
+    db.session.commit()
+
+
+def remove_shopping_cart_item(cart, item_id):
+    item = ShoppingCartItem.query.filter(
+        ShoppingCartItem.correlative == item_id,
+        ShoppingCartItem.cart_id == cart.correlative,
+    ).first()
+    if item is None:
+        raise ValueError('El producto no pertenece al carrito actual.')
+    db.session.delete(item)
+    db.session.commit()
 
 
 def _to_decimal(value, default='0'):
@@ -1116,11 +1299,13 @@ def _build_provider_review_list_detail(review_list, coin_symbol='$'):
 
         detail_items.append({
             'item_type': 'catalog',
+            'review_item_id': item.correlative,
             'code': item.product_code or '',
             'name': (item.product.description if item.product else item.product_code) or '-',
             'reference': (item.product.referenc if item.product else '') or '-',
             'quantity': float(quantity),
             'unit': (item.unit_detail.unit1.description if item.unit_detail and item.unit_detail.unit1 else None) or item.unit_detail.unit if item.unit_detail else 'UND',
+            'unit_id': item.unit,
             'unit_price': float(_quantize_money(unit_price)),
             'subtotal': float(subtotal),
             'status': item.status or 'PENDING',
@@ -2090,6 +2275,17 @@ def get_product_inventory_params(code):
     if not product:
         return []
 
+    product_unit = (
+        db.session.query(Unit.description.label('unit_description'))
+        .outerjoin(ProductsUnit, ProductsUnit.unit == Unit.code)
+        .filter(
+            func.upper(func.trim(ProductsUnit.product_code)) == main_code,
+            ProductsUnit.main_unit.is_(True),
+        )
+        .first()
+    )
+    unit_description = (product_unit.unit_description if product_unit else None) or 'UND'
+
     stock_rows = (
         db.session.query(
             ProductsStock.store.label('store_code'),
@@ -2121,6 +2317,7 @@ def get_product_inventory_params(code):
             'store_code': row.store_code,
             'store_name': row.store_name or row.store_code,
             'stock': float(row.stock or 0),
+            'unit_description': unit_description,
             'minimum_stock': None,
             'maximum_stock': None,
             'is_total': False,
@@ -2135,6 +2332,7 @@ def get_product_inventory_params(code):
                 'store_code': row.store_code,
                 'store_name': row.store_name or row.store_code,
                 'stock': 0,
+                'unit_description': unit_description,
                 'minimum_stock': None,
                 'maximum_stock': None,
                 'is_total': False,
@@ -2144,6 +2342,10 @@ def get_product_inventory_params(code):
         stores[normalized_store]['maximum_stock'] = row.maximum_stock
 
     return sorted(stores.values(), key=lambda store: store['store_name'] or '')
+
+
+def get_product_total_inventory(code):
+    return sum(inventory_param['stock'] for inventory_param in get_product_inventory_params(code))
 
 
 def get_product_inventory_param_form_context(code, store_code, errors=None):

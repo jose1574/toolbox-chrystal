@@ -30,6 +30,12 @@
                 </form>
                 </div>
                 <div class="col-12 col-sm-auto">
+                    <a class="btn btn-success px-4 w-100" id="continue-provider-selection"
+                        href="{{ url_for('shopping.offer_list_provider', code_provider=selected_provider_code|default('')) }}">
+                        Continuar
+                    </a>
+                </div>
+                <div class="col-12 col-sm-auto">
                     <button type="button" class="btn btn-primary px-4 w-100"
                         hx-get="{{ url_for('shopping.providers_modal') }}" hx-target="#providers-modal-container"
                         hx-swap="innerHTML">
@@ -41,3 +47,11 @@
         <div id="providers-modal-container"></div>
     </div>
 </div>
+
+<script>
+    document.getElementById('code-provider-input')?.addEventListener('input', function () {
+        const continueButton = document.getElementById('continue-provider-selection');
+        const providerCode = this.value.trim();
+        continueButton.href = '{{ url_for("shopping.offer_list_provider") }}?code_provider=' + encodeURIComponent(providerCode);
+    });
+</script>
