@@ -1,10 +1,106 @@
+<style>
+    #provider-offer-lists-modal-content .provider-history-count,
+    #provider-offer-lists-modal-content .provider-history-meta,
+    #provider-offer-lists-modal-content .provider-history-empty-copy,
+    #provider-offer-lists-modal-content .provider-history-date,
+    #provider-offer-lists-modal-content .provider-history-note {
+        color: #9ca3af !important;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        color: #e5e7eb;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-item.is-selected {
+        background: rgba(37, 99, 235, 0.14);
+        border-color: rgba(37, 99, 235, 0.34);
+        color: #f9fafb;
+        box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+    }
+
+    #provider-offer-lists-modal-content .provider-history-card,
+    #provider-offer-lists-modal-content .provider-history-empty {
+        background: #11131a;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        color: #e5e7eb;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-table-wrap {
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        overflow: hidden;
+        background: #11131a;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-table {
+        --bs-table-bg: transparent;
+        --bs-table-color: #e5e7eb;
+        --bs-table-border-color: rgba(255, 255, 255, 0.06);
+        margin-bottom: 0;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-table thead th {
+        background: #0f1117;
+        color: #9ca3af;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom-color: rgba(255, 255, 255, 0.06);
+    }
+
+    #provider-offer-lists-modal-content .provider-history-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    #provider-offer-lists-modal-content .provider-history-table tfoot th {
+        background: #11131a;
+        border-top-color: rgba(255, 255, 255, 0.06);
+    }
+
+    #provider-offer-lists-modal-content .btn-outline-primary,
+    #provider-offer-lists-modal-content .btn-outline-success {
+        border-radius: 0.8rem;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #provider-offer-lists-modal-content .btn-outline-primary {
+        border-color: rgba(37, 99, 235, 0.35);
+        color: #93c5fd;
+    }
+
+    #provider-offer-lists-modal-content .btn-outline-primary:hover {
+        background: rgba(37, 99, 235, 0.12);
+        color: #eff6ff;
+    }
+
+    #provider-offer-lists-modal-content .btn-outline-success {
+        border-color: rgba(34, 197, 94, 0.35);
+        color: #86efac;
+    }
+
+    #provider-offer-lists-modal-content .btn-outline-success:hover {
+        background: rgba(34, 197, 94, 0.12);
+        color: #f0fdf4;
+    }
+
+    #provider-offer-lists-modal-content .provider-history-buyer-note {
+        background: rgba(37, 99, 235, 0.12);
+        border: 1px solid rgba(37, 99, 235, 0.22);
+        color: #dbeafe;
+        border-radius: 1rem;
+    }
+</style>
 <div class="row g-0 h-100">
     <aside class="provider-history-sidebar col-lg-4 col-xl-3">
         <div class="provider-history-sidebar-inner p-3">
             <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
                 <div>
                     <div class="small text-uppercase text-body-secondary fw-semibold">Listas enviadas</div>
-                    <div class="small text-body-secondary">{{ review_lists|length }} registradas</div>
+                    <div class="small provider-history-count">{{ review_lists|length }} registradas</div>
                 </div>
             </div>
 
@@ -13,7 +109,7 @@
                 {% for review_list in review_lists %}
                 <button
                     type="button"
-                    class="btn text-start p-3 border {{ 'border-primary bg-primary-subtle text-primary-emphasis' if review_list.is_selected else 'border-secondary-subtle bg-body-tertiary text-body' }}"
+                    class="btn provider-history-item {{ 'is-selected' if review_list.is_selected else '' }} text-start p-3"
                     hx-get="{{ url_for('shopping.provider_offer_lists_content', review_list_correlative=review_list.correlative) }}"
                     hx-target="#provider-offer-lists-modal-content"
                     hx-swap="innerHTML"
@@ -21,21 +117,21 @@
                     <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                         <div>
                             <div class="fw-semibold small">{{ review_list.reference }}</div>
-                            <div class="text-body-secondary" style="font-size: 0.74rem;">{{ review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if review_list.submitted_at else review_list.created_at.strftime('%d/%m/%Y %H:%M') if review_list.created_at else '-' }}</div>
+                            <div class="provider-history-date" style="font-size: 0.74rem;">{{ review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if review_list.submitted_at else review_list.created_at.strftime('%d/%m/%Y %H:%M') if review_list.created_at else '-' }}</div>
                         </div>
                         <span class="badge text-bg-{{ review_list.status_badge_class }}">{{ review_list.status_label }}</span>
                     </div>
                     <div class="d-flex align-items-center justify-content-between gap-2 small">
-                        <span class="text-body-secondary">{{ review_list.products_count }} productos</span>
+                        <span class="provider-history-meta">{{ review_list.products_count }} productos</span>
                         <strong>{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</strong>
                     </div>
                 </button>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-4 text-center h-100 d-flex flex-column justify-content-center">
+            <div class="provider-history-empty p-4 text-center h-100 d-flex flex-column justify-content-center">
                 <h6 class="mb-2">Aun no has enviado listas</h6>
-                <p class="small text-body-secondary mb-0">Cuando envies una oferta a revision, aparecera aqui para que puedas consultarla luego.</p>
+                <p class="small provider-history-empty-copy mb-0">Cuando envies una oferta a revision, aparecera aqui para que puedas consultarla luego.</p>
             </div>
             {% endif %}
         </div>
@@ -50,19 +146,19 @@
                         <h6 class="mb-0 fw-bold">{{ selected_review_list.reference }}</h6>
                         <span class="badge text-bg-{{ selected_review_list.status_badge_class }}">{{ selected_review_list.status_label }}</span>
                     </div>
-                    <div class="small text-body-secondary">Enviada: {{ selected_review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if selected_review_list.submitted_at else '-' }}</div>
+                    <div class="small provider-history-date">Enviada: {{ selected_review_list.submitted_at.strftime('%d/%m/%Y %H:%M') if selected_review_list.submitted_at else '-' }}</div>
                 </div>
 
                 <div class="row g-2 w-100 w-lg-auto" style="max-width: 26rem;">
                     <div class="col-6">
-                        <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-3 h-100">
-                            <div class="small text-body-secondary">Productos</div>
+                        <div class="provider-history-card p-3 h-100">
+                            <div class="small provider-history-meta">Productos</div>
                             <div class="fs-5 fw-bold">{{ selected_review_list.products_count }}</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="border border-secondary-subtle rounded-4 bg-body-tertiary p-3 h-100">
-                            <div class="small text-body-secondary">Monto estimado</div>
+                        <div class="provider-history-card p-3 h-100">
+                            <div class="small provider-history-meta">Monto estimado</div>
                             <div class="fs-6 fw-bold">{{ selected_review_list.coin_symbol }} {{ '{:,.2f}'.format(selected_review_list.total_amount).replace(',', ' ') }}</div>
                         </div>
                     </div>
@@ -86,8 +182,8 @@
                 </a>
             </div>
 
-            <div class="table-responsive border border-secondary-subtle rounded-4 overflow-hidden mb-3">
-                <table class="table table-dark table-hover align-middle mb-0">
+            <div class="provider-history-table-wrap table-responsive mb-3">
+                <table class="table provider-history-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Producto</th>
@@ -103,7 +199,7 @@
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ item.name }}</div>
-                                <div class="small text-body-secondary">
+                                <div class="small provider-history-meta">
                                     {% if item.item_type == 'new_product' %}
                                     Nuevo producto{% if item.main_code %} · Codigo: {{ item.main_code }}{% endif %}{% if item.mark_name %} · {{ item.mark_name }}{% endif %}{% if item.department_name %} · {{ item.department_name }}{% endif %}
                                     {% else %}
@@ -111,7 +207,7 @@
                                     {% endif %}
                                 </div>
                                 {% if item.note %}
-                                <div class="small text-info-emphasis mt-1">Nota: {{ item.note }}</div>
+                                <div class="small provider-history-note mt-1">Nota: {{ item.note }}</div>
                                 {% endif %}
                                 {% if item.rejected_reason %}
                                 <div class="small text-danger mt-1">Motivo: {{ item.rejected_reason }}</div>
@@ -136,7 +232,7 @@
             </div>
 
             {% if selected_review_list.buyer_notes %}
-            <div class="border border-info-subtle bg-info-subtle rounded-4 p-3 mb-3">
+            <div class="provider-history-buyer-note p-3 mb-3">
                 <div class="small text-uppercase fw-semibold mb-1">Notas del comprador</div>
                 <div class="small mb-0">{{ selected_review_list.buyer_notes }}</div>
             </div>

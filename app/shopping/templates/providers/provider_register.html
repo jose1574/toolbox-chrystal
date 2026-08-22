@@ -9,11 +9,11 @@
         :root {
             --provider-register-bg: #0f1117;
             --provider-register-surface: #161821;
-            --provider-register-field: #0f1117;
+            --provider-register-field: #11131a;
             --provider-register-border: rgba(255, 255, 255, 0.06);
             --provider-register-text: #f9fafb;
             --provider-register-muted: #9ca3af;
-            --provider-register-success: #22c55e;
+            --provider-register-success: #2563eb;
         }
 
         body {
@@ -33,7 +33,7 @@
             background: var(--provider-register-surface);
             border: 1px solid var(--provider-register-border);
             border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
         }
 
         .provider-register-header {
@@ -71,8 +71,8 @@
 
         .provider-register-input:focus {
             background: var(--provider-register-field);
-            border-color: rgba(34, 197, 94, 0.7);
-            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.12);
+            border-color: rgba(37, 99, 235, 0.45);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.14);
             color: var(--provider-register-text);
         }
 
@@ -82,8 +82,8 @@
         }
 
         .provider-register-input.is-valid {
-            border-color: rgba(34, 197, 94, 0.7);
-            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.12);
+            border-color: rgba(37, 99, 235, 0.45);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.14);
         }
 
         .provider-register-feedback {
@@ -102,22 +102,24 @@
             background: rgba(255, 255, 255, 0.03);
             border-color: var(--provider-register-border);
             color: var(--provider-register-text);
+            border-radius: 0.85rem;
         }
 
         .provider-register-submit {
             min-height: 3rem;
             background: var(--provider-register-success);
             border-color: var(--provider-register-success);
-            color: var(--provider-register-bg);
+            color: #ffffff;
             font-weight: 700;
-            box-shadow: 0 10px 12px rgba(34, 197, 94, 0.2);
+            box-shadow: 0 10px 12px rgba(37, 99, 235, 0.22);
+            border-radius: 0.85rem;
         }
 
         .provider-register-submit:hover,
         .provider-register-submit:focus {
-            background: #16a34a;
-            border-color: #16a34a;
-            color: var(--provider-register-bg);
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #ffffff;
         }
 
         @media (max-width: 575.98px) {

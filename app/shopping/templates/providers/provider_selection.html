@@ -3,9 +3,38 @@
 {% block title %}Compras | Selección de proveedor{% endblock %}
 
 {% block content %}
+<style>
+  .provider-selection-card {
+    background: #161821;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .provider-selection-card .text-body,
+  .provider-selection-card .text-body-secondary,
+  .provider-selection-card .btn {
+    color: #e5e7eb;
+  }
+
+  .provider-selection-card .text-body-secondary {
+    color: #9ca3af !important;
+  }
+
+  .provider-selection-card .btn-outline-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+    border-radius: 0.8rem;
+  }
+
+  .provider-selection-card .btn-outline-secondary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f9fafb;
+  }
+</style>
 <div class="container-fluid py-4 px-3 px-lg-4">
   <div class="d-flex flex-column gap-4">
-    <section class="rounded border border-secondary-subtle bg-body p-3 p-lg-4 shadow-sm">
+    <section class="provider-selection-card rounded p-3 p-lg-4">
       <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-2 mb-3">
         <div>
           <h1 class="h4 fw-bold text-body mb-1">Crear lista como proveedor</h1>

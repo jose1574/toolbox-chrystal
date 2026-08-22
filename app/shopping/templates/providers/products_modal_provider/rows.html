@@ -1,5 +1,11 @@
 {% for product in products %}
-<tr>
+<tr
+    class="provider-product-row"
+    data-product-code="{{ product.code }}"
+    data-unit-correlative="{{ product.unit_correlative or '' }}"
+    ondblclick="addProviderProductDirect('{{ product.code }}', '{{ product.unit_correlative or '' }}')"
+    style="cursor: pointer;"
+>
     <td class="provider-product-select-cell">
         <input
             class="form-check-input provider-product-select-input"

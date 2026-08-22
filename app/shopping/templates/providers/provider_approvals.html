@@ -3,8 +3,54 @@
 {% block title %}Aprobaciones de proveedores | Toolbox{% endblock %}
 
 {% block content %}
+<style>
+  .provider-approvals-card {
+    background: #161821;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .provider-approvals-card .card-body {
+    color: #e5e7eb;
+  }
+
+  .provider-approvals-card .text-body-secondary {
+    color: #9ca3af !important;
+  }
+
+  .provider-approvals-card .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #e5e7eb;
+    --bs-table-border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .provider-approvals-card .table thead th {
+    background: #11131a;
+    color: #9ca3af;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+  }
+
+  .provider-approvals-card .table-hover tbody tr:hover {
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.02);
+    --bs-table-hover-color: #f9fafb;
+  }
+
+  .provider-approvals-card .alert {
+    border-radius: 0.9rem;
+    border-width: 1px;
+  }
+
+  .provider-approvals-card .bg-body-tertiary,
+  .provider-approvals-card .table-responsive {
+    background: transparent !important;
+  }
+</style>
 <div class="container-fluid py-4 px-3 px-lg-4">
-  <div class="card shadow-sm border-0">
+  <div class="provider-approvals-card card shadow-sm border-0">
     <div class="card-body p-4">
       <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
         <div>
@@ -30,7 +76,7 @@
       {% if registrations %}
         <div class="table-responsive">
           <table class="table table-hover align-middle">
-            <thead class="table-light">
+            <thead>
               <tr>
                 <th>Empresa</th>
                 <th>RIF</th>
@@ -83,7 +129,7 @@
           </table>
         </div>
       {% else %}
-        <div class="border border-dashed rounded-3 p-5 text-center bg-body-tertiary">
+        <div class="border border-secondary-subtle rounded-4 p-5 text-center" style="background:#11131a;">
           <h3 class="h5 mb-2">No hay solicitudes pendientes</h3>
           <p class="text-body-secondary mb-0">Cuando un proveedor envíe su registro, aparecerá aquí para su revisión.</p>
         </div>

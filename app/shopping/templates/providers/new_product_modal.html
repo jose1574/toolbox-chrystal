@@ -1,4 +1,73 @@
 <div class="modal fade" id="providerNewProductModal" tabindex="-1" aria-labelledby="providerNewProductModalLabel" aria-hidden="true">
+    <style>
+        #providerNewProductModal .modal-content {
+            background: #161821;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 1.25rem;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+        }
+
+        #providerNewProductModal .modal-header,
+        #providerNewProductModal .modal-body {
+            background: #161821;
+            color: #e5e7eb;
+        }
+
+        #providerNewProductModal .provider-modal-eyebrow,
+        #providerNewProductModal .text-muted,
+        #providerNewProductModal .form-label {
+            color: #9ca3af !important;
+        }
+
+        #providerNewProductModal .modal-title {
+            color: #f9fafb;
+        }
+
+        #providerNewProductModal .form-control,
+        #providerNewProductModal .form-select {
+            min-height: 2.7rem;
+            background: #11131a;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #e5e7eb;
+            border-radius: 0.75rem;
+        }
+
+        #providerNewProductModal .form-control::placeholder {
+            color: #6b7280;
+        }
+
+        #providerNewProductModal .form-control:focus,
+        #providerNewProductModal .form-select:focus {
+            background: #11131a;
+            border-color: rgba(37, 99, 235, 0.45);
+            box-shadow: 0 0 0 0.18rem rgba(37, 99, 235, 0.14);
+            color: #f9fafb;
+        }
+
+        #providerNewProductModal .btn-close {
+            filter: invert(1) grayscale(1);
+            opacity: 0.75;
+        }
+
+        #providerNewProductModal .btn-outline-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.06);
+            color: #e5e7eb;
+            border-radius: 0.85rem;
+        }
+
+        #providerNewProductModal .btn-outline-secondary:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #f9fafb;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #providerNewProductModal .alert-danger {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid rgba(248, 113, 113, 0.24);
+            color: #fecaca;
+        }
+    </style>
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content provider-modal-shell border-0 shadow-lg">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
@@ -25,47 +94,47 @@
                 >
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="proposed_main_code" class="form-label fw-semibold">Main product code</label>
+                            <label for="proposed_main_code" class="form-label fw-semibold">Codigo</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 id="proposed_main_code"
                                 name="proposed_main_code"
                                 value="{{ form_data.get('proposed_main_code', '') }}"
-                                placeholder="Principal code used by the provider"
+                                placeholder="Codigo principal usado por el proveedor"
                                 required
                             >
                         </div>
 
                         <div class="col-12">
-                            <label for="proposed_description" class="form-label fw-semibold">Description</label>
+                            <label for="proposed_description" class="form-label fw-semibold">Descripcion</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 id="proposed_description"
                                 name="proposed_description"
                                 value="{{ form_data.get('proposed_description', '') }}"
-                                placeholder="Product name or commercial description"
+                                placeholder="Nombre del producto o descripcion comercial"
                                 required
                             >
                         </div>
 
                         <div class="col-md-6">
-                            <label for="proposed_reference" class="form-label fw-semibold">Reference</label>
+                            <label for="proposed_reference" class="form-label fw-semibold">Referencia</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 id="proposed_reference"
                                 name="proposed_reference"
                                 value="{{ form_data.get('proposed_reference', '') }}"
-                                placeholder="Reference, model or presentation"
+                                placeholder="Referencia, modelo o presentacion"
                             >
                         </div>
 
                         <div class="col-md-6">
-                            <label for="proposed_unit_code" class="form-label fw-semibold">Unit</label>
+                            <label for="proposed_unit_code" class="form-label fw-semibold">Unidad</label>
                             <select class="form-select" id="proposed_unit_code" name="proposed_unit_code">
-                                <option value="">Select a unit</option>
+                                <option value="">Seleccione una unidad</option>
                                 {% for unit in units %}
                                 <option value="{{ unit.code }}" {% if form_data.get('proposed_unit_code') == unit.code %}selected{% endif %}>
                                     {{ unit.description }}
@@ -75,9 +144,9 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="proposed_mark_code" class="form-label fw-semibold">Brand</label>
+                            <label for="proposed_mark_code" class="form-label fw-semibold">Marca</label>
                             <select class="form-select" id="proposed_mark_code" name="proposed_mark_code">
-                                <option value="">Select a brand</option>
+                                <option value="">Seleccione una marca</option>
                                 {% for mark in marks %}
                                 <option value="{{ mark.code }}" {% if form_data.get('proposed_mark_code') == mark.code %}selected{% endif %}>
                                     {{ mark.description }}
@@ -87,9 +156,9 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="proposed_department_code" class="form-label fw-semibold">Department</label>
+                            <label for="proposed_department_code" class="form-label fw-semibold">Departamento</label>
                             <select class="form-select" id="proposed_department_code" name="proposed_department_code">
-                                <option value="">Select a department</option>
+                                <option value="">Seleccione un departamento</option>
                                 {% for department in departments %}
                                 <option value="{{ department.code }}" {% if form_data.get('proposed_department_code') == department.code %}selected{% endif %}>
                                     {{ department.description }}
@@ -99,7 +168,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="requested_amount" class="form-label fw-semibold">Quantity</label>
+                            <label for="requested_amount" class="form-label fw-semibold">Cantidad</label>
                             <input
                                 type="number"
                                 class="form-control"
@@ -114,7 +183,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="unitary_cost" class="form-label fw-semibold">Unit price</label>
+                            <label for="unitary_cost" class="form-label fw-semibold">Precio unitario</label>
                             <input
                                 type="number"
                                 class="form-control"
@@ -129,20 +198,20 @@
                         </div>
 
                         <div class="col-12">
-                            <label for="provider_note" class="form-label fw-semibold">Provider note</label>
+                            <label for="provider_note" class="form-label fw-semibold">Nota del proveedor</label>
                             <textarea
                                 class="form-control"
                                 id="provider_note"
                                 name="provider_note"
                                 rows="3"
-                                placeholder="Optional commercial details, lead time, minimum order, packaging or observations"
+                                placeholder="Detalles comerciales opcionales, tiempo de entrega, pedido mínimo, embalaje u observaciones"
                             >{{ form_data.get('provider_note', '') }}</textarea>
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="btn btn-outline-secondary" onclick="closeProviderNewProductModal()">Cancel</button>
-                        <button type="submit" class="provider-success-btn btn px-4">Add to offer</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="closeProviderNewProductModal()">Cancelar</button>
+                        <button type="submit" class="provider-success-btn btn px-4">Agregar a la oferta</button>
                     </div>
                 </form>
             </div>
