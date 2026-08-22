@@ -329,7 +329,7 @@ def provider_catalog_modal():
     reference = (request.args.get('reference') or '').strip()
     mark_codes = request.args.getlist('mark_codes')
     department_codes = request.args.getlist('department_codes')
-    only_provider_products = request.args.get('only_provider_products') == '1'
+    only_provider_products = request.args.get('only_provider_products', '1') == '1'
     provider_code = session.get('provider_code', '')
     page = request.args.get('page', 1, type=int)
     append = request.args.get('append') == '1'
