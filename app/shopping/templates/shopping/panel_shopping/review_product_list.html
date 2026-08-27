@@ -1,0 +1,39 @@
+<section class="h-100 d-flex flex-column overflow-hidden" aria-label="Productos a revisar">
+    <div class="d-flex align-items-start justify-content-between gap-2 px-2 pt-2 pb-1">
+        <div>
+            <h2 class="section-title text-uppercase fw-bold text-body mb-1 fs-6 lh-1">Productos a revisar</h2>
+            {% if selected_review_list %}
+            <div class="small text-body-secondary text-truncate" title="{{ selected_review_list.reference }}">{{ selected_review_list.reference }}</div>
+            {% else %}
+            <div class="small text-body-secondary">Compra directa</div>
+            {% endif %}
+        </div>
+        <span class="badge text-bg-secondary">{{ review_products_total|default(review_products|length) }}</span>
+    </div>
+
+    <div class="overflow-auto px-2 pb-2 flex-grow-1" style="min-height: 0;">
+        <div class="list-group list-group-flush">
+            {% for review_product in review_products|default([]) %}
+            {% set product_code = review_product.get('code') or review_product.get('main_code') or '' %}
+            {% set product_name = review_product.get('name') or review_product.get('description') or '-' %}
+            <a class="list-group-item list-group-item-action bg-transparent text-body border-secondary-subtle px-1 py-2 {% if product and product_code == product.code %}active{% endif %}"
+                {% if product_code %}
+                href="{{ url_for('shopping.order', code_provider=selected_provider_code, review_list_correlative=review_list_correlative|default(none), product_code=product_code) }}"
+                {% else %}
+                aria-disabled="true"
+                {% endif %}>
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <span class="fw-semibold small text-truncate" title="{{ product_name }}">{{ product_name }}</span>
+                    {% if review_product.get('status_label') %}
+                    <span class="badge text-bg-{{ review_product.get('status_badge_class', 'secondary') }} flex-shrink-0">{{ review_product.get('status_label') }}</span>
+                    {% endif %}
+                </div>
+                <div class="small text-body-secondary text-truncate">{{ product_code or 'Sin código' }}</div>
+                <div class="small text-body-secondary">{{ '%.2f'|format(review_product.get('quantity', 0)) }} {{ review_product.get('unit') or 'UND' }}</div>
+            </a>
+            {% else %}
+            <div class="text-center text-body-secondary small py-4">No hay productos para revisar.</div>
+            {% endfor %}
+        </div>
+    </div>
+</section>

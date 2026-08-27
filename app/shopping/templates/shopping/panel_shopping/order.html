@@ -11,8 +11,24 @@
     gap: 8px;
 }
     
+.div1,
+.div2,
+.div3,
+.div4,
+.div5,
+.div6,
+.div7,
+.div8 {
+    background-color: rgba(22, 24, 33, 1);
+    border: 1px solid var(--bs-border-color-translucent);
+    border-radius: 0.625rem;
+    padding: 0.25rem;
+}
+
 .div1 {
     grid-column: span 5 / span 5;
+    margin: 10px;
+    
 }
 
 .div1 h3 {
@@ -21,9 +37,12 @@
 }
 
 .purchase-header {
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.375rem;
+    background-color: var(--bs-tertiary-bg) !important;
+    border: 2px solid var(--bs-border-color);
+    border-radius: 0.5rem;
     overflow: hidden;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.18);
+    margin: 0.25rem 0.25rem 0.9rem;
 }
 
 .purchase-header-top,
@@ -32,18 +51,27 @@
 }
 
 .purchase-header-bottom {
-    border-top: 1px solid var(--bs-border-color);
+    border-top: 1px solid var(--bs-border-color-translucent);
 }
 
 .div2 {
-    grid-column: span 4 / span 4;
+    grid-column: span 3 / span 3;
+    grid-column-start: 2;
     grid-row-start: 2;
+}
+
+.div4 {
+    grid-row: span 2 / span 2;
+    grid-column-start: 1;
+    grid-row-start: 2;
+    margin: 0 0 0 10px;
 }
 
 .div3 {
     grid-row: span 2 / span 2;
     grid-column-start: 5;
     grid-row-start: 2;
+    margin: 0 10px 0 0;
 }
 
 .div5,
@@ -56,10 +84,13 @@
     width: 100%;
 }
 
-.div5 { grid-column-start: 1; }
-.div6 { grid-column-start: 2; }
-.div7 { grid-column-start: 3; }
-.div8 { grid-column-start: 4; }
+.div5 { grid-column-start: 2; }
+.div6 { grid-column-start: 3; }
+.div7 { grid-column-start: 4; }
+.div8 {
+    grid-column: 2 / span 3;
+    grid-row-start: 4;
+}
 
 .order-detail-panel {
     min-height: 6rem;
@@ -103,7 +134,7 @@
 
 <div class="parent">
     <div class="div1">
-        <section class="purchase-header bg-body">
+        <section>
             <div class="purchase-header-top d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <h1 class="h6 mb-0 fw-semibold">Pedidos en espera</h1>
@@ -130,27 +161,30 @@
             </div>
         </section>
     </div>
+    <div class="div4" id="left-sidebar-panel">
+        {% include "shopping/panel_shopping/review_product_list.html" %}
+    </div>
     <div class="div2">
         {% include "shopping/panel_shopping/product_order_details.html" %}
     </div>
     <div class="div3">
         {% include "shopping/panel_shopping/shopping_cart.html" %}
     </div>
-    <section class="div5 order-detail-panel border rounded p-2" id="inventory-details-panel">
+    <section class="div5 order-detail-panel" id="inventory-details-panel">
 
         {% include "shopping/panel_shopping/product_inventory_params.html" %}
     </section>
-    <section class="div6 order-detail-panel border rounded p-2" id="purchasing-details-panel">
+    <section class="div6 order-detail-panel" id="purchasing-details-panel">
         {% include "shopping/panel_shopping/product_shopping_params.html" %}
     </section>
-    <section class="div7 order-detail-panel border rounded p-2" id="sales-details-panel">
+    <section class="div7 order-detail-panel" id="sales-details-panel">
         <div id="product-sales-chart-container" class="h-100">
             {% set selected_code = product.code if product else '' %}
             {% set compact = true %}
             {% include "shopping/panel_shopping/product_sales_chart_loader.html" %}
         </div>
     </section>
-    <section class="div8 order-detail-panel border rounded p-2" id="purchase-history-panel">
+    <section class="div8 order-detail-panel" id="purchase-history-panel">
         {% include "shopping/panel_shopping/product_purchase_history.html" %}
     </section>
 </div>

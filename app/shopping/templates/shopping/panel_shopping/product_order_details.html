@@ -30,23 +30,6 @@
                 {% endif %}
             </div>
         </div>
-        <div class="col-12 col-xl-2 min-w-0">
-            <form class="h-100 d-flex flex-column gap-2"
-                hx-get="{{ url_for('shopping.product_order_details') }}" hx-trigger="submit, keyup changed delay:500ms"
-                hx-target="#product-order-details-container" hx-swap="outerHTML">
-                <label for="product-code-input" class="form-label mb-0 text-body-secondary fw-semibold">Ingrese codigo de producto</label>
-                <input type="hidden" name="provider_code" value="{{ order_provider_code }}">
-                <input type="text" class="form-control form-control-sm" id="product-code-input" name="code" value="{{ product.code if product else '' }}" autocomplete="off">
-                <div class="d-grid gap-2 mt-1">
-                    <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
-                        hx-get="{{ url_for('shopping.products_modal', provider_code=order_provider_code) }}" hx-target="#products-modal-container"
-                        hx-swap="innerHTML">Abrir Catalogo</button>
-                    <button type="button" class="btn btn-sm btn-outline-success flex-fill"
-                        hx-get="{{ url_for('shopping.product_create_modal') }}" hx-target="#product-edit-modal-container"
-                        hx-swap="innerHTML">Nuevo Producto</button>
-                </div>
-            </form>
-        </div>
 
         <div class="col-12 col-xl-7 min-w-0">
             <div class="h-100 rounded border border-secondary-subtle bg-body p-2">
@@ -60,6 +43,7 @@
                     <span class="text-body-secondary fw-semibold">Editar</span>
                     {% endif %}
                 </div>
+                
                 <dl class="row mb-0 g-1 small">
                     <dt class="col-5 fw-semibold text-body-secondary">Codigo:</dt>
                     <dd class="col-7 mb-0 text-body-secondary text-break">{{ product.code if product else '-' }}</dd>
@@ -74,6 +58,7 @@
                 </dl>
             </div>
         </div>
+        
 
         <div class="col-12 col-md-6 col-xl-3 min-w-0">
             <div class="h-100 d-flex flex-column gap-1 rounded border border-secondary-subtle bg-body p-2">
@@ -139,6 +124,7 @@
 
     <div id="products-modal-container"></div>
     <div id="product-edit-modal-container"></div>
+    <div id="product-shopping-param-modal-container"></div>
 </div>
 {% if include_shopping_params_oob|default(false) %}
 <div id="product-shopping-params-container" hx-swap-oob="innerHTML">
@@ -153,8 +139,7 @@
 {% if include_sales_chart_oob|default(false) %}
 <div id="product-sales-chart-container" hx-swap-oob="innerHTML">
     {% set selected_code = product.code if product else '' %}
-    {% set compact = true %}
-    {% include 'shopping/panel_shopping/product_sales_chart_loader.html' %}
+    {% include 'shopping/partials/product_sales_chart_loader.html' %}
 </div>
 {% endif %}
 {% if include_purchase_history_oob|default(false) %}
