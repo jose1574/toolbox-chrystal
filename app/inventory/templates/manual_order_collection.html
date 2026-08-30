@@ -108,6 +108,21 @@
         font-size: 0.7rem;
     }
 
+    #manual-product-detail {
+        transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    #manual-product-detail.htmx-swapping {
+        opacity: 0;
+        transform: translateX(10px);
+        pointer-events: none;
+    }
+
+    #manual-product-detail.htmx-added {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+
 </style>
 <div class="container-fluid vh-100 d-flex flex-column pt-4 pb-2 px-3 px-lg-4 overflow-hidden ">
     <div class="mb-4 d-flex flex-column flex-sm-row align-items-sm-start gap-3 flex-shrink-0 rounded border border-secondary-subtle bg-body p-3 shadow-sm">

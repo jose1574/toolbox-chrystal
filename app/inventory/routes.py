@@ -906,7 +906,16 @@ def manual_order_cart_add():
         message="Producto agregado a la orden.",
         message_category="success",
     )
-    return render_template("partials/manual_order_cart.html", **cart_context)
+    cart_html = render_template("partials/manual_order_cart.html", **cart_context)
+    empty_detail_html = render_template(
+        "partials/manual_order_product_detail.html",
+        product_detail=None,
+        error_message=None,
+        store_origin_code=store_origin,
+        store_dst_code=store_dst,
+        swap_oob=True,
+    )
+    return cart_html + empty_detail_html
 
 
 @inventory_bp.route("/manual_order_collection/cart/update", methods=["POST"])

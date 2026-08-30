@@ -13,7 +13,7 @@
     {% endif %}
 {% endif %}
 
-<div id="manual-product-detail" class="d-flex flex-column flex-grow-1 h-100 min-h-0 overflow-hidden" data-tour="manual-order-detail-panel-root">
+<div id="manual-product-detail" class="d-flex flex-column flex-grow-1 h-100 min-h-0 overflow-hidden" data-tour="manual-order-detail-panel-root"{% if swap_oob|default(false) %} hx-swap-oob="outerHTML"{% endif %}>
     <div class="flex-grow-1 min-h-0 overflow-y-auto pe-1 pb-2">
         <div class="rounded border border-secondary-subtle bg-body p-3 small mb-3">
             <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
@@ -151,7 +151,8 @@
         autocomplete="off"
         hx-post="{{ url_for('inventory.manual_order_cart_add') }}"
         hx-target="#manual-order-cart"
-        hx-swap="outerHTML">
+        hx-swap="outerHTML settle:220ms"
+        hx-disabled-elt="find button[type=submit]">
         <input type="hidden" name="product_code" value="{{ detail.main_code if detail else '' }}">
         <input type="hidden" name="store_origin" value="{{ store_origin_code if store_origin_code is defined else '' }}">
         <input type="hidden" name="store_dst" value="{{ store_dst_code if store_dst_code is defined else '' }}">
