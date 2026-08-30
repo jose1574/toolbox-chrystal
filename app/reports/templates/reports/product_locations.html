@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de ubicación de productos{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="margin-left: 4.75rem; width: calc(100% - 4.75rem);">
+    <div class="mx-auto" style="max-width: 100rem;">
+        <div class="card shadow-sm border-0 bg-body mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                    <div>
+                        <h1 class="h3 fw-bold mb-1">Reporte de ubicación de productos</h1>
+                        <p class="text-body-secondary mb-0">Listado de productos con su stock y ubicación por depósito.</p>
+                    </div>
+                </div>
+
+                <div id="product-locations-filters" class="mt-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <label for="product-locations-q" class="form-label small fw-semibold mb-1">Buscar</label>
+                            <input type="search" id="product-locations-q" name="q" value="{{ filters.q }}"
+                                autocomplete="off" placeholder="Código o nombre del producto"
+                                class="form-control form-control-sm"
+                                hx-get="{{ url_for('reports.product_locations_table') }}"
+                                hx-trigger="keyup changed delay:300ms, search"
+                                hx-include="#product-locations-filters"
+                                hx-target="#product-locations-table" hx-swap="outerHTML">
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label small fw-semibold mb-1">Marca</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <span data-product-locations-filter-label="mark">
+                                        {{ filters.mark_codes|length if filters.mark_codes else 'Todas' }}{% if filters.mark_codes %} seleccionadas{% endif %}
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu w-100 p-2 overflow-auto" style="max-height: 16rem;">
+                                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Buscar marca"
+                                        aria-label="Buscar marca" autocomplete="off"
+                                        oninput="filterProductLocationsMarkOptions(this)">
+                                    {% for mark in marks %}
+                                    <label class="dropdown-item d-flex align-items-start gap-2 small text-wrap product-locations-mark-option">
+                                        <input class="form-check-input mt-0 product-locations-filter-checkbox" type="checkbox" name="mark_codes"
+                                            value="{{ mark.code }}" {% if mark.code in filters.mark_codes %}checked{% endif %}
+                                            hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                            hx-include="#product-locations-filters"
+                                            hx-target="#product-locations-table" hx-swap="outerHTML">
+                                        <span>{{ mark.description or mark.code }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label small fw-semibold mb-1">Departamento</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <span data-product-locations-filter-label="department">
+                                        {{ filters.department_codes|length if filters.department_codes else 'Todos' }}{% if filters.department_codes %} seleccionados{% endif %}
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu w-100 p-2 overflow-auto" style="max-height: 16rem;">
+                                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Buscar departamento"
+                                        aria-label="Buscar departamento" autocomplete="off"
+                                        oninput="filterProductLocationsDepartmentOptions(this)">
+                                    {% for department in departments %}
+                                    <label class="dropdown-item d-flex align-items-start gap-2 small text-wrap product-locations-department-option">
+                                        <input class="form-check-input mt-0 product-locations-filter-checkbox" type="checkbox" name="department_codes"
+                                            value="{{ department.code }}" {% if department.code in filters.department_codes %}checked{% endif %}
+                                            hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                            hx-include="#product-locations-filters"
+                                            hx-target="#product-locations-table" hx-swap="outerHTML">
+                                        <span>{{ department.description or department.code }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-2 d-grid d-xl-flex justify-content-xl-end">
+                            <a href="{{ url_for('reports.product_locations') }}" class="btn btn-outline-secondary btn-sm">Limpiar filtros</a>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label small fw-semibold mb-1">Depósito</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <span data-product-locations-filter-label="store">
+                                        {{ filters.store_codes|length if filters.store_codes else 'Todos' }}{% if filters.store_codes %} seleccionados{% endif %}
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu w-100 p-2 overflow-auto" style="max-height: 16rem;">
+                                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Buscar depósito"
+                                        aria-label="Buscar depósito" autocomplete="off"
+                                        oninput="filterProductLocationsStoreOptions(this)">
+                                    {% for store in stores %}
+                                    <label class="dropdown-item d-flex align-items-start gap-2 small text-wrap product-locations-store-option">
+                                        <input class="form-check-input mt-0 product-locations-filter-checkbox" type="checkbox" name="store_codes"
+                                            value="{{ store.code }}" {% if store.code in filters.store_codes %}checked{% endif %}
+                                            hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                            hx-include="#product-locations-filters"
+                                            hx-target="#product-locations-table" hx-swap="outerHTML">
+                                        <span>{{ store.description or store.code }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label for="product-locations-location-state" class="form-label small fw-semibold mb-1">Ubicación</label>
+                            <select id="product-locations-location-state" name="location_state" class="form-select form-select-sm"
+                                hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                hx-include="#product-locations-filters"
+                                hx-target="#product-locations-table" hx-swap="outerHTML">
+                                <option value="">Todos</option>
+                                <option value="with" {% if filters.location_state == 'with' %}selected{% endif %}>Con ubicación</option>
+                                <option value="without" {% if filters.location_state == 'without' %}selected{% endif %}>Sin ubicación</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label for="product-locations-stock-state" class="form-label small fw-semibold mb-1">Stock</label>
+                            <select id="product-locations-stock-state" name="stock_state" class="form-select form-select-sm"
+                                hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                hx-include="#product-locations-filters"
+                                hx-target="#product-locations-table" hx-swap="outerHTML">
+                                <option value="">Todos</option>
+                                <option value="with" {% if filters.stock_state == 'with' %}selected{% endif %}>Con stock</option>
+                                <option value="without" {% if filters.stock_state == 'without' %}selected{% endif %}>Sin stock</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label for="product-locations-product-status" class="form-label small fw-semibold mb-1">Estado de productos</label>
+                            <select id="product-locations-product-status" name="product_status" class="form-select form-select-sm"
+                                hx-get="{{ url_for('reports.product_locations_table') }}" hx-trigger="change"
+                                hx-include="#product-locations-filters"
+                                hx-target="#product-locations-table" hx-swap="outerHTML">
+                                <option value="active" {% if filters.product_status == 'active' %}selected{% endif %}>Solo activos</option>
+                                <option value="all" {% if filters.product_status == 'all' %}selected{% endif %}>Todos (incluye inactivos)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'reports/partials/product_locations_table.html' %}
+    </div>
+</div>
+
+<script>
+    (function () {
+        function filterOptions(input, optionSelector) {
+            const term = (input.value || '').toLowerCase().trim();
+            const menu = input.closest('.dropdown-menu');
+            if (!menu) return;
+            menu.querySelectorAll(optionSelector).forEach(function (label) {
+                const text = (label.textContent || '').toLowerCase();
+                label.classList.toggle('d-none', Boolean(term) && !text.includes(term));
+            });
+        }
+
+        window.filterProductLocationsMarkOptions = function (input) {
+            filterOptions(input, '.product-locations-mark-option');
+        };
+
+        window.filterProductLocationsDepartmentOptions = function (input) {
+            filterOptions(input, '.product-locations-department-option');
+        };
+
+        window.filterProductLocationsStoreOptions = function (input) {
+            filterOptions(input, '.product-locations-store-option');
+        };
+
+        document.addEventListener('change', function (event) {
+            if (!event.target.matches('.product-locations-filter-checkbox')) return;
+
+            const markCount = document.querySelectorAll('#product-locations-filters input[name="mark_codes"]:checked').length;
+            const departmentCount = document.querySelectorAll('#product-locations-filters input[name="department_codes"]:checked').length;
+            const storeCount = document.querySelectorAll('#product-locations-filters input[name="store_codes"]:checked').length;
+            const markLabel = document.querySelector('[data-product-locations-filter-label="mark"]');
+            const departmentLabel = document.querySelector('[data-product-locations-filter-label="department"]');
+            const storeLabel = document.querySelector('[data-product-locations-filter-label="store"]');
+
+            if (markLabel) {
+                markLabel.textContent = markCount ? markCount + ' seleccionadas' : 'Todas';
+            }
+            if (departmentLabel) {
+                departmentLabel.textContent = departmentCount ? departmentCount + ' seleccionados' : 'Todos';
+            }
+            if (storeLabel) {
+                storeLabel.textContent = storeCount ? storeCount + ' seleccionados' : 'Todos';
+            }
+        });
+    })();
+</script>
+{% endblock %}

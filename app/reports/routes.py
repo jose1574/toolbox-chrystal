@@ -1,5 +1,6 @@
 from io import BytesIO
 from datetime import datetime
+from urllib.parse import urlencode
 
 import xlwt
 from flask import (
@@ -13,173 +14,17 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
-from sqlalchemy import func, select
 
 from app import db
 from app.models import (
     Department,
     Mark,
-    Product,
-    ProductsCode,
-    ProductsStock,
-    ProductsUnit,
     Store,
-    Unit,
 )
 from app.reports import reports_bp
 from app.reports.utils import generate_barcode, render_pdf
+from app.reports.services import reports_service
 from app.inventory.services import inventory_service
-
-
-def _normalize_code(code: str) -> str:
-    return (code or "").strip().upper()
-
-
-def _resolve_main_code(code: str) -> str:
-    normalized = _normalize_code(code)
-    mapping = ProductsCode.query.filter(
-        func.upper(func.trim(ProductsCode.other_code)) == normalized
-    ).first()
-    return _normalize_code(mapping.main_code) if mapping else normalized
-
-
-def _get_product_info(main_code):
-    if not main_code:
-        return None
-
-    stmt = (
-        select(
-            Product.code,
-            Product.description,
-            Product.referenc,
-            Unit.description.label("unit_description"),
-            Mark.description.label("mark_description"),
-            Department.description.label("department_description"),
-        )
-        .join(
-            ProductsUnit,
-            (ProductsUnit.product_code == Product.code)
-            & (ProductsUnit.main_unit.is_(True)),
-        )
-        .join(Unit, Unit.code == ProductsUnit.unit)
-        .outerjoin(Mark, Mark.code == Product.mark)
-        .outerjoin(Department, Department.code == Product.department)
-        .where(func.upper(func.trim(Product.code)) == main_code)
-    )
-    return db.session.execute(stmt).first()
-
-
-def _get_stock_by_store(main_code):
-    stock_by_store = (
-        select(
-            ProductsStock.store.label("store_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock"),
-        )
-        .where(
-            func.upper(func.trim(ProductsStock.product_code)) == main_code,
-        )
-        .group_by(ProductsStock.store)
-        .subquery()
-    )
-
-    stmt = (
-        select(
-            Store.code.label("store_code"),
-            Store.description.label("store_description"),
-            func.coalesce(stock_by_store.c.stock, 0).label("stock"),
-        )
-        .outerjoin(stock_by_store, stock_by_store.c.store_code == Store.code)
-        .order_by(Store.description.asc())
-    )
-    return db.session.execute(stmt).all()
-
-
-def _search_products_for_stock_report(query, page=1, per_page=10):
-    query = (query or "").strip()
-    page = max(page or 1, 1)
-    per_page = max(min(per_page or 10, 50), 1)
-
-    stock_totals = (
-        select(
-            ProductsStock.product_code.label("product_code"),
-            func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock_total"),
-        )
-        .group_by(ProductsStock.product_code)
-        .subquery()
-    )
-
-    filters = []
-    if query:
-        # 1. Reemplazamos los asteriscos por espacios para normalizar la búsqueda
-        # Ejemplo: "*busing*1/4" -> " busing 1/4" -> ["busing", "1/4"]
-        clean_query = query.replace('*', ' ')
-        tokens = [token for token in clean_query.split() if token]
-
-        # 2. Por cada palabra clave, exigimos que coincida con ALGUNO de los campos (OR)
-        for token in tokens:
-            search_value = f"%{token}%"
-            # Este bloque evalúa una sola palabra contra todas las columnas
-            token_filter = (
-                (Product.code.ilike(search_value))
-                | (Product.description.ilike(search_value))
-                | (Product.referenc.ilike(search_value))
-                | (ProductsCode.other_code.ilike(search_value))
-            )
-            # Al hacer append, SQLAlchemy las unirá con AND en el .where()
-            filters.append(token_filter)
-
-    base_stmt = (
-        select(
-            Product.code,
-            Product.description,
-            Product.referenc,
-            Unit.description.label("unit_description"),
-            Mark.description.label("mark_description"),
-            Department.description.label("department_description"),
-            func.coalesce(stock_totals.c.stock_total, 0).label("stock_total"),
-        )
-        .join(
-            ProductsUnit,
-            (ProductsUnit.product_code == Product.code)
-            & (ProductsUnit.main_unit.is_(True)),
-        )
-        .join(Unit, Unit.code == ProductsUnit.unit)
-        .outerjoin(Mark, Mark.code == Product.mark)
-        .outerjoin(Department, Department.code == Product.department)
-        .outerjoin(stock_totals, stock_totals.c.product_code == Product.code)
-    )
-    
-    if filters:
-        # *filters aplicará (FiltroToken1 AND FiltroToken2 AND FiltroToken3...)
-        base_stmt = base_stmt.outerjoin(
-            ProductsCode, ProductsCode.main_code == Product.code
-        ).where(*filters)
-        
-    base_stmt = base_stmt.distinct(Product.code).order_by(Product.code.asc())
-
-    if filters:
-        count_stmt = (
-            select(func.count(func.distinct(Product.code)))
-            .select_from(Product)
-            .join(
-                ProductsUnit,
-                (ProductsUnit.product_code == Product.code)
-                & (ProductsUnit.main_unit.is_(True)),
-            )
-            .outerjoin(ProductsCode, ProductsCode.main_code == Product.code)
-            .where(*filters)
-        )
-        total = db.session.execute(count_stmt).scalar() or 0
-    else:
-        total = db.session.execute(select(func.count()).select_from(Product)).scalar() or 0
-
-    total_pages = max((total + per_page - 1) // per_page, 1)
-    page = min(page, total_pages)
-    products = db.session.execute(
-        base_stmt.limit(per_page).offset((page - 1) * per_page)
-    ).all()
-    
-    return products, total, total_pages, page
 
 
 @reports_bp.route("/product_stock")
@@ -201,8 +46,8 @@ def product_stock_details():
             error=None,
         )
 
-    main_code = _resolve_main_code(product_code)
-    product = _get_product_info(main_code)
+    main_code = reports_service.resolve_main_code(product_code)
+    product = reports_service.get_product_info(main_code)
     if not product:
         return render_template(
             "inventory/partials/product_stock_details.html",
@@ -212,7 +57,7 @@ def product_stock_details():
             error="No se encontro el producto indicado.",
         )
 
-    product_stocks = _get_stock_by_store(main_code)
+    product_stocks = reports_service.get_stock_by_store(main_code)
     stock_total = sum(float(row.stock or 0) for row in product_stocks)
 
     return render_template(
@@ -230,7 +75,7 @@ def modal_producs_stock():
     query = request.args.get("q", "")
     page = request.args.get("page", 1, type=int)
     products, total_products, total_pages, current_page = (
-        _search_products_for_stock_report(query, page=page, per_page=10)
+        reports_service.search_products_for_stock_report(query, page=page, per_page=10)
     )
     return render_template(
         "inventory/partials/modal_producs_stock.html",
@@ -239,6 +84,203 @@ def modal_producs_stock():
         page=current_page,
         total_pages=total_pages,
         total_products=total_products,
+    )
+
+
+PRODUCT_LOCATIONS_PDF_LIMIT = 5000
+PRODUCT_LOCATIONS_EXCEL_LIMIT = 65000
+PRODUCT_LOCATIONS_STATE_FILTERS = {"with", "without"}
+
+
+def _build_product_location_filters(args):
+    mark_codes = [
+        reports_service.normalize_code(code) for code in args.getlist("mark_codes")
+    ]
+    department_codes = [
+        reports_service.normalize_code(code) for code in args.getlist("department_codes")
+    ]
+    store_codes = [
+        reports_service.normalize_code(code) for code in args.getlist("store_codes")
+    ]
+    location_state = args.get("location_state", "")
+    stock_state = args.get("stock_state", "")
+    product_status = args.get("product_status", "") or "active"
+    return {
+        "q": (args.get("q") or "").strip(),
+        "mark_codes": [code for code in mark_codes if code],
+        "department_codes": [code for code in department_codes if code],
+        "store_codes": [code for code in store_codes if code],
+        "location_state": (
+            location_state if location_state in PRODUCT_LOCATIONS_STATE_FILTERS else ""
+        ),
+        "stock_state": (
+            stock_state if stock_state in PRODUCT_LOCATIONS_STATE_FILTERS else ""
+        ),
+        "product_status": (
+            product_status if product_status in {"active", "all"} else "active"
+        ),
+        "page": max(args.get("page", 1, type=int) or 1, 1),
+    }
+
+
+def _build_product_location_export_query(filters):
+    pairs = []
+    if filters["q"]:
+        pairs.append(("q", filters["q"]))
+    for code in filters["mark_codes"]:
+        pairs.append(("mark_codes", code))
+    for code in filters["department_codes"]:
+        pairs.append(("department_codes", code))
+    for code in filters["store_codes"]:
+        pairs.append(("store_codes", code))
+    if filters["location_state"]:
+        pairs.append(("location_state", filters["location_state"]))
+    if filters["stock_state"]:
+        pairs.append(("stock_state", filters["stock_state"]))
+    if filters["product_status"] == "all":
+        pairs.append(("product_status", "all"))
+    return urlencode(pairs)
+
+
+def _get_product_location_table_context(filters):
+    total_products, total_rows = reports_service.get_product_location_totals(filters)
+    total_pages = max(
+        (total_rows + reports_service.PRODUCT_LOCATIONS_PER_PAGE - 1)
+        // reports_service.PRODUCT_LOCATIONS_PER_PAGE,
+        1,
+    )
+    page = min(filters["page"], total_pages)
+
+    rows = []
+    if total_rows:
+        rows = db.session.execute(
+            reports_service.get_product_location_rows_query(filters)
+            .limit(reports_service.PRODUCT_LOCATIONS_PER_PAGE)
+            .offset((page - 1) * reports_service.PRODUCT_LOCATIONS_PER_PAGE)
+        ).all()
+
+    return {
+        "rows": rows,
+        "page": page,
+        "total_pages": total_pages,
+        "total_rows": total_rows,
+        "total_products": total_products,
+        "export_query": _build_product_location_export_query(filters),
+    }
+
+
+@reports_bp.route("/product_locations")
+@login_required
+def product_locations():
+    filters = _build_product_location_filters(request.args)
+    return render_template(
+        "reports/product_locations.html",
+        filters=filters,
+        marks=Mark.query.order_by(Mark.description.asc(), Mark.code.asc()).all(),
+        departments=Department.query.order_by(
+            Department.description.asc(), Department.code.asc()
+        ).all(),
+        stores=Store.query.order_by(Store.description.asc(), Store.code.asc()).all(),
+        **_get_product_location_table_context(filters),
+    )
+
+
+@reports_bp.route("/product_locations/table")
+@login_required
+def product_locations_table():
+    filters = _build_product_location_filters(request.args)
+    return render_template(
+        "reports/partials/product_locations_table.html",
+        **_get_product_location_table_context(filters),
+    )
+
+
+@reports_bp.route("/product_locations/pdf")
+@login_required
+def product_locations_pdf():
+    filters = _build_product_location_filters(request.args)
+    _, total_rows = reports_service.get_product_location_totals(filters)
+    rows = db.session.execute(
+        reports_service.get_product_location_rows_query(filters).limit(
+            PRODUCT_LOCATIONS_PDF_LIMIT
+        )
+    ).all()
+
+    pdf = render_pdf(
+        "reports/product_locations_pdf.html",
+        {
+            "rows": rows,
+            "filters": filters,
+            "truncated": total_rows > PRODUCT_LOCATIONS_PDF_LIMIT,
+            "limit": PRODUCT_LOCATIONS_PDF_LIMIT,
+            "now": datetime.now(),
+            "user": current_user,
+        },
+        paper_format="Letter",
+        orientation="Landscape",
+    )
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "inline; filename=ubicacion_productos.pdf"},
+    )
+
+
+@reports_bp.route("/product_locations/excel")
+@login_required
+def product_locations_excel():
+    filters = _build_product_location_filters(request.args)
+    rows = db.session.execute(
+        reports_service.get_product_location_rows_query(filters).limit(
+            PRODUCT_LOCATIONS_PDF_LIMIT
+        )
+    ).all()
+
+    output = BytesIO()
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet("Ubicaciones")
+
+    header_style = xlwt.easyxf(
+        "font: bold on; pattern: pattern solid, fore_colour gray25;"
+    )
+    text_style = xlwt.easyxf(num_format_str="@")
+    number_style = xlwt.easyxf(num_format_str="0.00")
+
+    columns = [
+        "Código",
+        "Nombre",
+        "Marca",
+        "Departamento",
+        "Depósito",
+        "Stock",
+        "Ubicación",
+    ]
+    for col_idx, title in enumerate(columns):
+        ws.write(0, col_idx, title, header_style)
+
+    for row_idx, row in enumerate(rows, start=1):
+        values = [
+            row.code,
+            row.description,
+            row.mark_description,
+            row.department_description,
+            row.store_description or row.store_code,
+        ]
+        for col_idx, value in enumerate(values):
+            ws.write(row_idx, col_idx, "" if value is None else str(value), text_style)
+        ws.write(row_idx, 5, float(row.stock or 0), number_style)
+        ws.write(row_idx, 6, row.location or "", text_style)
+
+    for col_idx, title in enumerate(columns):
+        ws.col(col_idx).width = min(max(len(title) + 4, 14), 45) * 256
+
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="ubicacion_productos.xls",
+        mimetype="application/vnd.ms-excel",
     )
 
 
@@ -353,7 +395,7 @@ def transfer_product_traceability():
     filters = inventory_service.build_transfer_product_traceability_filters(
         request.args.get("product_code")
     )
-    product = _get_product_info(filters["resolved_product_code"])
+    product = reports_service.get_product_info(filters["resolved_product_code"])
     rows = inventory_service.get_transfer_product_traceability_rows(filters) if product else []
     return render_template(
         "reports/transfer_product_traceability.html",
@@ -370,7 +412,7 @@ def transfer_product_traceability_products_modal():
     query = request.args.get("q", "")
     page = request.args.get("page", 1, type=int)
     products, total_products, total_pages, current_page = (
-        _search_products_for_stock_report(query, page=page, per_page=10)
+        reports_service.search_products_for_stock_report(query, page=page, per_page=10)
     )
     return render_template(
         "reports/partials/transfer_product_traceability_products_modal.html",

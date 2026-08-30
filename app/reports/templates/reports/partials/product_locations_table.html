@@ -1,0 +1,78 @@
+<div id="product-locations-table" class="card shadow-sm border-0 bg-body overflow-hidden">
+    <div class="card-header bg-body-tertiary border-0 px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+        <div>
+            <h2 class="h5 fw-semibold mb-1">Productos y ubicaciones</h2>
+            <p class="text-body-secondary small mb-0">
+                {{ total_products }} producto(s) · {{ total_rows }} fila(s) · página {{ page }} de {{ total_pages }}
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('reports.product_locations_pdf') }}?{{ export_query }}" target="_blank"
+                class="btn btn-outline-secondary btn-sm">PDF</a>
+            <a href="{{ url_for('reports.product_locations_excel') }}?{{ export_query }}"
+                class="btn btn-success btn-sm">Excel</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-secondary">
+                <tr>
+                    <th scope="col">Código / Nombre</th>
+                    <th scope="col">Marca</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Depósito</th>
+                    <th scope="col" class="text-end">Stock</th>
+                    <th scope="col">Ubicación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold font-monospace">{{ row.code }}</div>
+                        <div class="small text-body-secondary">{{ row.description or '-' }}</div>
+                    </td>
+                    <td class="small">{{ row.mark_description or '-' }}</td>
+                    <td class="small">{{ row.department_description or '-' }}</td>
+                    <td class="small">{{ row.store_description or row.store_code }}</td>
+                    <td class="text-end fw-semibold">{{ '%.2f'|format(row.stock or 0) }}</td>
+                    <td>
+                        {% if row.location %}
+                        <span class="badge text-bg-info">{{ row.location }}</span>
+                        {% else %}
+                        <span class="small fst-italic text-body-secondary">Sin ubicación</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="py-5 text-center fst-italic text-body-secondary">
+                        No se encontraron productos con los filtros indicados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-footer bg-body-tertiary d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+        <span class="small text-body-secondary">Mostrando {{ rows|length }} fila(s) de {{ total_rows }}.</span>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                hx-get="{{ url_for('reports.product_locations_table', page=page - 1) }}"
+                hx-include="#product-locations-filters"
+                hx-target="#product-locations-table" hx-swap="outerHTML"
+                {% if page <= 1 %}disabled{% endif %}>
+                Anterior
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                hx-get="{{ url_for('reports.product_locations_table', page=page + 1) }}"
+                hx-include="#product-locations-filters"
+                hx-target="#product-locations-table" hx-swap="outerHTML"
+                {% if page >= total_pages %}disabled{% endif %}>
+                Siguiente
+            </button>
+        </div>
+    </div>
+</div>

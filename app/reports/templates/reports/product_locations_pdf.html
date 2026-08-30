@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de ubicación de productos</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #111; margin: 0; padding: 10px; }
+        h1 { font-size: 18px; margin: 0 0 4px; text-transform: uppercase; }
+        .meta { color: #444; margin-bottom: 12px; }
+        .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .table th { color: #fff; background: #1f2937; padding: 6px; border: 1px solid #111; text-align: left; font-size: 9px; text-transform: uppercase; }
+        .table td { padding: 6px; border: 1px solid #555; vertical-align: top; }
+        .code { font-weight: bold; font-family: Courier New, monospace; }
+        .text-end { text-align: right; }
+        .location { background: #e0f2fe; font-weight: bold; }
+        .empty { color: #777; font-style: italic; }
+        .alert { margin-top: 10px; padding: 8px; background: #fef3c7; border: 1px solid #d97706; font-size: 9px; }
+        .footer { margin-top: 12px; font-size: 9px; text-align: center; color: #555; }
+    </style>
+</head>
+
+<body>
+    <h1>Reporte de ubicación de productos</h1>
+    <div class="meta">
+        Generado por: {{ user.description if user else 'Sistema' }} | {{ now.strftime('%d/%m/%Y %H:%M:%S') }}
+        {% if filters.q %} | Búsqueda: {{ filters.q }}{% endif %}
+        {% if filters.mark_codes %} | Marcas: {{ filters.mark_codes|length }} seleccionadas{% endif %}
+        {% if filters.department_codes %} | Departamentos: {{ filters.department_codes|length }} seleccionados{% endif %}
+        {% if filters.store_codes %} | Depósitos: {{ filters.store_codes|length }} seleccionados{% endif %}
+        {% if filters.location_state == 'with' %} | Ubicación: con ubicación{% elif filters.location_state == 'without' %} | Ubicación: sin ubicación{% endif %}
+        {% if filters.stock_state == 'with' %} | Stock: con stock{% elif filters.stock_state == 'without' %} | Stock: sin stock{% endif %}
+        {% if filters.product_status == 'all' %} | Incluye productos inactivos{% endif %}
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Código / Nombre</th>
+                <th style="width: 13%;">Marca</th>
+                <th style="width: 15%;">Departamento</th>
+                <th style="width: 14%;">Depósito</th>
+                <th style="width: 8%;">Stock</th>
+                <th style="width: 12%;">Ubicación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>
+                    <span class="code">{{ row.code }}</span><br>
+                    {{ row.description or '-' }}
+                </td>
+                <td>{{ row.mark_description or '-' }}</td>
+                <td>{{ row.department_description or '-' }}</td>
+                <td>{{ row.store_description or row.store_code }}</td>
+                <td class="text-end">{{ '%.2f'|format(row.stock or 0) }}</td>
+                <td class="location">{{ row.location or '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="empty">No se encontraron productos con los filtros indicados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if truncated %}
+    <div class="alert">
+        El reporte completo contiene más de {{ limit }} filas. Se muestran las primeras {{ limit }}.
+        Use los filtros de la pantalla para acotar el resultado.
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        Toolbox Chrystal · Reporte de ubicación de productos · {{ rows|length }} fila(s)
+    </div>
+</body>
+
+</html>
