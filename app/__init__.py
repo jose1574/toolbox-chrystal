@@ -278,6 +278,7 @@ def create_app():
     from app.reports import reports_bp
     from app.document_manager import document_manager_bp
     from app.products_label import label_bp
+    from app.sales import sales_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -289,6 +290,7 @@ def create_app():
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(document_manager_bp, url_prefix='/documents')
     app.register_blueprint(label_bp, url_prefix='/etiquetas')
+    app.register_blueprint(sales_bp)
 
     return app
 

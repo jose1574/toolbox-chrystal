@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Despacho de facturas{% endblock %}
+{% block content %}
+<div class="container-fluid py-4 px-3 px-lg-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="d-grid gap-2 mb-3">
+        {% for category, message in messages %}
+        <div class="p-3 rounded border small {% if category == 'success' %}bg-success-subtle border-success-subtle text-success-emphasis{% elif category == 'error' %}bg-danger-subtle border-danger-subtle text-danger-emphasis{% else %}bg-primary-subtle border-primary-subtle text-primary-emphasis{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if not dispatch %}
+    <div class="p-4 bg-body border border-secondary-subtle rounded shadow-sm mx-auto mt-4 w-100" style="max-width: 32rem;">
+        <h1 class="h4 fw-semibold text-body mb-1">Despacho de facturas</h1>
+        <p class="small text-body-secondary mb-3">Escanee el codigo de barras de la factura para cargarla y comenzar el despacho.</p>
+        {% if error %}
+        <div class="mb-3 p-3 small text-danger-emphasis rounded bg-danger-subtle border border-danger-subtle" role="alert">
+            <span class="fw-semibold">Error:</span> {{ error }}
+        </div>
+        {% endif %}
+        <form action="{{ url_for('sales.invoice_dispatch') }}" method="post" class="d-grid gap-3">
+            <div>
+                <label for="invoice_code" class="form-label small fw-semibold">Codigo de la factura</label>
+                <input type="text" id="invoice_code" name="invoice_code" value="{{ invoice_code or '' }}"
+                    class="form-control" placeholder="Escanear o escribir numero de factura"
+                    autocomplete="off" autofocus>
+            </div>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-primary">Cargar factura</button>
+                <a href="{{ url_for('sales.pending_invoices') }}" class="btn btn-outline-secondary">Facturas por despachar</a>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 pb-3 border-bottom border-secondary-subtle mb-3">
+        <div>
+            <h1 class="h3 fw-bold text-body mb-1">Despacho de factura {{ dispatch.document_no or dispatch.sales_operation_correlative }}</h1>
+            <p class="text-body-secondary small mb-1">
+                Cliente: <span class="fw-semibold text-body">{{ dispatch.client_name or dispatch.client_code or '-' }}</span>
+            </p>
+            <p class="text-body-secondary small mb-0">
+                Fecha: <span class="fw-semibold text-body">{% if dispatch.emission_date %}{{ dispatch.emission_date.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</span>
+                <span class="mx-2">|</span>
+                Estado:
+                <span id="dispatch-status-badge" class="badge {% if dispatch.status == 'COMPLETE' %}text-bg-success{% elif dispatch.status == 'PARTIAL' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+                    {% if dispatch.status == 'COMPLETE' %}Completo{% elif dispatch.status == 'PARTIAL' %}Parcial{% else %}Pendiente{% endif %}
+                </span>
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('sales.invoice_dispatch') }}" class="btn btn-outline-secondary btn-sm">Cargar otra factura</a>
+            <a href="{{ url_for('sales.pending_invoices') }}" class="btn btn-outline-primary btn-sm">Informe por despachar</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="card border-secondary-subtle shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h6 fw-semibold mb-3">Escanear producto</h2>
+                    <form id="dispatch-product-form"
+                        hx-get="{{ url_for('sales.scan_dispatch_product', dispatch_id=dispatch.correlative) }}"
+                        hx-target="#dispatch-qty-modal"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="document.getElementById('product_code').value='';">
+                        <label for="product_code" class="form-label small fw-semibold">Codigo de barras</label>
+                        <input type="text" id="product_code" name="product_code" class="form-control"
+                            placeholder="Sacar el producto de la bolsa y escanearlo"
+                            autocomplete="off" {% if dispatch.status != 'COMPLETE' %}autofocus{% endif %}
+                            {% if dispatch.status == 'COMPLETE' %}disabled{% endif %}>
+                        <button type="submit" class="btn btn-primary btn-sm mt-3 w-100" {% if dispatch.status == 'COMPLETE' %}disabled{% endif %}>
+                            Cargar producto
+                        </button>
+                    </form>
+                    <p class="small text-body-secondary mt-3 mb-0">El lector envia Enter al terminar. Luego indique la cantidad que esta entregando.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-8">
+            {% include 'sales/partials/dispatch_lines.html' %}
+        </div>
+    </div>
+    <div id="dispatch-qty-modal"></div>
+    {% endif %}
+</div>
+<script>
+    document.body.addEventListener('dispatchQtySaved', function () {
+        const modal = document.getElementById('dispatch-qty-modal');
+        if (modal) {
+            modal.innerHTML = '';
+        }
+        const input = document.getElementById('product_code');
+        if (input && !input.disabled) {
+            input.focus();
+        }
+    });
+</script>
+{% endblock %}

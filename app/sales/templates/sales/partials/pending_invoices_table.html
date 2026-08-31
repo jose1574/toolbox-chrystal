@@ -1,0 +1,51 @@
+<div id="pending-invoices-table" class="card shadow-sm border-0 bg-body">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Documento</th>
+                    <th>Cliente</th>
+                    <th>Fecha factura</th>
+                    <th>Cargada</th>
+                    <th>Estado</th>
+                    <th class="text-end">Lineas pendientes</th>
+                    <th class="text-end">Cantidad pendiente</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="fw-semibold font-monospace">{{ row.document_no or row.correlative }}</td>
+                    <td>
+                        <div>{{ row.client_name or '-' }}</div>
+                        <div class="small text-body-secondary">{{ row.client_code or '' }}</div>
+                    </td>
+                    <td>{% if row.emission_date %}{{ row.emission_date.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
+                    <td>{% if row.loaded_at %}{{ row.loaded_at.strftime('%d/%m/%Y %H:%M') }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if row.status == 'COMPLETE' %}
+                        <span class="badge text-bg-success">Completo</span>
+                        {% elif row.status == 'PARTIAL' %}
+                        <span class="badge text-bg-warning">Parcial</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.pending_lines or 0 }} / {{ row.total_lines or 0 }}</td>
+                    <td class="text-end">{{ '%.2f'|format(row.pending_qty or 0) }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('sales.invoice_dispatch_detail', dispatch_id=row.correlative) }}" class="btn btn-outline-primary btn-sm">
+                            Continuar
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-body-secondary py-4">No hay facturas con los filtros indicados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

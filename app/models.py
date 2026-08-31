@@ -9917,3 +9917,157 @@ class ShoppingCartItem(db.Model):
         primaryjoin="ShoppingCartItem.source_review_item_id == PurchaseReviewListItem.correlative",
         backref="shopping_cart_items",
     )
+
+
+class SalesInvoiceDispatch(db.Model):
+    __tablename__ = "sales_invoice_dispatches"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('PENDING','PARTIAL','COMPLETE')",
+            name="ck_sales_invoice_dispatches_status",
+        ),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    sales_operation_correlative = db.Column(
+        db.ForeignKey(
+            "public.sales_operation.correlative",
+            ondelete="RESTRICT",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    document_no = db.Column(db.String, index=True)
+    client_code = db.Column(db.String)
+    client_name = db.Column(db.String)
+    emission_date = db.Column(db.Date)
+    status = db.Column(db.String(16), nullable=False, server_default="PENDING")
+    loaded_by = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    loaded_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    sales_operation = db.relationship(
+        "SalesOperation",
+        primaryjoin="SalesInvoiceDispatch.sales_operation_correlative == SalesOperation.correlative",
+        backref="sales_invoice_dispatches",
+    )
+    loader = db.relationship(
+        "User",
+        primaryjoin="SalesInvoiceDispatch.loaded_by == User.code",
+        backref="loaded_sales_invoice_dispatches",
+    )
+
+
+class SalesInvoiceDispatchItem(db.Model):
+    __tablename__ = "sales_invoice_dispatch_items"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "dispatch_id",
+            "sales_line",
+            name="uq_sales_invoice_dispatch_items_line",
+        ),
+        db.CheckConstraint(
+            "status IN ('PENDING','PARTIAL','COMPLETE')",
+            name="ck_sales_invoice_dispatch_items_status",
+        ),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    dispatch_id = db.Column(
+        db.ForeignKey(
+            "toolbox.sales_invoice_dispatches.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    sales_line = db.Column(db.Integer, nullable=False)
+    product_code = db.Column(
+        db.ForeignKey("public.products.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    product_description = db.Column(db.String)
+    invoiced_amount = db.Column(db.Double(53), nullable=False, server_default="0")
+    dispatched_amount = db.Column(db.Double(53), nullable=False, server_default="0")
+    status = db.Column(db.String(16), nullable=False, server_default="PENDING")
+
+    dispatch = db.relationship(
+        "SalesInvoiceDispatch",
+        primaryjoin="SalesInvoiceDispatchItem.dispatch_id == SalesInvoiceDispatch.correlative",
+        backref="items",
+    )
+    product = db.relationship(
+        "Product",
+        primaryjoin="SalesInvoiceDispatchItem.product_code == Product.code",
+        backref="sales_invoice_dispatch_items",
+    )
+
+
+class SalesInvoiceDispatchEvent(db.Model):
+    __tablename__ = "sales_invoice_dispatch_events"
+    __table_args__ = (
+        db.CheckConstraint(
+            "quantity > 0",
+            name="ck_sales_invoice_dispatch_events_quantity",
+        ),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    dispatch_id = db.Column(
+        db.ForeignKey(
+            "toolbox.sales_invoice_dispatches.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    item_id = db.Column(
+        db.ForeignKey(
+            "toolbox.sales_invoice_dispatch_items.correlative",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+    user_code = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    quantity = db.Column(db.Double(53), nullable=False)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    dispatch = db.relationship(
+        "SalesInvoiceDispatch",
+        primaryjoin="SalesInvoiceDispatchEvent.dispatch_id == SalesInvoiceDispatch.correlative",
+        backref="dispatch_events",
+    )
+    item = db.relationship(
+        "SalesInvoiceDispatchItem",
+        primaryjoin="SalesInvoiceDispatchEvent.item_id == SalesInvoiceDispatchItem.correlative",
+        backref="dispatch_events",
+    )
+    user = db.relationship(
+        "User",
+        primaryjoin="SalesInvoiceDispatchEvent.user_code == User.code",
+        backref="sales_invoice_dispatch_events",
+    )

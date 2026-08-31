@@ -1,0 +1,60 @@
+<div id="dispatch-lines-wrap">
+    {% if success_message %}
+    <div class="alert alert-success py-2 small mb-3" role="status">{{ success_message }}</div>
+    <span id="dispatch-status-badge" hx-swap-oob="true"
+        class="badge {% if dispatch.status == 'COMPLETE' %}text-bg-success{% elif dispatch.status == 'PARTIAL' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+        {% if dispatch.status == 'COMPLETE' %}Completo{% elif dispatch.status == 'PARTIAL' %}Parcial{% else %}Pendiente{% endif %}
+    </span>
+    {% endif %}
+    <div class="card border-secondary-subtle shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Descripcion</th>
+                            <th class="text-end">Facturado</th>
+                            <th class="text-end">Despachado</th>
+                            <th class="text-end">Pendiente</th>
+                            <th>Estado</th>
+                            <th>Despachado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        {% set remaining = (item.invoiced_amount or 0) - (item.dispatched_amount or 0) %}
+                        <tr class="{% if item.status == 'COMPLETE' %}table-success{% elif item.status == 'PARTIAL' %}table-warning{% endif %}">
+                            <td class="fw-semibold font-monospace">{{ item.product_code }}</td>
+                            <td>{{ item.product_description or '-' }}</td>
+                            <td class="text-end">{{ '%.2f'|format(item.invoiced_amount or 0) }}</td>
+                            <td class="text-end">{{ '%.2f'|format(item.dispatched_amount or 0) }}</td>
+                            <td class="text-end">{{ '%.2f'|format(remaining if remaining > 0 else 0) }}</td>
+                            <td>
+                                {% if item.status == 'COMPLETE' %}
+                                <span class="badge text-bg-success">Completo</span>
+                                {% elif item.status == 'PARTIAL' %}
+                                <span class="badge text-bg-warning">Parcial</span>
+                                {% else %}
+                                <span class="badge text-bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if participants is defined and participants.get(item.correlative) %}
+                                {% for name, qty in participants.get(item.correlative) %}
+                                <div>{{ name }} <span class="text-body-secondary">({{ '%.2f'|format(qty) }})</span></div>
+                                {% endfor %}
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-body-secondary py-4">Esta factura no tiene productos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

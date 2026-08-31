@@ -64,6 +64,7 @@ Módulos actuales:
 | `admin` | `/admin` | Gestión de menús, perfiles y usuarios |
 | `inventory` | `/inventory` | Guías de transferencia, recolección, operaciones de inventario (`services/inventory_service.py`) |
 | `shopping` | `/shopping` | Compras, catálogo de proveedores, listas de ofertas, panel de proveedor (`services/shopping_service.py`) |
+| `sales` | `/sales` | Despacho de facturas de venta y informe de facturas por despachar (`services/sales_service.py`) |
 | `reports` | `/reports` | Reportes (PDF/Excel), códigos de barras, ubicación de productos (`utils.py`, `services/reports_service.py`) |
 | `document_manager` | `/documents` | Gestión de documentos/operaciones de inventario (recepción, transferencias) |
 | `products_label` | `/etiquetas` | Generación de etiquetas de productos (PDF) |

@@ -1,0 +1,40 @@
+<div class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;">
+    <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 28rem;">
+        {% if error and not item %}
+        <h3 class="h5 fw-semibold text-body mb-2">No se pudo cargar el producto</h3>
+        <p class="small text-danger mb-3">{{ error }}</p>
+        {% if scanned_code %}
+        <p class="small text-body-secondary">Codigo leido: <span class="font-monospace">{{ scanned_code }}</span></p>
+        {% endif %}
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="document.getElementById('dispatch-qty-modal').innerHTML=''; document.getElementById('product_code') && document.getElementById('product_code').focus();">
+            Cerrar
+        </button>
+        {% else %}
+        <h3 class="h5 fw-semibold text-body mb-2">Cantidad a despachar</h3>
+        <p class="small text-body-secondary mb-1">{{ item.product_description or '-' }}</p>
+        <p class="small text-body-secondary mb-1">Codigo: <span class="font-monospace">{{ item.product_code }}</span></p>
+        <p class="small mb-1">Facturado: <span class="fw-semibold">{{ '%.2f'|format(item.invoiced_amount or 0) }}</span></p>
+        <p class="small mb-1">Ya despachado: <span class="fw-semibold">{{ '%.2f'|format(item.dispatched_amount or 0) }}</span></p>
+        <p class="small mb-3">Pendiente: <span class="fw-semibold">{{ '%.2f'|format(remaining) }}</span></p>
+        {% if error %}
+        <div class="alert alert-danger py-2 small">{{ error }}</div>
+        {% endif %}
+        <form hx-post="{{ url_for('sales.confirm_dispatch_qty', dispatch_id=dispatch.correlative) }}"
+            hx-target="#dispatch-lines-wrap"
+            hx-swap="outerHTML">
+            <input type="hidden" name="item_id" value="{{ item.correlative }}">
+            <label for="dispatch-quantity" class="form-label small fw-semibold">Cantidad que esta entregando</label>
+            <input type="number" step="0.01" min="0.01" max="{{ remaining }}" name="quantity" id="dispatch-quantity"
+                class="form-control" value="{{ '%.2f'|format(remaining) }}" required autofocus>
+            <div class="form-text">Puede despachar el restante completo o una cantidad parcial.</div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">Confirmar despacho</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill"
+                    onclick="document.getElementById('dispatch-qty-modal').innerHTML=''; document.getElementById('product_code') && document.getElementById('product_code').focus();">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>

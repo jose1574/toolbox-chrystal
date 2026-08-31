@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Facturas por despachar{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" style="margin-left: 4.75rem; width: calc(100% - 4.75rem);">
+    <div class="mx-auto" style="max-width: 100rem;">
+        <div class="card shadow-sm border-0 bg-body mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                    <div>
+                        <h1 class="h3 fw-bold mb-1">Facturas por despachar</h1>
+                        <p class="text-body-secondary mb-0">Facturas cargadas en el modulo de ventas que aun tienen producto pendiente de entregar.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('sales.invoice_dispatch') }}" class="btn btn-primary btn-sm">Nuevo despacho</a>
+                        <a id="pending-invoices-pdf" href="{{ url_for('sales.pending_invoices_pdf', q=filters.q, status=filters.status) }}"
+                            class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Exportar PDF</a>
+                    </div>
+                </div>
+
+                <div id="pending-invoices-filters" class="mt-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-6 col-xl-5">
+                            <label for="pending-invoices-q" class="form-label small fw-semibold mb-1">Buscar</label>
+                            <input type="search" id="pending-invoices-q" name="q" value="{{ filters.q }}"
+                                autocomplete="off" placeholder="Documento o cliente"
+                                class="form-control form-control-sm"
+                                hx-get="{{ url_for('sales.pending_invoices_table') }}"
+                                hx-trigger="keyup changed delay:300ms, search"
+                                hx-include="#pending-invoices-filters"
+                                hx-target="#pending-invoices-table" hx-swap="outerHTML">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label for="pending-invoices-status" class="form-label small fw-semibold mb-1">Estado</label>
+                            <select id="pending-invoices-status" name="status" class="form-select form-select-sm"
+                                hx-get="{{ url_for('sales.pending_invoices_table') }}"
+                                hx-trigger="change"
+                                hx-include="#pending-invoices-filters"
+                                hx-target="#pending-invoices-table" hx-swap="outerHTML">
+                                <option value="open" {% if filters.status == 'open' %}selected{% endif %}>Por despachar (pendiente y parcial)</option>
+                                <option value="PENDING" {% if filters.status == 'PENDING' %}selected{% endif %}>Pendiente</option>
+                                <option value="PARTIAL" {% if filters.status == 'PARTIAL' %}selected{% endif %}>Parcial</option>
+                                <option value="COMPLETE" {% if filters.status == 'COMPLETE' %}selected{% endif %}>Completo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'sales/partials/pending_invoices_table.html' %}
+    </div>
+</div>
+<script>
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (event.detail.target && event.detail.target.id === 'pending-invoices-table') {
+            const q = document.getElementById('pending-invoices-q');
+            const status = document.getElementById('pending-invoices-status');
+            const pdf = document.getElementById('pending-invoices-pdf');
+            if (!pdf) return;
+            const params = new URLSearchParams();
+            if (q && q.value) params.set('q', q.value);
+            if (status && status.value) params.set('status', status.value);
+            pdf.href = "{{ url_for('sales.pending_invoices_pdf') }}" + (params.toString() ? '?' + params.toString() : '');
+        }
+    });
+</script>
+{% endblock %}
