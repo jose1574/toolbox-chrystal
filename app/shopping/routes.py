@@ -1,3 +1,4 @@
+import os
 import re
 import uuid
 from datetime import datetime
@@ -5,7 +6,19 @@ from functools import wraps
 from io import BytesIO
 
 import xlsxwriter
-from flask import Response, make_response, redirect, render_template, request, flash, session, send_file, url_for
+from flask import (
+    Response,
+    abort,
+    current_app,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    flash,
+    session,
+    send_file,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app import db
@@ -110,6 +123,123 @@ def _provider_offer_coin_symbol():
 
 def _normalize_offer_item_id(value):
     return (value or '').strip()
+
+
+PROVIDER_OFFER_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+
+
+def _provider_offer_image_dir():
+    folder = os.path.join(current_app.instance_path, 'provider_offer_images')
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _detect_provider_offer_image_mime(data):
+    if not data or len(data) < 12:
+        return None
+    if data.startswith(b'\xff\xd8\xff'):
+        return 'image/jpeg'
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png'
+    if data.startswith((b'GIF87a', b'GIF89a')):
+        return 'image/gif'
+    if data.startswith(b'RIFF') and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return None
+
+
+def _provider_offer_image_token_prefix(provider_code):
+    return f'{normalize_upper(provider_code)}_'
+
+
+def _is_valid_provider_offer_image_token(provider_code, token):
+    token = (token or '').strip()
+    prefix = _provider_offer_image_token_prefix(provider_code)
+    if not token.startswith(prefix):
+        return False
+    return bool(re.fullmatch(r'[0-9a-f]{32}', token[len(prefix):]))
+
+
+def _provider_offer_image_paths(token):
+    folder = _provider_offer_image_dir()
+    return os.path.join(folder, token), os.path.join(folder, f'{token}.type')
+
+
+def _save_provider_offer_image(provider_code, file_storage):
+    if file_storage is None or not (file_storage.filename or '').strip():
+        return None, None, None
+
+    data = file_storage.read(PROVIDER_OFFER_IMAGE_MAX_BYTES + 1)
+    if not data:
+        return None, None, None
+    if len(data) > PROVIDER_OFFER_IMAGE_MAX_BYTES:
+        return None, None, 'La imagen no debe superar 5 MB.'
+
+    mime = _detect_provider_offer_image_mime(data)
+    if not mime:
+        return None, None, 'La imagen debe ser JPG, PNG, WEBP o GIF.'
+
+    token = f'{_provider_offer_image_token_prefix(provider_code)}{uuid.uuid4().hex}'
+    image_path, type_path = _provider_offer_image_paths(token)
+    with open(image_path, 'wb') as handle:
+        handle.write(data)
+    with open(type_path, 'w', encoding='utf-8') as handle:
+        handle.write(mime)
+    return token, mime, None
+
+
+def _read_provider_offer_image(provider_code, token):
+    if not _is_valid_provider_offer_image_token(provider_code, token):
+        return None, None
+
+    image_path, type_path = _provider_offer_image_paths(token)
+    if not os.path.isfile(image_path):
+        return None, None
+
+    with open(image_path, 'rb') as handle:
+        data = handle.read()
+
+    mime = 'image/jpeg'
+    if os.path.isfile(type_path):
+        with open(type_path, 'r', encoding='utf-8') as handle:
+            mime = (handle.read() or '').strip() or mime
+    return data, mime
+
+
+def _delete_provider_offer_image(provider_code, token):
+    if not _is_valid_provider_offer_image_token(provider_code, token):
+        return
+
+    image_path, type_path = _provider_offer_image_paths(token)
+    for path in (image_path, type_path):
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+
+
+def _delete_provider_offer_item_image(provider_code, item):
+    _delete_provider_offer_image(provider_code, (item or {}).get('image_token'))
+
+
+def _render_new_product_modal_error(form_data, error_message):
+    marks = Mark.query.order_by(Mark.description.asc(), Mark.code.asc()).all()
+    departments = Department.query.order_by(Department.description.asc(), Department.code.asc()).all()
+    units = Unit.query.order_by(Unit.description.asc(), Unit.code.asc()).all()
+    response = make_response(
+        render_template(
+            'providers/new_product_modal.html',
+            marks=marks,
+            departments=departments,
+            units=units,
+            form_data=form_data,
+            error_message=error_message,
+        ),
+        422,
+    )
+    response.headers['HX-Retarget'] = '#provider-new-product-modal-container'
+    response.headers['HX-Reswap'] = 'innerHTML'
+    return response
 
 
 def _find_offer_item(items, item_id=None, product_code=None):
@@ -556,6 +686,7 @@ def provider_offer_list_pdf_report(review_list_correlative):
         flash('No se encontro la lista de oferta solicitada.', 'warning')
         return redirect(url_for('shopping.provider_panel'))
 
+    review_list = service.attach_review_list_pdf_images(review_list)
     safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
     pdf = render_pdf(
         'providers/reports/provider_offer_list_pdf.html',
@@ -736,6 +867,7 @@ def offer_list_provider_pdf_report(review_list_correlative):
         flash('No se encontro la lista de oferta solicitada.', 'warning')
         return redirect(url_for('shopping.offer_list_provider', code_provider=provider_code))
 
+    review_list = service.attach_review_list_pdf_images(review_list)
     safe_reference = re.sub(r'[^A-Za-z0-9_-]+', '_', review_list['reference']).strip('_') or f'lista_{review_list_correlative}'
     pdf = render_pdf(
         'providers/reports/provider_offer_list_pdf.html',
@@ -932,7 +1064,25 @@ def provider_offer_items_add_new_product():
         'provider_note': provider_note,
         'requested_amount': raw_requested_amount,
         'unitary_cost': raw_unitary_cost,
+        'image_token': '',
     }
+
+    existing_image_token = (request.form.get('existing_image_token') or '').strip()
+    image_token, image_type, image_error = _save_provider_offer_image(
+        provider_code,
+        request.files.get('proposed_image'),
+    )
+    if image_error:
+        if _is_valid_provider_offer_image_token(provider_code, existing_image_token):
+            form_data['image_token'] = existing_image_token
+        return _render_new_product_modal_error(form_data, image_error)
+
+    if image_token:
+        _delete_provider_offer_image(provider_code, existing_image_token)
+        form_data['image_token'] = image_token
+    elif _read_provider_offer_image(provider_code, existing_image_token)[0]:
+        image_token = existing_image_token
+        form_data['image_token'] = existing_image_token
 
     try:
         requested_amount = max(float(raw_requested_amount), 0)
@@ -945,23 +1095,10 @@ def provider_offer_items_add_new_product():
         unitary_cost = -1
 
     if not proposed_description or not proposed_main_code or requested_amount <= 0 or unitary_cost < 0:
-        marks = Mark.query.order_by(Mark.description.asc(), Mark.code.asc()).all()
-        departments = Department.query.order_by(Department.description.asc(), Department.code.asc()).all()
-        units = Unit.query.order_by(Unit.description.asc(), Unit.code.asc()).all()
-        response = make_response(
-            render_template(
-                'providers/new_product_modal.html',
-                marks=marks,
-                departments=departments,
-                units=units,
-                form_data=form_data,
-                error_message='Completa el código principal, la descripción, una cantidad válida y un precio unitario válido.',
-            ),
-            422,
+        return _render_new_product_modal_error(
+            form_data,
+            'Completa el código principal, la descripción, una cantidad válida y un precio unitario válido.',
         )
-        response.headers['HX-Retarget'] = '#provider-new-product-modal-container'
-        response.headers['HX-Reswap'] = 'innerHTML'
-        return response
 
     selected_mark = Mark.query.filter(Mark.code == proposed_mark_code).first() if proposed_mark_code else None
     selected_department = Department.query.filter(Department.code == proposed_department_code).first() if proposed_department_code else None
@@ -988,11 +1125,41 @@ def provider_offer_items_add_new_product():
         'mark_name': selected_mark.description if selected_mark else '',
         'department_code': selected_department.code if selected_department else '',
         'department_name': selected_department.description if selected_department else '',
+        'image_token': image_token or '',
+        'image_type': image_type or '',
     })
 
     _set_provider_offer_items(provider_code, offer_items)
     offer_context = service.build_provider_offer_context(offer_items, _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
+
+
+@shopping_bp.route('/provider_offer_items/temp_image/<token>')
+@provider_session_required
+def provider_offer_temp_image(token):
+    provider_code = session.get('provider_code', '')
+    image_bytes, image_type = _read_provider_offer_image(provider_code, token)
+    if not image_bytes:
+        abort(404)
+    return send_file(BytesIO(image_bytes), mimetype=image_type or 'image/jpeg')
+
+
+@shopping_bp.route('/provider_new_product_image/<int:correlative>')
+def provider_new_product_image(correlative):
+    item = PurchaseReviewNewProductItem.query.filter_by(correlative=correlative).first()
+    if item is None or not item.proposed_image:
+        abort(404)
+
+    if session.get('provider_logged_in'):
+        if normalize_upper(item.review_list.provider_code) != normalize_upper(session.get('provider_code')):
+            abort(403)
+    elif not current_user.is_authenticated:
+        abort(401)
+
+    return send_file(
+        BytesIO(bytes(item.proposed_image)),
+        mimetype=item.proposed_image_type or 'image/jpeg',
+    )
 
 
 @shopping_bp.route('/provider_offer_items/submit_review', methods=['POST'])
@@ -1022,6 +1189,7 @@ def provider_offer_items_submit_review():
     for item in offer_items:
         item_type = item.get('item_type') or 'catalog'
         if item_type == 'new_product':
+            image_bytes, image_type = _read_provider_offer_image(provider_code, item.get('image_token'))
             db.session.add(
                 PurchaseReviewNewProductItem(
                     main_correlative=review_list.correlative,
@@ -1035,6 +1203,8 @@ def provider_offer_items_submit_review():
                     unitary_cost=float(item.get('unit_price') or 0),
                     provider_note=(item.get('note') or '').strip() or None,
                     status='PENDING',
+                    proposed_image=image_bytes,
+                    proposed_image_type=image_type if image_bytes else None,
                 )
             )
             continue
@@ -1057,6 +1227,8 @@ def provider_offer_items_submit_review():
         )
 
     db.session.commit()
+    for item in offer_items:
+        _delete_provider_offer_item_image(provider_code, item)
     _set_provider_offer_items(provider_code, [])
     flash(f'Se envió la oferta a revisión con la referencia {review_list.reference}.', 'success')
     return redirect(url_for('shopping.provider_panel'))
@@ -1068,6 +1240,7 @@ def provider_offer_items_add():
     provider_code = session.get('provider_code', '')
     selected_codes = request.form.getlist('selected_product_codes')
     selected_unit_correlatives = request.form.getlist('selected_product_units')
+    selected_quantities = request.form.getlist('selected_product_quantities')
     if not selected_codes:
         item_id = _normalize_offer_item_id(request.form.get('item_id'))
         product_code = normalize_upper(request.form.get('product_code'))
@@ -1117,6 +1290,18 @@ def provider_offer_items_add():
 
     existing_items = _get_provider_offer_items(provider_code)
     existing_by_code = {normalize_upper(item.get('code')): item for item in existing_items}
+    requested_quantities_by_code = {}
+    for index, product_code in enumerate(selected_codes):
+        normalized_code = normalize_upper(product_code)
+        if index >= len(selected_quantities):
+            continue
+        raw_quantity = (selected_quantities[index] or '').strip().replace(',', '.')
+        if not raw_quantity:
+            continue
+        try:
+            requested_quantities_by_code[normalized_code] = float(raw_quantity)
+        except ValueError:
+            continue
 
     products = service.get_provider_offer_products(provider_code, selected_codes, selected_unit_correlatives)
     for product in products:
@@ -1147,10 +1332,17 @@ def provider_offer_items_add():
         selected_unit_from_db = service.get_provider_product_unit_by_correlative(selected_unit_correlative)
         if selected_unit_from_db:
             selected_unit = selected_unit_from_db
-        base_quantity = float(product.get('suggested_quantity', 0) or 0)
         conversion_factor = float((selected_unit or {}).get('conversion_factor') or product.get('conversion_factor') or 1)
         unit_type = int((selected_unit or {}).get('unit_type') or product.get('unit_type') or 0)
         units_per_main = service._units_per_main(conversion_factor, unit_type)
+        requested_quantity = requested_quantities_by_code.get(product_code)
+        if requested_quantity is not None:
+            quantity = max(float(requested_quantity), 0)
+            main_quantity = quantity * units_per_main if units_per_main else quantity
+        else:
+            base_quantity = float(product.get('suggested_quantity', 0) or 0)
+            quantity = base_quantity / units_per_main if units_per_main else base_quantity
+            main_quantity = base_quantity
         unit_price = float(product.get('last_provider_cost') or 0)
         source_cost_unit = next(
             (
@@ -1179,8 +1371,8 @@ def provider_offer_items_add():
             'code': product.get('code'),
             'name': product.get('name'),
             'reference': product.get('reference'),
-            'quantity': base_quantity / units_per_main if units_per_main else base_quantity,
-            'main_quantity': base_quantity,
+            'quantity': quantity,
+            'main_quantity': main_quantity,
             'unit_price': unit_price,
             'unit': product.get('unit') or 'UND',
             'unit_code': product.get('unit_code') or '',
@@ -1282,6 +1474,9 @@ def provider_offer_items_remove():
         if _normalize_offer_item_id(item.get('item_id')) != item_id
         and (item_id or normalize_upper(item.get('code')) != product_code)
     ]
+    for item in existing_items:
+        if item not in remaining_items:
+            _delete_provider_offer_item_image(provider_code, item)
 
     _set_provider_offer_items(provider_code, remaining_items)
     offer_context = service.build_provider_offer_context(remaining_items, _provider_offer_coin_symbol())
@@ -1292,6 +1487,8 @@ def provider_offer_items_remove():
 @provider_session_required
 def provider_offer_items_clear():
     provider_code = session.get('provider_code', '')
+    for item in _get_provider_offer_items(provider_code):
+        _delete_provider_offer_item_image(provider_code, item)
     _set_provider_offer_items(provider_code, [])
     offer_context = service.build_provider_offer_context([], _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
@@ -1299,6 +1496,9 @@ def provider_offer_items_clear():
 
 @shopping_bp.route('/provider_logout')
 def provider_logout():
+    provider_code = session.get('provider_code', '')
+    for item in _get_provider_offer_items(provider_code):
+        _delete_provider_offer_item_image(provider_code, item)
     session.pop('provider_logged_in', None)
     session.pop('provider_username', None)
     session.pop('provider_code', None)
@@ -1547,7 +1747,7 @@ def provider_catalog_modal():
     append = request.args.get('append') == '1'
     list_only = request.args.get('list_only') == '1'
 
-    products, total_products, total_pages, current_page = service.get_provider_catalog_products(
+    products, total_products, total_pages, current_page, stock_stores = service.get_provider_catalog_products(
         query=query,
         reference=reference,
         mark_codes=mark_codes,
@@ -1570,6 +1770,7 @@ def provider_catalog_modal():
             total_products=total_products,
             total_pages=total_pages,
             current_page=current_page,
+            stock_stores=stock_stores,
         )
 
     if list_only:
@@ -1584,6 +1785,7 @@ def provider_catalog_modal():
             total_products=total_products,
             total_pages=total_pages,
             current_page=current_page,
+            stock_stores=stock_stores,
         )
 
     marks, departments = service.get_product_filter_options()
@@ -1600,6 +1802,7 @@ def provider_catalog_modal():
         total_products=total_products,
         total_pages=total_pages,
         current_page=current_page,
+        stock_stores=stock_stores,
     )
 
 @shopping_bp.route('/provider_login', methods=['GET', 'POST'])

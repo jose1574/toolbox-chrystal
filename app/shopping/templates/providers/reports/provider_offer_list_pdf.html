@@ -122,6 +122,18 @@
             font-weight: bold;
             background: #f8fafc;
         }
+
+        .image-cell {
+            width: 64px;
+            text-align: center;
+        }
+
+        .product-image {
+            width: 52px;
+            height: 52px;
+            border: 1px solid #d6dde8;
+            background: #f8fafc;
+        }
     </style>
 </head>
 <body>
@@ -168,21 +180,29 @@
     <table class="detail">
         <thead>
             <tr>
-                <th style="width: 23%;">Codigo</th>
-                <th style="width: 33%;">Producto</th>
+                <th style="width: 12%;">Imagen</th>
+                <th style="width: 18%;">Codigo</th>
+                <th style="width: 28%;">Producto</th>
                 <th style="width: 8%;" class="text-right">Cantidad</th>
                 <th style="width: 10%;">Unidad</th>
-                <th style="width: 11%;" class="text-right">Precio unitario</th>
-                <th style="width: 11%;" class="text-right">Subtotal</th>
+                <th style="width: 12%;" class="text-right">Precio unitario</th>
+                <th style="width: 12%;" class="text-right">Subtotal</th>
             </tr>
         </thead>
         <tbody>
             {% for item in review_list['items'] %}
             <tr>
+                <td class="image-cell">
+                    {% if item.image_base64 %}
+                    <img class="product-image" src="data:{{ item.image_mime or 'image/jpeg' }};base64,{{ item.image_base64 }}" alt="{{ item.name }}">
+                    {% else %}
+                    <span class="muted">-</span>
+                    {% endif %}
+                </td>
                 <td>{{ item.code }}</td>
                 <td>
-                    <strong>{{ item.name }}</strong>                </td>
-                
+                    <strong>{{ item.name }}</strong>
+                </td>
                 <td class="text-right">{{ '{:,.2f}'.format(item.quantity).replace(',', ' ') }}</td>
                 <td>{{ item.unit }}</td>
                 <td class="text-right">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(item.unit_price).replace(',', ' ') }}</td>
@@ -192,7 +212,7 @@
         </tbody>
         <tfoot>
             <tr class="footer-total">
-                <td colspan="5" class="text-right">Total</td>
+                <td colspan="6" class="text-right">Total</td>
                 <td class="text-right">{{ review_list.coin_symbol }} {{ '{:,.2f}'.format(review_list.total_amount).replace(',', ' ') }}</td>
                 
             </tr>

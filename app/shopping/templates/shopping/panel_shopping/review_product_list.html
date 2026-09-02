@@ -22,14 +22,26 @@
                 {% else %}
                 aria-disabled="true"
                 {% endif %}>
-                <div class="d-flex align-items-start justify-content-between gap-2">
-                    <span class="fw-semibold small text-truncate" title="{{ product_name }}">{{ product_name }}</span>
-                    {% if review_product.get('status_label') %}
-                    <span class="badge text-bg-{{ review_product.get('status_badge_class', 'secondary') }} flex-shrink-0">{{ review_product.get('status_label') }}</span>
+                <div class="d-flex align-items-start gap-2">
+                    {% if review_product.get('has_image') and review_product.get('image_correlative') %}
+                    <img
+                        src="{{ url_for('shopping.provider_new_product_image', correlative=review_product.image_correlative) }}"
+                        alt="Imagen de {{ product_name }}"
+                        class="rounded flex-shrink-0"
+                        style="width: 36px; height: 36px; object-fit: cover;"
+                    >
                     {% endif %}
+                    <div class="min-w-0 flex-grow-1">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <span class="fw-semibold small text-truncate" title="{{ product_name }}">{{ product_name }}</span>
+                            {% if review_product.get('status_label') %}
+                            <span class="badge text-bg-{{ review_product.get('status_badge_class', 'secondary') }} flex-shrink-0">{{ review_product.get('status_label') }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="small text-body-secondary text-truncate">{{ product_code or 'Sin código' }}</div>
+                        <div class="small text-body-secondary">{{ '%.2f'|format(review_product.get('quantity', 0)) }} {{ review_product.get('unit') or 'UND' }}</div>
+                    </div>
                 </div>
-                <div class="small text-body-secondary text-truncate">{{ product_code or 'Sin código' }}</div>
-                <div class="small text-body-secondary">{{ '%.2f'|format(review_product.get('quantity', 0)) }} {{ review_product.get('unit') or 'UND' }}</div>
             </a>
             {% else %}
             <div class="text-center text-body-secondary small py-4">No hay productos para revisar.</div>

@@ -11,6 +11,7 @@
             <table class="table table-sm provider-table align-middle mb-0">
                 <colgroup>
                     <col>
+                    <col style="width: 110px;">
                     <col style="width: 92px;">
                     <col style="width: 118px;">
                     <col style="width: 136px;">
@@ -22,6 +23,7 @@
                 <thead>
                     <tr>
                         <th class="ps-3">Producto</th>
+                        <th class="text-end">Stock total</th>
                         <th class="text-end">Cantidad</th>
                         <th>Unidad</th>
                         <th class="text-end">Precio Unitario</th>
@@ -35,19 +37,39 @@
                     {% for item in offer_context['items'] %}
                     <tr>
                         <td class="ps-3">
-                            <div class="provider-product-name mb-1">
-                                {{ item.name }}
-                                {% if item.item_type == 'new_product' %}
-                                <span class="provider-badge ms-2 align-middle">Nuevo producto</span>
+                            <div class="d-flex align-items-start gap-2">
+                                {% if item.has_image and item.image_token %}
+                                <a href="{{ url_for('shopping.provider_offer_temp_image', token=item.image_token) }}" target="_blank" rel="noopener">
+                                    <img
+                                        src="{{ url_for('shopping.provider_offer_temp_image', token=item.image_token) }}"
+                                        alt="Imagen de {{ item.name }}"
+                                        class="provider-offer-thumb"
+                                    >
+                                </a>
                                 {% endif %}
+                                <div class="min-w-0">
+                                    <div class="provider-product-name mb-1">
+                                        {{ item.name }}
+                                        {% if item.item_type == 'new_product' %}
+                                        <span class="provider-badge ms-2 align-middle">Nuevo producto</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="provider-product-sub">
+                                        {% if item.item_type == 'new_product' %}
+                                        Codigo: {{ item.main_code or 'Sin codigo' }} · {{ item.mark_name or 'Sin marca' }} · {{ item.department_name or 'Sin departamento' }}
+                                        {% else %}
+                                        SKU: {{ item.code }}
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="provider-product-sub">
-                                {% if item.item_type == 'new_product' %}
-                                Codigo: {{ item.main_code or 'Sin codigo' }} · {{ item.mark_name or 'Sin marca' }} · {{ item.department_name or 'Sin departamento' }}
-                                {% else %}
-                                SKU: {{ item.code }}
-                                {% endif %}
-                            </div>
+                        </td>
+                        <td class="text-end provider-metric">
+                            {% if item.stock_total is none %}
+                            <span class="text-body-secondary">-</span>
+                            {% else %}
+                            <span class="{% if item.stock_total > 0 %}text-success{% else %}text-danger{% endif %}">{{ '%.2f'|format(item.stock_total) }}</span>
+                            {% endif %}
                         </td>
                         <td class="text-end">
                         <input type="number"
@@ -147,7 +169,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <th colspan="6" class="text-end ps-3">Total</th>
+                        <th colspan="7" class="text-end ps-3">Total</th>
                         <th class="text-end provider-metric provider-total-amount">{{ offer_context.coin_symbol }} {{ '{:,.2f}'.format(offer_context['total_amount']).replace(',', ' ') }}</th>
                         <th class="pe-3"></th>
                     </tr>

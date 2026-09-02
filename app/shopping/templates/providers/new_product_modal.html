@@ -67,6 +67,32 @@
             border: 1px solid rgba(248, 113, 113, 0.24);
             color: #fecaca;
         }
+
+        #providerNewProductModal .provider-image-picker {
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            background: #11131a;
+            border-radius: 0.85rem;
+            min-height: 8.25rem;
+            overflow: hidden;
+        }
+
+        #providerNewProductModal .provider-image-picker:hover {
+            border-color: rgba(37, 99, 235, 0.45);
+        }
+
+        #providerNewProductModal .provider-image-preview {
+            width: 5.5rem;
+            height: 5.5rem;
+            object-fit: cover;
+            border-radius: 0.7rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #0f1117;
+        }
+
+        #providerNewProductModal .form-control[type="file"] {
+            min-height: 2.4rem;
+            padding: 0.45rem 0.7rem;
+        }
     </style>
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content provider-modal-shell border-0 shadow-lg">
@@ -88,10 +114,12 @@
 
                 <form
                     hx-post="{{ url_for('shopping.provider_offer_items_add_new_product') }}"
+                    hx-encoding="multipart/form-data"
                     hx-target="#provider-offer-details-container"
                     hx-swap="outerHTML"
                     hx-on::after-request="if(event.detail.successful){ closeProviderNewProductModal(); }"
                 >
+                    <input type="hidden" name="existing_image_token" value="{{ form_data.get('image_token', '') }}">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="proposed_main_code" class="form-label fw-semibold">Codigo</label>
@@ -198,6 +226,32 @@
                         </div>
 
                         <div class="col-12">
+                            <label for="proposed_image" class="form-label fw-semibold">Imagen del producto</label>
+                            <div class="provider-image-picker d-flex align-items-center gap-3 p-3">
+                                <img
+                                    id="provider-new-product-image-preview"
+                                    class="provider-image-preview {% if not form_data.get('image_token') %}d-none{% endif %}"
+                                    {% if form_data.get('image_token') %}src="{{ url_for('shopping.provider_offer_temp_image', token=form_data.get('image_token')) }}"{% endif %}
+                                    alt="Vista previa de la imagen"
+                                >
+                                <div id="provider-new-product-image-placeholder" class="{% if form_data.get('image_token') %}d-none{% endif %} text-muted small">
+                                    Sin imagen
+                                </div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <input
+                                        type="file"
+                                        class="form-control"
+                                        id="proposed_image"
+                                        name="proposed_image"
+                                        accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                                        onchange="previewProviderNewProductImage(this)"
+                                    >
+                                    <div class="form-text text-muted mt-2 mb-0">JPG, PNG, WEBP o GIF. Máximo 5 MB. Opcional.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
                             <label for="provider_note" class="form-label fw-semibold">Nota del proveedor</label>
                             <textarea
                                 class="form-control"
@@ -217,4 +271,28 @@
             </div>
         </div>
     </div>
+    <script>
+        function previewProviderNewProductImage(input) {
+            const preview = document.getElementById('provider-new-product-image-preview');
+            const placeholder = document.getElementById('provider-new-product-image-placeholder');
+            if (!preview || !placeholder) {
+                return;
+            }
+
+            const file = input.files && input.files[0];
+            if (!file) {
+                return;
+            }
+
+            if (preview.dataset.objectUrl) {
+                URL.revokeObjectURL(preview.dataset.objectUrl);
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            preview.dataset.objectUrl = objectUrl;
+            preview.src = objectUrl;
+            preview.classList.remove('d-none');
+            placeholder.classList.add('d-none');
+        }
+    </script>
 </div>

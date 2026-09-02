@@ -2,7 +2,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy import and_, text
-from sqlalchemy.orm import foreign
+from sqlalchemy.orm import deferred, foreign
 import json
 
 
@@ -9740,6 +9740,8 @@ class PurchaseReviewNewProductItem(db.Model):
         nullable=True,
         index=True,
     )
+    proposed_image = deferred(db.Column(db.LargeBinary))
+    proposed_image_type = db.Column(db.String)
 
     review_list = db.relationship(
         "PurchaseReviewList",

@@ -1,3 +1,4 @@
+import base64
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from types import SimpleNamespace
@@ -797,6 +798,30 @@ def get_provider_catalog_products(
     rows = product_query.limit(per_page).offset((page - 1) * per_page).all()
     product_codes = [row.code for row in rows]
     catalog_units = _get_provider_catalog_units(product_codes, provider_code)
+
+    stock_stores = [
+        {
+            'code': row.code,
+            'description': row.description or row.code,
+        }
+        for row in Store.query.with_entities(Store.code, Store.description).order_by(Store.description.asc(), Store.code.asc()).all()
+    ]
+    stock_by_product = {code: {} for code in product_codes}
+
+    if product_codes:
+        stock_rows = (
+            db.session.query(
+                ProductsStock.product_code,
+                ProductsStock.store,
+                func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_quantity'),
+            )
+            .filter(ProductsStock.product_code.in_(product_codes))
+            .group_by(ProductsStock.product_code, ProductsStock.store)
+            .all()
+        )
+        for stock_row in stock_rows:
+            stock_by_product.setdefault(stock_row.product_code, {})[stock_row.store] = float(stock_row.stock_quantity or 0)
+
     products = []
     for row in rows:
         unit = catalog_units.get(normalize_code(row.code))
@@ -807,7 +832,10 @@ def get_provider_catalog_products(
         stock_total = float(row.stock_total or 0) / units_per_main
         minimum_stock = float(row.minimum_stock or 0) / units_per_main
         maximum_stock = float(row.maximum_stock or 0) / units_per_main
-        replenishment_needed = max(0.0, maximum_stock - stock_total)
+        replenishment_needed = _calculate_replenishment_quantity(
+            stock_total, minimum_stock, maximum_stock
+        )
+        raw_stock_by_store = stock_by_product.get(row.code, {})
         products.append({
             'code': row.code,
             'name': row.name,
@@ -815,6 +843,10 @@ def get_provider_catalog_products(
             'brand': row.brand or '-',
             'reference': row.reference or '-',
             'stock_total': stock_total,
+            'stock_by_store': {
+                store_code: stock_value / units_per_main
+                for store_code, stock_value in raw_stock_by_store.items()
+            },
             'minimum_stock': minimum_stock,
             'maximum_stock': maximum_stock,
             'replenishment_needed': replenishment_needed,
@@ -826,7 +858,7 @@ def get_provider_catalog_products(
             'unit_correlative': unit['unit_correlative'] if unit else None,
         })
 
-    return products, total_products, total_pages, page
+    return products, total_products, total_pages, page, stock_stores
 
 
 def _get_provider_catalog_units(product_codes, provider_code):
@@ -1084,6 +1116,7 @@ def get_provider_offer_products(provider_code, product_codes, product_unit_corre
             Product.description.label('name'),
             Product.referenc.label('reference'),
             func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
+            func.coalesce(ShoppingProductsParam.minimum_stock, 0).label('minimum_stock'),
             func.coalesce(ShoppingProductsParam.maximum_stock, 0).label('maximum_stock'),
             last_cost_subquery.label('last_provider_cost'),
         )
@@ -1098,6 +1131,7 @@ def get_provider_offer_products(provider_code, product_codes, product_unit_corre
             Product.code,
             Product.description,
             Product.referenc,
+            ShoppingProductsParam.minimum_stock,
             ShoppingProductsParam.maximum_stock,
         )
         .all()
@@ -1185,8 +1219,11 @@ def get_provider_offer_products(provider_code, product_codes, product_unit_corre
                 selected_cost_unit_correlative = catalog_unit.get('unit_correlative')
 
         stock_total = float(row.stock_total or 0)
+        minimum_stock = float(row.minimum_stock or 0)
         maximum_stock = float(row.maximum_stock or 0)
-        suggested_quantity = max(0.0, maximum_stock - stock_total)
+        suggested_quantity = _calculate_replenishment_quantity(
+            stock_total, minimum_stock, maximum_stock
+        )
         products.append({
             'code': row.code,
             'name': row.name or row.code,
@@ -1215,9 +1252,31 @@ def get_provider_offer_products(provider_code, product_codes, product_unit_corre
     return products
 
 
+def _get_products_stock_totals(product_codes):
+    normalized_codes = [normalize_code(code) for code in product_codes if normalize_code(code)]
+    if not normalized_codes:
+        return {}
+
+    rows = (
+        db.session.query(
+            func.upper(func.trim(ProductsStock.product_code)).label('product_code'),
+            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
+        )
+        .filter(func.upper(func.trim(ProductsStock.product_code)).in_(normalized_codes))
+        .group_by(func.upper(func.trim(ProductsStock.product_code)))
+        .all()
+    )
+    return {row.product_code: float(row.stock_total or 0) for row in rows}
+
+
 def build_provider_offer_context(items, coin_symbol='$'):
     normalized_items = []
     total_amount = Decimal('0')
+    stock_totals = _get_products_stock_totals([
+        item.get('code')
+        for item in (items or [])
+        if (item.get('item_type') or 'catalog') != 'new_product'
+    ])
 
     for item in items or []:
         quantity = _to_decimal(item.get('quantity') or 0)
@@ -1241,6 +1300,11 @@ def build_provider_offer_context(items, coin_symbol='$'):
         discount_factor = Decimal('1') - (discount_percent / Decimal('100'))
         total_with_discount = _quantize_money(subtotal * discount_factor)
         total_amount += total_with_discount
+        stock_main = stock_totals.get(normalize_code(item.get('code')), 0.0) if item_type != 'new_product' else None
+        stock_total = (
+            None if stock_main is None
+            else (float(stock_main) / float(units_per_main) if units_per_main else float(stock_main))
+        )
 
         normalized_items.append({
             'item_id': item.get('item_id') or item.get('code') or '',
@@ -1249,6 +1313,7 @@ def build_provider_offer_context(items, coin_symbol='$'):
             'name': item.get('name') or item.get('code') or '-',
             'main_code': item.get('proposed_main_code') or item.get('code') or '',
             'reference': item.get('reference') or '-',
+            'stock_total': stock_total,
             'quantity': float(purchase_quantity),
             'unit': item.get('unit') or 'UND',
             'unit_code': item.get('unit_code') or '',
@@ -1263,6 +1328,9 @@ def build_provider_offer_context(items, coin_symbol='$'):
             'note': item.get('note') or '',
             'mark_name': item.get('mark_name') or '',
             'department_name': item.get('department_name') or '',
+            'has_image': bool(item.get('image_token')),
+            'image_token': item.get('image_token') or '',
+            'image_correlative': None,
         })
 
     return {
@@ -1339,6 +1407,9 @@ def _build_provider_review_list_detail(review_list, coin_symbol='$'):
             'main_code': item.proposed_main_code or '',
             'mark_name': item.mark.description if item.mark else '',
             'department_name': item.department.description if item.department else '',
+            'has_image': bool(item.proposed_image_type),
+            'image_token': '',
+            'image_correlative': item.correlative if item.proposed_image_type else None,
         })
 
     status_label, status_badge_class = _provider_review_status_meta(review_list.status)
@@ -1496,10 +1567,52 @@ def get_provider_review_list_detail_context(provider_code, review_list_correlati
     return _build_provider_review_list_detail(review_list, coin_symbol=coin_symbol)
 
 
+def attach_review_list_pdf_images(review_list_detail):
+    items = (review_list_detail or {}).get('items') or []
+    correlatives = [
+        item.get('image_correlative')
+        for item in items
+        if item.get('has_image') and item.get('image_correlative')
+    ]
+    if not correlatives:
+        return review_list_detail
+
+    rows = (
+        db.session.query(
+            PurchaseReviewNewProductItem.correlative,
+            PurchaseReviewNewProductItem.proposed_image,
+            PurchaseReviewNewProductItem.proposed_image_type,
+        )
+        .filter(PurchaseReviewNewProductItem.correlative.in_(correlatives))
+        .all()
+    )
+    images = {}
+    for row in rows:
+        if not row.proposed_image:
+            continue
+        images[row.correlative] = {
+            'image_base64': base64.b64encode(bytes(row.proposed_image)).decode('ascii'),
+            'image_mime': row.proposed_image_type or 'image/jpeg',
+        }
+
+    for item in items:
+        image_data = images.get(item.get('image_correlative')) or {}
+        item['image_base64'] = image_data.get('image_base64', '')
+        item['image_mime'] = image_data.get('image_mime', '')
+
+    return review_list_detail
+
+
 def _units_per_main(conversion_factor, unit_type):
     factor = max(float(conversion_factor or 1), 0.0001)
     unit_type = int(unit_type or 0)
     return factor if unit_type == 1 else (1 / factor if unit_type == 2 else 1)
+
+
+def _calculate_replenishment_quantity(stock_total, minimum_stock, maximum_stock):
+    stock_total = float(stock_total or 0)
+    maximum_stock = float(maximum_stock or 0)
+    return max(0.0, maximum_stock - stock_total)
 
 
 def convert_unit_price(price, from_conversion_factor, from_unit_type, to_conversion_factor, to_unit_type):

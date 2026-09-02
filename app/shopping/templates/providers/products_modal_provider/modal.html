@@ -306,6 +306,10 @@
             overflow-x: hidden;
         }
 
+        #providerCatalogModal .provider-table-scroll.has-custom-widths {
+            overflow-x: auto;
+        }
+
         #providerCatalogModal .provider-table {
             margin: 0;
             width: 100%;
@@ -313,6 +317,11 @@
             color: rgba(255,255,255,0.9);
             table-layout: fixed;
             font-size: 0.77rem;
+        }
+
+        #providerCatalogModal .provider-table.is-custom-widths {
+            width: max-content;
+            min-width: 100%;
         }
 
         #providerCatalogModal .provider-table thead th {
@@ -328,6 +337,28 @@
             text-transform: uppercase;
             font-weight: 700;
             padding: 0.8rem 0.75rem;
+        }
+
+        #providerCatalogModal .provider-col-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0.55rem;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 3;
+            user-select: none;
+        }
+
+        #providerCatalogModal .provider-col-resizer:hover,
+        #providerCatalogModal .provider-col-resizer.is-active {
+            background: rgba(37, 99, 235, 0.55);
+        }
+
+        body.provider-col-resizing,
+        body.provider-col-resizing * {
+            cursor: col-resize !important;
+            user-select: none !important;
         }
 
         #providerCatalogModal .provider-table tbody td {
@@ -350,6 +381,41 @@
             height: 1rem;
             margin: 0;
             cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-table tbody td.provider-replenish-cell {
+            overflow: visible;
+        }
+
+        #providerCatalogModal .provider-replenish-input {
+            width: 100%;
+            min-width: 4.5rem;
+            height: 2rem;
+            border-radius: 0.4rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: #f9fafb;
+            padding: 0.2rem 0.45rem;
+            font-size: 0.77rem;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        #providerCatalogModal .provider-replenish-input::-webkit-outer-spin-button,
+        #providerCatalogModal .provider-replenish-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #providerCatalogModal .provider-replenish-input:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.55);
+            box-shadow: 0 0 0 0.15rem rgba(37, 99, 235, 0.18);
+        }
+
+        #providerCatalogModal .provider-replenish-input.is-invalid {
+            border-color: #f87171;
+            box-shadow: 0 0 0 0.15rem rgba(248, 113, 113, 0.18);
         }
 
         #providerCatalogModal .provider-table tbody tr:nth-child(odd) {
@@ -584,12 +650,19 @@
                         <span class="mx-1">·</span>
                         <span id="provider-selected-products-count">0 seleccionados</span>
                         </span>
+                        <span id="provider-catalog-quantity-error" class="small text-danger d-none">Ingresa una cantidad válida (0 o más) en los productos seleccionados.</span>
                         <button
                             id="provider-select-all-filtered"
                             type="button"
                             class="btn btn-sm btn-outline-primary d-none"
                             onclick="selectAllProviderFilteredProducts()"
                         >Seleccionar todos</button>
+                        <button
+                            id="provider-reset-column-widths"
+                            type="button"
+                            class="btn btn-sm provider-action-btn d-none"
+                            onclick="resetProviderCatalogColumnWidths()"
+                        >Restablecer columnas</button>
                     </div>
                 </div>
 
@@ -605,6 +678,148 @@
 
 <script>
     window.providerCatalogSelection ||= { allFiltered: false, keyboardIndex: -1 };
+    window.providerCatalogColumnWidthsKey = 'providerCatalogColumnWidths.v2:{{ session.get("provider_username") or session.get("provider_code") or "default" }}';
+
+    function getProviderCatalogTable() {
+        return document.querySelector('#providerCatalogModal .provider-table');
+    }
+
+    function getProviderCatalogColumnHeaders() {
+        return Array.from(document.querySelectorAll('#providerCatalogModal .provider-table thead th[data-col]'));
+    }
+
+    function loadProviderCatalogColumnWidths() {
+        try {
+            const rawValue = window.localStorage.getItem(window.providerCatalogColumnWidthsKey);
+            const parsed = rawValue ? JSON.parse(rawValue) : null;
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function hasCustomProviderCatalogColumnWidths() {
+        return Object.keys(loadProviderCatalogColumnWidths()).length > 0;
+    }
+
+    function setProviderCatalogCustomWidthMode(enabled) {
+        getProviderCatalogTable()?.classList.toggle('is-custom-widths', enabled);
+        document.getElementById('provider-catalog-table-scroll')?.classList.toggle('has-custom-widths', enabled);
+    }
+
+    function saveProviderCatalogColumnWidths() {
+        const widths = {};
+        getProviderCatalogColumnHeaders().forEach((header) => {
+            const width = Math.round(header.getBoundingClientRect().width);
+            if (header.dataset.col && width > 0) {
+                widths[header.dataset.col] = width;
+            }
+        });
+        window.localStorage.setItem(window.providerCatalogColumnWidthsKey, JSON.stringify(widths));
+        updateProviderCatalogColumnResetButton();
+    }
+
+    function updateProviderCatalogColumnResetButton() {
+        const resetButton = document.getElementById('provider-reset-column-widths');
+        if (!resetButton) {
+            return;
+        }
+        resetButton.classList.toggle('d-none', !hasCustomProviderCatalogColumnWidths());
+    }
+
+    function applyProviderCatalogColumnWidth(header, width) {
+        const minWidth = header.dataset.col === 'select' ? 36 : 56;
+        const nextWidth = Math.max(minWidth, Math.round(width));
+        header.style.width = `${nextWidth}px`;
+        header.style.minWidth = `${nextWidth}px`;
+        header.style.maxWidth = `${nextWidth}px`;
+    }
+
+    function lockProviderCatalogColumnWidths() {
+        getProviderCatalogColumnHeaders().forEach((header) => {
+            applyProviderCatalogColumnWidth(header, header.getBoundingClientRect().width);
+        });
+        setProviderCatalogCustomWidthMode(true);
+    }
+
+    function clearProviderCatalogColumnWidthStyles() {
+        getProviderCatalogColumnHeaders().forEach((header) => {
+            header.style.width = '';
+            header.style.minWidth = '';
+            header.style.maxWidth = '';
+        });
+        setProviderCatalogCustomWidthMode(false);
+    }
+
+    function applyProviderCatalogColumnWidths() {
+        const headers = getProviderCatalogColumnHeaders();
+        headers.forEach(bindProviderCatalogColumnResizer);
+
+        const savedWidths = loadProviderCatalogColumnWidths();
+        if (!Object.keys(savedWidths).length) {
+            clearProviderCatalogColumnWidthStyles();
+            updateProviderCatalogColumnResetButton();
+            return;
+        }
+
+        setProviderCatalogCustomWidthMode(true);
+        headers.forEach((header) => {
+            const savedWidth = Number(savedWidths[header.dataset.col]);
+            const width = Number.isFinite(savedWidth) && savedWidth > 0
+                ? savedWidth
+                : header.getBoundingClientRect().width;
+            applyProviderCatalogColumnWidth(header, width);
+        });
+        updateProviderCatalogColumnResetButton();
+    }
+
+    function resetProviderCatalogColumnWidths() {
+        window.localStorage.removeItem(window.providerCatalogColumnWidthsKey);
+        applyProviderCatalogColumnWidths();
+    }
+
+    function bindProviderCatalogColumnResizer(header) {
+        if (header.dataset.col === 'select' || header.querySelector('.provider-col-resizer')) {
+            return;
+        }
+
+        const handle = document.createElement('span');
+        handle.className = 'provider-col-resizer';
+        handle.title = 'Arrastra para cambiar el ancho';
+        header.appendChild(handle);
+        handle.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (!getProviderCatalogTable()?.classList.contains('is-custom-widths')) {
+                lockProviderCatalogColumnWidths();
+            }
+
+            const startX = event.pageX;
+            const startWidth = header.getBoundingClientRect().width;
+            handle.classList.add('is-active');
+            document.body.classList.add('provider-col-resizing');
+
+            const onMove = (moveEvent) => {
+                applyProviderCatalogColumnWidth(header, startWidth + (moveEvent.pageX - startX));
+            };
+
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                handle.classList.remove('is-active');
+                document.body.classList.remove('provider-col-resizing');
+                if (Math.round(header.getBoundingClientRect().width) !== Math.round(startWidth)) {
+                    saveProviderCatalogColumnWidths();
+                } else if (!hasCustomProviderCatalogColumnWidths()) {
+                    clearProviderCatalogColumnWidthStyles();
+                }
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    }
 
     function clearActiveProviderCatalogRow() {
         getProviderCatalogRows().forEach((row) => {
@@ -701,10 +916,7 @@
             }
 
             event.preventDefault();
-            addProviderProductDirect(
-                activeRow.dataset.productCode || '',
-                activeRow.dataset.unitCorrelative || ''
-            );
+            addProviderProductFromRow(activeRow);
         }
     }
 
@@ -787,6 +999,7 @@
         selectedRows.forEach((item) => {
             payload.append('selected_product_codes', item.code);
             payload.append('selected_product_units', item.unitCorrelative || '');
+            payload.append('selected_product_quantities', item.quantity);
         });
 
         fetch('{{ url_for("shopping.provider_offer_items_add") }}', {
@@ -822,22 +1035,89 @@
             });
     }
 
+    function parseProviderCatalogQuantity(value) {
+        const quantity = Number(String(value ?? '').trim().replace(',', '.'));
+        return Number.isFinite(quantity) ? quantity : NaN;
+    }
+
+    function getProviderCatalogRowPayload(row) {
+        const checkbox = row?.querySelector('input[name="selected_product_codes"]');
+        const quantityInput = row?.querySelector('.provider-replenish-input');
+        return {
+            code: row?.dataset.productCode || checkbox?.value || '',
+            unitCorrelative: row?.dataset.unitCorrelative || checkbox?.dataset.unitCorrelative || '',
+            quantity: quantityInput?.value || '',
+            quantityInput,
+        };
+    }
+
+    function setProviderCatalogQuantityError(visible) {
+        document.getElementById('provider-catalog-quantity-error')?.classList.toggle('d-none', !visible);
+    }
+
+    function validateProviderCatalogQuantities(items) {
+        let isValid = true;
+        items.forEach((item) => {
+            const quantity = parseProviderCatalogQuantity(item.quantity);
+            const inputValid = Number.isFinite(quantity) && quantity >= 0;
+            item.quantityInput?.classList.toggle('is-invalid', !inputValid);
+            if (!inputValid) {
+                isValid = false;
+            }
+        });
+        setProviderCatalogQuantityError(!isValid);
+        if (!isValid) {
+            items.find((item) => item.quantityInput?.classList.contains('is-invalid'))?.quantityInput?.focus();
+        }
+        return isValid;
+    }
+
+    function handleProviderReplenishQuantityChange(input) {
+        const quantity = parseProviderCatalogQuantity(input.value);
+        if (Number.isFinite(quantity) && quantity >= 0) {
+            input.classList.remove('is-invalid');
+            const checkbox = input.closest('tr')?.querySelector('input[name="selected_product_codes"]');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+                handleProviderProductSelection();
+            }
+        }
+        if (!document.querySelector('#provider-catalog-list .provider-replenish-input.is-invalid')) {
+            setProviderCatalogQuantityError(false);
+        }
+    }
+
     function addSelectedProviderProducts() {
         const selectedRows = Array.from(
             document.querySelectorAll('#provider-catalog-list input[name="selected_product_codes"]:checked')
-        ).map((input) => ({
-            code: input.value,
-            unitCorrelative: input.dataset.unitCorrelative || '',
-        }));
+        ).map((input) => getProviderCatalogRowPayload(input.closest('tr')));
+
+        if (!selectedRows.length || !validateProviderCatalogQuantities(selectedRows)) {
+            return;
+        }
 
         submitProviderProductSelection(selectedRows);
     }
 
+    function addProviderProductFromRow(row) {
+        const payload = getProviderCatalogRowPayload(row);
+        if (!payload.code || !validateProviderCatalogQuantities([payload])) {
+            return;
+        }
+        submitProviderProductSelection([payload]);
+    }
+
     function addProviderProductDirect(productCode, unitCorrelative) {
+        const row = document.querySelector(`#provider-catalog-list tr.provider-product-row[data-product-code="${productCode}"]`);
+        if (row) {
+            addProviderProductFromRow(row);
+            return;
+        }
         submitProviderProductSelection([
             {
                 code: productCode,
                 unitCorrelative: unitCorrelative || '',
+                quantity: '',
             },
         ]);
     }
@@ -856,9 +1136,15 @@
                 window.providerCatalogSelection.keyboardIndex = -1;
                 clearActiveProviderCatalogRow();
             }
+
+            applyProviderCatalogColumnWidths();
         });
     }
 
     document.getElementById('provider-product-search')?.addEventListener('keydown', handleProviderCatalogSearchKeydown);
-    document.getElementById('providerCatalogModal')?.addEventListener('shown.bs.modal', focusProviderCatalogSearch);
+    document.getElementById('providerCatalogModal')?.addEventListener('shown.bs.modal', () => {
+        focusProviderCatalogSearch();
+        applyProviderCatalogColumnWidths();
+    });
+    applyProviderCatalogColumnWidths();
 </script>

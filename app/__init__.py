@@ -120,6 +120,8 @@ def ensure_toolbox_schema_columns(inspector):
     if "purchase_review_new_product_items" in table_names:
         table_columns_sql["purchase_review_new_product_items"] = {
             "proposed_main_code": "ALTER TABLE toolbox.purchase_review_new_product_items ADD COLUMN proposed_main_code VARCHAR",
+            "proposed_image": "ALTER TABLE toolbox.purchase_review_new_product_items ADD COLUMN proposed_image BYTEA",
+            "proposed_image_type": "ALTER TABLE toolbox.purchase_review_new_product_items ADD COLUMN proposed_image_type VARCHAR",
         }
 
     added_columns = []
@@ -193,6 +195,7 @@ def create_app():
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'una_clave_secreta_muy_segura_dev_123')
+    app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
 
     login_manager = LoginManager(app)
     login_manager.login_view = 'auth.login'
@@ -235,6 +238,7 @@ def create_app():
             "shopping.provider_offer_list_excel_report",
             "shopping.provider_offer_items_add",
             "shopping.provider_offer_items_add_new_product",
+            "shopping.provider_offer_temp_image",
             "shopping.provider_offer_items_submit_review",
             "shopping.provider_offer_items_unit",
             "shopping.provider_offer_items_remove",
@@ -248,6 +252,13 @@ def create_app():
                 return
             flash("Debes iniciar sesión como proveedor para acceder a esta sección.", "warning")
             return redirect(url_for("shopping.provider_login"))
+
+        if request.endpoint == "shopping.provider_new_product_image":
+            if session.get("provider_logged_in") and session.get("provider_username"):
+                return
+            if current_user.is_authenticated:
+                return
+            return redirect(url_for("auth.login", next=request.url))
 
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.url))

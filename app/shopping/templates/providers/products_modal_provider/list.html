@@ -3,7 +3,7 @@
         <table class="table provider-table align-middle mb-0">
             <thead>
                 <tr>
-                    <th class="provider-product-select-cell">
+                    <th class="provider-product-select-cell" data-col="select">
                         <input
                             class="form-check-input provider-product-select-input"
                             type="checkbox"
@@ -11,16 +11,19 @@
                             onchange="toggleProviderVisibleProducts(this)"
                         >
                     </th>
-                    <th style="width: 22%;">Código / Nombre</th>
-                    <th style="width: 12%;">Departamento</th>
-                    <th style="width: 10%;">Marca</th>
-                    <th style="width: 12%;">Referencia</th>
-                    <th style="width: 10%;">Unidad</th>
-                    <th style="width: 10%;">Stock total (unidad)</th>
-                    <th style="width: 10%;">Mínimo (unidad)</th>
-                    <th style="width: 10%;">Máximo (unidad)</th>
-                    <th style="width: 14%;">Reponer (unidad)</th>
-                    <th style="width: 12%;" class="text-end">Último costo (unidad)</th>
+                    <th style="width: 22%;" data-col="code_name">Código / Nombre</th>
+                    <th style="width: 12%;" data-col="department">Departamento</th>
+                    <th style="width: 10%;" data-col="brand">Marca</th>
+                    <th style="width: 12%;" data-col="reference">Referencia</th>
+                    <th style="width: 10%;" data-col="unit">Unidad</th>
+                    <th style="width: 10%;" data-col="stock_total">Stock total (unidad)</th>
+                    {% for store in stock_stores %}
+                    <th style="width: 8%;" data-col="store-{{ store.code }}" class="text-end" title="{{ store.description }}">{{ store.description }}</th>
+                    {% endfor %}
+                    <th style="width: 10%;" data-col="minimum">Mínimo (unidad)</th>
+                    <th style="width: 10%;" data-col="maximum">Máximo (unidad)</th>
+                    <th style="width: 10%;" data-col="replenish">Reponer (unidad)</th>
+                    <th style="width: 12%;" data-col="last_cost" class="text-end">Último costo (unidad)</th>
                 </tr>
             </thead>
             <tbody>

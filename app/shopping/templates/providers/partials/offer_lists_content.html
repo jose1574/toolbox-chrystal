@@ -61,6 +61,16 @@
         border-top-color: rgba(255, 255, 255, 0.06);
     }
 
+    .provider-history-thumb {
+        width: 42px;
+        height: 42px;
+        object-fit: cover;
+        border-radius: 0.55rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #0f1117;
+        flex-shrink: 0;
+    }
+
     #provider-offer-lists-modal-content .btn-outline-primary,
     #provider-offer-lists-modal-content .btn-outline-success {
         border-radius: 0.8rem;
@@ -207,6 +217,17 @@
                         {% for item in selected_review_list['items'] %}
                         <tr>
                             <td>
+                                <div class="d-flex align-items-start gap-2">
+                                    {% if item.has_image and item.image_correlative %}
+                                    <a href="{{ url_for('shopping.provider_new_product_image', correlative=item.image_correlative) }}" target="_blank" rel="noopener">
+                                        <img
+                                            src="{{ url_for('shopping.provider_new_product_image', correlative=item.image_correlative) }}"
+                                            alt="Imagen de {{ item.name }}"
+                                            class="provider-history-thumb"
+                                        >
+                                    </a>
+                                    {% endif %}
+                                    <div class="min-w-0">
                                 <div class="fw-semibold">{{ item.name }}</div>
                                 <div class="small provider-history-meta">
                                     {% if item.item_type == 'new_product' %}
@@ -221,6 +242,8 @@
                                 {% if item.rejected_reason %}
                                 <div class="small text-danger mt-1">Motivo: {{ item.rejected_reason }}</div>
                                 {% endif %}
+                                    </div>
+                                </div>
                             </td>
                             <td class="text-end">{{ '{:,.2f}'.format(item.quantity).replace(',', ' ') }}</td>
                             <td>{{ item.unit }}</td>

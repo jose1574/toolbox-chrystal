@@ -3,7 +3,7 @@
     class="provider-product-row"
     data-product-code="{{ product.code }}"
     data-unit-correlative="{{ product.unit_correlative or '' }}"
-    ondblclick="addProviderProductDirect('{{ product.code }}', '{{ product.unit_correlative or '' }}')"
+    ondblclick="addProviderProductFromRow(this)"
     style="cursor: pointer;"
 >
     <td class="provider-product-select-cell">
@@ -26,9 +26,32 @@
     <td>{{ product.reference }}</td>
     <td>{{ product.unit_description or 'UND' }}</td>
     <td>{{ '%.2f'|format(product.stock_total) }}</td>
+    {% for store in stock_stores %}
+    <td class="text-end" title="{{ store.description }}">{{ '%.2f'|format(product.stock_by_store.get(store.code, 0)) }}</td>
+    {% endfor %}
     <td>{{ '%.2f'|format(product.minimum_stock) }}</td>
     <td>{{ '%.2f'|format(product.maximum_stock) }}</td>
-    <td>{{ '%.2f'|format(product.replenishment_needed) }}</td>
+    <td class="provider-replenish-cell">
+        <input
+            type="number"
+            class="form-control form-control-sm provider-replenish-input text-end"
+            min="0"
+            step="any"
+            value="{{ '%.2f'|format(product.replenishment_needed) }}"
+            data-suggested="{{ '%.2f'|format(product.replenishment_needed) }}"
+            data-minimum="{{ '%.2f'|format(product.minimum_stock) }}"
+            data-maximum="{{ '%.2f'|format(product.maximum_stock) }}"
+            data-stock="{{ '%.2f'|format(product.stock_total) }}"
+            title="Sugerido: {{ '%.2f'|format(product.replenishment_needed) }} (mín. {{ '%.2f'|format(product.minimum_stock) }} / máx. {{ '%.2f'|format(product.maximum_stock) }})"
+            aria-label="Cantidad a reponer de {{ product.code }}"
+            onclick="event.stopPropagation()"
+            ondblclick="event.stopPropagation()"
+            onmousedown="event.stopPropagation()"
+            onkeydown="event.stopPropagation()"
+            onfocus="this.select()"
+            oninput="handleProviderReplenishQuantityChange(this)"
+        >
+    </td>
     <td class="text-end">
         {% if product.last_provider_cost is not none %}
             {{ '%.2f'|format(product.last_provider_cost) }}
@@ -37,7 +60,7 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="11" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
+    <td colspan="{{ 11 + (stock_stores|length) }}" class="text-center text-body-secondary py-4">No se encontraron productos con esos filtros.</td>
 </tr>
 {% endfor %}
 
@@ -48,7 +71,7 @@
     hx-target="this"
     hx-swap="outerHTML"
 >
-    <td colspan="11" class="text-center py-3 text-body-secondary">
+    <td colspan="{{ 11 + (stock_stores|length) }}" class="text-center py-3 text-body-secondary">
         Cargando más productos...
     </td>
 </tr>
