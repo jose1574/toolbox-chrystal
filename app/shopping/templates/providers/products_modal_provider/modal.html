@@ -386,6 +386,121 @@
             background: rgba(37, 99, 235, 0.55);
         }
 
+        #providerCatalogModal .provider-table th[hidden],
+        #providerCatalogModal .provider-table td[hidden] {
+            display: none !important;
+        }
+
+        #providerCatalogModal .provider-columns-dropdown .dropdown-menu {
+            width: 19rem;
+            max-height: min(22rem, 55vh);
+            padding: 0.45rem;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 0.55rem;
+            background: #21242b;
+        }
+
+        #providerCatalogModal .provider-columns-dropdown .provider-columns-editor-title {
+            padding: 0.35rem 0.5rem 0.45rem;
+            color: #9ca3af;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        #providerCatalogModal .provider-column-editor-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.28rem 0.35rem;
+            border-radius: 0.4rem;
+            color: #e5e7eb;
+        }
+
+        #providerCatalogModal .provider-column-editor-item:hover,
+        #providerCatalogModal .provider-column-editor-item.is-dragover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        #providerCatalogModal .provider-column-editor-item.is-dragging {
+            opacity: 0.45;
+        }
+
+        #providerCatalogModal .provider-column-editor-grip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            color: #6b7280;
+            cursor: grab;
+        }
+
+        #providerCatalogModal .provider-column-editor-item label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-column-editor-item .form-check-input {
+            width: 0.9rem;
+            height: 0.9rem;
+            min-width: 0.9rem;
+            margin: 0;
+            padding: 0;
+            appearance: auto;
+            cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-column-editor-item .form-check-input:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        #providerCatalogModal .provider-column-editor-item span.provider-column-editor-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.8rem;
+        }
+
+        #providerCatalogModal .provider-column-editor-move {
+            display: flex;
+            gap: 0.15rem;
+        }
+
+        #providerCatalogModal .provider-column-editor-move button {
+            width: 1.45rem;
+            height: 1.45rem;
+            padding: 0;
+            border: 0;
+            border-radius: 0.3rem;
+            background: transparent;
+            color: #9ca3af;
+            line-height: 1;
+        }
+
+        #providerCatalogModal .provider-column-editor-move button:hover {
+            background: rgba(255,255,255,0.08);
+            color: #f9fafb;
+        }
+
+        #providerCatalogModal .provider-columns-dropdown .dropdown-item {
+            border-radius: 0.4rem;
+            color: #e5e7eb;
+            font-size: 0.8rem;
+        }
+
+        #providerCatalogModal .provider-columns-dropdown .dropdown-item:hover {
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+        }
+
         body.provider-col-resizing,
         body.provider-col-resizing * {
             cursor: col-resize !important;
@@ -693,8 +808,31 @@
                             id="provider-reset-column-widths"
                             type="button"
                             class="btn btn-sm provider-action-btn d-none"
-                            onclick="resetProviderCatalogColumnWidths()"
+                            onclick="resetProviderCatalogColumns()"
                         >Restablecer columnas</button>
+                    </div>
+                    <div class="dropdown provider-columns-dropdown">
+                        <button
+                            type="button"
+                            class="btn btn-sm provider-action-btn"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            aria-expanded="false"
+                            aria-label="Editar columnas"
+                            title="Editar columnas"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.8"/>
+                                <circle cx="12" cy="12" r="1.8"/>
+                                <circle cx="12" cy="19" r="1.8"/>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <div class="provider-columns-editor-title">Columnas</div>
+                            <div id="provider-catalog-columns-editor"></div>
+                            <div class="dropdown-divider"></div>
+                            <button type="button" class="dropdown-item" onclick="resetProviderCatalogColumns()">Restablecer columnas</button>
+                        </div>
                     </div>
                 </div>
 
@@ -711,6 +849,7 @@
 <script>
     window.providerCatalogSelection ||= { allFiltered: false, keyboardIndex: -1 };
     window.providerCatalogColumnWidthsKey = 'providerCatalogColumnWidths.v2:{{ session.get("provider_username") or session.get("provider_code") or "default" }}';
+    window.providerCatalogColumnLayoutKey = 'providerCatalogColumnLayout.v1:{{ session.get("provider_username") or session.get("provider_code") or "default" }}';
 
     function getProviderCatalogTable() {
         return document.querySelector('#providerCatalogModal .provider-table');
@@ -740,8 +879,11 @@
     }
 
     function saveProviderCatalogColumnWidths() {
-        const widths = {};
+        const widths = { ...loadProviderCatalogColumnWidths() };
         getProviderCatalogColumnHeaders().forEach((header) => {
+            if (header.hidden) {
+                return;
+            }
             const width = Math.round(header.getBoundingClientRect().width);
             if (header.dataset.col && width > 0) {
                 widths[header.dataset.col] = width;
@@ -756,7 +898,7 @@
         if (!resetButton) {
             return;
         }
-        resetButton.classList.toggle('d-none', !hasCustomProviderCatalogColumnWidths());
+        resetButton.classList.toggle('d-none', !hasCustomProviderCatalogColumns());
     }
 
     function applyProviderCatalogColumnWidth(header, width) {
@@ -796,6 +938,9 @@
 
         setProviderCatalogCustomWidthMode(true);
         headers.forEach((header) => {
+            if (header.hidden) {
+                return;
+            }
             const savedWidth = Number(savedWidths[header.dataset.col]);
             const width = Number.isFinite(savedWidth) && savedWidth > 0
                 ? savedWidth
@@ -805,9 +950,287 @@
         updateProviderCatalogColumnResetButton();
     }
 
-    function resetProviderCatalogColumnWidths() {
-        window.localStorage.removeItem(window.providerCatalogColumnWidthsKey);
+    function loadProviderCatalogColumnLayout() {
+        try {
+            const rawValue = window.localStorage.getItem(window.providerCatalogColumnLayoutKey);
+            const parsed = rawValue ? JSON.parse(rawValue) : null;
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+            return {
+                order: Array.isArray(parsed.order) ? parsed.order.filter((col) => typeof col === 'string') : [],
+                hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter((col) => typeof col === 'string') : [],
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveProviderCatalogColumnLayout(layout) {
+        window.localStorage.setItem(window.providerCatalogColumnLayoutKey, JSON.stringify({
+            order: layout.order || [],
+            hidden: layout.hidden || [],
+        }));
+        updateProviderCatalogColumnResetButton();
+    }
+
+    function getProviderCatalogPresentColumnOrder() {
+        return getProviderCatalogColumnHeaders().map((header) => header.dataset.col).filter(Boolean);
+    }
+
+    function getProviderCatalogDefaultColumnOrder(presentOrder) {
+        const captured = window.providerCatalogDefaultColumnOrder;
+        if (Array.isArray(captured) && captured.length) {
+            const next = captured.filter((col) => presentOrder.includes(col));
+            presentOrder.forEach((col) => {
+                if (!next.includes(col)) {
+                    next.push(col);
+                }
+            });
+            return next;
+        }
+        return presentOrder.slice();
+    }
+
+    function resolveProviderCatalogColumnLayout(presentOrder) {
+        const saved = loadProviderCatalogColumnLayout();
+        const defaultOrder = getProviderCatalogDefaultColumnOrder(presentOrder);
+        let order = saved?.order?.length ? saved.order.slice() : defaultOrder.slice();
+        order = order.filter((col) => presentOrder.includes(col));
+        presentOrder.forEach((col) => {
+            if (!order.includes(col)) {
+                order.push(col);
+            }
+        });
+        order = order.filter((col) => col !== 'select');
+        if (presentOrder.includes('select')) {
+            order.unshift('select');
+        }
+
+        const hidden = (saved?.hidden || []).filter((col) => col !== 'select' && presentOrder.includes(col));
+        const visibleDataColumns = order.filter((col) => col !== 'select' && !hidden.includes(col));
+        if (!visibleDataColumns.length) {
+            hidden.length = 0;
+        }
+        return { order, hidden };
+    }
+
+    function hasCustomProviderCatalogColumnLayout() {
+        const presentOrder = getProviderCatalogPresentColumnOrder();
+        if (!presentOrder.length) {
+            return false;
+        }
+        const layout = resolveProviderCatalogColumnLayout(presentOrder);
+        const defaultOrder = getProviderCatalogDefaultColumnOrder(presentOrder);
+        if (layout.hidden.length) {
+            return true;
+        }
+        return layout.order.join('\0') !== defaultOrder.join('\0');
+    }
+
+    function hasCustomProviderCatalogColumns() {
+        return hasCustomProviderCatalogColumnWidths() || hasCustomProviderCatalogColumnLayout();
+    }
+
+    function getProviderCatalogColumnLabel(header) {
+        return header.querySelector('.text-truncate')?.textContent.trim()
+            || header.getAttribute('title')
+            || header.textContent.trim()
+            || header.dataset.col;
+    }
+
+    function escapeProviderCatalogHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char]));
+    }
+
+    function applyProviderCatalogColumnLayout(options = {}) {
+        const headers = getProviderCatalogColumnHeaders();
+        const presentOrder = headers.map((header) => header.dataset.col).filter(Boolean);
+        if (!presentOrder.length) {
+            return;
+        }
+
+        if (options.captureDefault) {
+            window.providerCatalogDefaultColumnOrder = presentOrder.slice();
+        } else if (!Array.isArray(window.providerCatalogDefaultColumnOrder) || !window.providerCatalogDefaultColumnOrder.length) {
+            window.providerCatalogDefaultColumnOrder = presentOrder.slice();
+        }
+
+        const layout = options.resetToDefault
+            ? { order: getProviderCatalogDefaultColumnOrder(presentOrder), hidden: [] }
+            : resolveProviderCatalogColumnLayout(presentOrder);
+
+        document.querySelectorAll('#providerCatalogModal .provider-table tr').forEach((row) => {
+            const cells = Array.from(row.children).filter((cell) => cell.dataset.col);
+            if (!cells.length) {
+                return;
+            }
+            const cellsByCol = {};
+            cells.forEach((cell) => {
+                cellsByCol[cell.dataset.col] = cell;
+            });
+            layout.order.forEach((col) => {
+                const cell = cellsByCol[col];
+                if (!cell) {
+                    return;
+                }
+                cell.toggleAttribute('hidden', layout.hidden.includes(col));
+                row.appendChild(cell);
+            });
+        });
+
+        renderProviderCatalogColumnsEditor(layout);
+        updateProviderCatalogColumnResetButton();
+    }
+
+    function renderProviderCatalogColumnsEditor(layout) {
+        const root = document.getElementById('provider-catalog-columns-editor');
+        if (!root) {
+            return;
+        }
+
+        const labels = {};
+        getProviderCatalogColumnHeaders().forEach((header) => {
+            labels[header.dataset.col] = getProviderCatalogColumnLabel(header);
+        });
+
+        root.innerHTML = layout.order
+            .filter((col) => col !== 'select')
+            .map((col) => {
+                const visible = !layout.hidden.includes(col);
+                const label = escapeProviderCatalogHtml(labels[col] || col);
+                return `
+                    <div class="provider-column-editor-item" draggable="true" data-col="${escapeProviderCatalogHtml(col)}">
+                        <span class="provider-column-editor-grip" aria-hidden="true">
+                            <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                                <circle cx="3" cy="2" r="1.15"/><circle cx="7" cy="2" r="1.15"/>
+                                <circle cx="3" cy="7" r="1.15"/><circle cx="7" cy="7" r="1.15"/>
+                                <circle cx="3" cy="12" r="1.15"/><circle cx="7" cy="12" r="1.15"/>
+                            </svg>
+                        </span>
+                        <label>
+                            <input class="form-check-input" type="checkbox"${visible ? ' checked' : ''} onchange="toggleProviderCatalogColumnVisibility('${escapeProviderCatalogHtml(col)}', this.checked)">
+                            <span class="provider-column-editor-label">${label}</span>
+                        </label>
+                        <div class="provider-column-editor-move">
+                            <button type="button" aria-label="Subir ${label}" onclick="moveProviderCatalogColumn('${escapeProviderCatalogHtml(col)}', -1)">↑</button>
+                            <button type="button" aria-label="Bajar ${label}" onclick="moveProviderCatalogColumn('${escapeProviderCatalogHtml(col)}', 1)">↓</button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join('');
+
+        bindProviderCatalogColumnEditorDrag(root);
+    }
+
+    function persistProviderCatalogColumnLayoutFromEditor(root) {
+        const order = ['select'];
+        const hidden = [];
+        root.querySelectorAll('.provider-column-editor-item').forEach((item) => {
+            const col = item.dataset.col;
+            if (!col || col === 'select') {
+                return;
+            }
+            order.push(col);
+            if (!item.querySelector('input[type="checkbox"]')?.checked) {
+                hidden.push(col);
+            }
+        });
+        saveProviderCatalogColumnLayout({ order, hidden });
+        applyProviderCatalogColumnLayout();
         applyProviderCatalogColumnWidths();
+    }
+
+    function bindProviderCatalogColumnEditorDrag(root) {
+        let dragged = null;
+        root.querySelectorAll('.provider-column-editor-item').forEach((item) => {
+            item.addEventListener('dragstart', (event) => {
+                dragged = item;
+                item.classList.add('is-dragging');
+                event.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', () => {
+                dragged = null;
+                item.classList.remove('is-dragging');
+                root.querySelectorAll('.is-dragover').forEach((el) => el.classList.remove('is-dragover'));
+                persistProviderCatalogColumnLayoutFromEditor(root);
+            });
+            item.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                if (!dragged || dragged === item) {
+                    return;
+                }
+                item.classList.add('is-dragover');
+                const rect = item.getBoundingClientRect();
+                const after = (event.clientY - rect.top) > (rect.height / 2);
+                root.insertBefore(dragged, after ? item.nextSibling : item);
+            });
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('is-dragover');
+            });
+            item.addEventListener('drop', (event) => {
+                event.preventDefault();
+            });
+        });
+    }
+
+    function toggleProviderCatalogColumnVisibility(col, visible) {
+        if (!col || col === 'select') {
+            return;
+        }
+        const presentOrder = getProviderCatalogPresentColumnOrder();
+        const layout = resolveProviderCatalogColumnLayout(presentOrder);
+        let hidden = layout.hidden.filter((value) => value !== col);
+        if (!visible) {
+            hidden.push(col);
+        }
+        const visibleCount = layout.order.filter((value) => value !== 'select' && !hidden.includes(value)).length;
+        if (!visibleCount) {
+            renderProviderCatalogColumnsEditor(layout);
+            return;
+        }
+        saveProviderCatalogColumnLayout({ order: layout.order, hidden });
+        applyProviderCatalogColumnLayout();
+        applyProviderCatalogColumnWidths();
+    }
+
+    function moveProviderCatalogColumn(col, direction) {
+        if (!col || col === 'select') {
+            return;
+        }
+        const presentOrder = getProviderCatalogPresentColumnOrder();
+        const layout = resolveProviderCatalogColumnLayout(presentOrder);
+        const movable = layout.order.filter((value) => value !== 'select');
+        const index = movable.indexOf(col);
+        const nextIndex = index + direction;
+        if (index < 0 || nextIndex < 0 || nextIndex >= movable.length) {
+            return;
+        }
+        [movable[index], movable[nextIndex]] = [movable[nextIndex], movable[index]];
+        saveProviderCatalogColumnLayout({
+            order: presentOrder.includes('select') ? ['select', ...movable] : movable,
+            hidden: layout.hidden,
+        });
+        applyProviderCatalogColumnLayout();
+        applyProviderCatalogColumnWidths();
+    }
+
+    function resetProviderCatalogColumns() {
+        window.localStorage.removeItem(window.providerCatalogColumnWidthsKey);
+        window.localStorage.removeItem(window.providerCatalogColumnLayoutKey);
+        applyProviderCatalogColumnLayout({ resetToDefault: true });
+        applyProviderCatalogColumnWidths();
+    }
+
+    function resetProviderCatalogColumnWidths() {
+        resetProviderCatalogColumns();
     }
 
     function bindProviderCatalogColumnResizer(header) {
@@ -1178,6 +1601,10 @@
         }
     }
     window.sortProviderCatalog = sortProviderCatalog;
+    window.toggleProviderCatalogColumnVisibility = toggleProviderCatalogColumnVisibility;
+    window.moveProviderCatalogColumn = moveProviderCatalogColumn;
+    window.resetProviderCatalogColumns = resetProviderCatalogColumns;
+    window.resetProviderCatalogColumnWidths = resetProviderCatalogColumnWidths;
 
     function addProviderProductDirect(productCode, unitCorrelative) {
         const row = document.querySelector(`#provider-catalog-list tr.provider-product-row[data-product-code="${productCode}"]`);
@@ -1209,6 +1636,9 @@
                 clearActiveProviderCatalogRow();
             }
 
+            applyProviderCatalogColumnLayout({
+                captureDefault: event.detail?.target?.id === 'provider-catalog-list',
+            });
             applyProviderCatalogColumnWidths();
         });
     }
@@ -1216,7 +1646,9 @@
     document.getElementById('provider-product-search')?.addEventListener('keydown', handleProviderCatalogSearchKeydown);
     document.getElementById('providerCatalogModal')?.addEventListener('shown.bs.modal', () => {
         focusProviderCatalogSearch();
+        applyProviderCatalogColumnLayout();
         applyProviderCatalogColumnWidths();
     });
+    applyProviderCatalogColumnLayout({ captureDefault: true });
     applyProviderCatalogColumnWidths();
 </script>

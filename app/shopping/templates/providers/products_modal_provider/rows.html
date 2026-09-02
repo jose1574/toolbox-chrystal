@@ -6,7 +6,7 @@
     ondblclick="addProviderProductFromRow(this)"
     style="cursor: pointer;"
 >
-    <td class="provider-product-select-cell">
+    <td class="provider-product-select-cell" data-col="select">
         <input
             class="form-check-input provider-product-select-input"
             type="checkbox"
@@ -17,21 +17,21 @@
             onchange="handleProviderProductSelection()"
         >
     </td>
-    <td>
+    <td data-col="code_name">
         <span class="product-cell-name">{{ product.code }}</span>
         <span class="product-cell-sub">{{ product.name or '-' }}</span>
     </td>
-    <td>{{ product.department }}</td>
-    <td>{{ product.brand }}</td>
-    <td>{{ product.reference }}</td>
-    <td>{{ product.unit_description or 'UND' }}</td>
-    <td>{{ '%.2f'|format(product.stock_total) }}</td>
+    <td data-col="department">{{ product.department }}</td>
+    <td data-col="brand">{{ product.brand }}</td>
+    <td data-col="reference">{{ product.reference }}</td>
+    <td data-col="unit">{{ product.unit_description or 'UND' }}</td>
+    <td data-col="stock_total">{{ '%.2f'|format(product.stock_total) }}</td>
     {% for store in stock_stores %}
-    <td class="text-end" title="{{ store.description }}">{{ '%.2f'|format(product.stock_by_store.get(store.code, 0)) }}</td>
+    <td class="text-end" data-col="store-{{ store.code }}" title="{{ store.description }}">{{ '%.2f'|format(product.stock_by_store.get(store.code, 0)) }}</td>
     {% endfor %}
-    <td>{{ '%.2f'|format(product.minimum_stock) }}</td>
-    <td>{{ '%.2f'|format(product.maximum_stock) }}</td>
-    <td class="provider-replenish-cell">
+    <td data-col="minimum">{{ '%.2f'|format(product.minimum_stock) }}</td>
+    <td data-col="maximum">{{ '%.2f'|format(product.maximum_stock) }}</td>
+    <td class="provider-replenish-cell" data-col="replenish">
         <input
             type="number"
             class="form-control form-control-sm provider-replenish-input text-end"
@@ -52,7 +52,7 @@
             oninput="handleProviderReplenishQuantityChange(this)"
         >
     </td>
-    <td class="text-end">
+    <td class="text-end" data-col="last_cost">
         {% if product.last_provider_cost is not none %}
             {{ '%.2f'|format(product.last_provider_cost) }}
         {% endif %}
