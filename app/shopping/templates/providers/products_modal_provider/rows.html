@@ -66,7 +66,7 @@
 
 {% if current_page < total_pages %}
 <tr
-    hx-get="{{ url_for('shopping.provider_catalog_modal', q=query, reference=reference, mark_codes=mark_codes, department_codes=department_codes, only_provider_products=1 if only_provider_products else 0, page=current_page + 1, append=1) }}"
+    hx-get="{{ url_for('shopping.provider_catalog_modal', q=query, reference=reference, mark_codes=mark_codes, department_codes=department_codes, only_provider_products=1 if only_provider_products else 0, page=current_page + 1, append=1, sort_by=sort_by|default(''), sort_dir=sort_dir|default('asc')) }}"
     hx-trigger="intersect once root:#provider-catalog-table-scroll"
     hx-target="this"
     hx-swap="outerHTML"

@@ -1746,6 +1746,8 @@ def provider_catalog_modal():
     page = request.args.get('page', 1, type=int)
     append = request.args.get('append') == '1'
     list_only = request.args.get('list_only') == '1'
+    sort_by = (request.args.get('sort_by') or '').strip()
+    sort_dir = 'desc' if request.args.get('sort_dir') == 'desc' else 'asc'
 
     products, total_products, total_pages, current_page, stock_stores = service.get_provider_catalog_products(
         query=query,
@@ -1756,53 +1758,43 @@ def provider_catalog_modal():
         only_provider_products=only_provider_products,
         page=page,
         per_page=20,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
+
+    catalog_context = {
+        'products': products,
+        'query': query,
+        'reference': reference,
+        'mark_codes': mark_codes,
+        'department_codes': department_codes,
+        'only_provider_products': only_provider_products,
+        'total_products': total_products,
+        'total_pages': total_pages,
+        'current_page': current_page,
+        'stock_stores': stock_stores,
+        'sort_by': sort_by,
+        'sort_dir': sort_dir,
+    }
 
     if append:
         return render_template(
             'providers/products_modal_provider/rows.html',
-            products=products,
-            query=query,
-            reference=reference,
-            mark_codes=mark_codes,
-            department_codes=department_codes,
-            only_provider_products=only_provider_products,
-            total_products=total_products,
-            total_pages=total_pages,
-            current_page=current_page,
-            stock_stores=stock_stores,
+            **catalog_context,
         )
 
     if list_only:
         return render_template(
             'providers/products_modal_provider/list.html',
-            products=products,
-            query=query,
-            reference=reference,
-            mark_codes=mark_codes,
-            department_codes=department_codes,
-            only_provider_products=only_provider_products,
-            total_products=total_products,
-            total_pages=total_pages,
-            current_page=current_page,
-            stock_stores=stock_stores,
+            **catalog_context,
         )
 
     marks, departments = service.get_product_filter_options()
     return render_template(
         'providers/products_modal_provider/modal.html',
-        products=products,
-        query=query,
-        reference=reference,
-        mark_codes=mark_codes,
         marks=marks,
-        department_codes=department_codes,
         departments=departments,
-        only_provider_products=only_provider_products,
-        total_products=total_products,
-        total_pages=total_pages,
-        current_page=current_page,
-        stock_stores=stock_stores,
+        **catalog_context,
     )
 
 @shopping_bp.route('/provider_login', methods=['GET', 'POST'])

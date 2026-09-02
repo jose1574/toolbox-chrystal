@@ -298,6 +298,11 @@
             max-height: none;
         }
 
+        #providerCatalogModal .provider-table-wrap.htmx-request {
+            opacity: 0.55;
+            pointer-events: none;
+        }
+
         #providerCatalogModal .provider-table-scroll {
             flex: 1;
             min-height: 0;
@@ -337,6 +342,32 @@
             text-transform: uppercase;
             font-weight: 700;
             padding: 0.8rem 0.75rem;
+        }
+
+        #providerCatalogModal .provider-col-sort {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            max-width: 100%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            letter-spacing: inherit;
+            text-transform: inherit;
+            text-align: inherit;
+            cursor: pointer;
+        }
+
+        #providerCatalogModal .provider-col-sort:hover {
+            color: #f9fafb;
+        }
+
+        #providerCatalogModal .provider-sort-icon {
+            flex-shrink: 0;
+            font-size: 0.68rem;
+            color: #f4d44b;
         }
 
         #providerCatalogModal .provider-col-resizer {
@@ -554,7 +585,7 @@
                             value="{{ query or '' }}"
                             hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
                             hx-trigger="input changed delay:300ms, search"
-                            hx-include="#provider-catalog-filters"
+                            hx-include="#provider-catalog-filters, #provider-catalog-sort-state"
                             hx-vals='{"list_only":"1"}'
                             hx-target="#provider-catalog-list"
                             hx-swap="outerHTML"
@@ -571,6 +602,7 @@
                             value="{{ reference or '' }}"
                             hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
                             hx-trigger="keyup changed delay:300ms"
+                            hx-include="#provider-catalog-filters, #provider-catalog-sort-state"
                             hx-target="#provider-catalog-modal-container"
                             hx-swap="innerHTML"
                             name="reference"
@@ -589,7 +621,7 @@
                                 {% if only_provider_products %}checked{% endif %}
                                 hx-get="{{ url_for('shopping.provider_catalog_modal') }}"
                                 hx-trigger="change"
-                                hx-include="#provider-catalog-filters"
+                                hx-include="#provider-catalog-filters, #provider-catalog-sort-state"
                                 hx-vals='{"list_only":"1"}'
                                 hx-target="#provider-catalog-list"
                                 hx-swap="outerHTML"
@@ -611,7 +643,7 @@
                                 {% for mark in marks %}
                                 <label class="dropdown-item provider-mark-option">
                                     <input class="form-check-input" type="checkbox" name="mark_codes" value="{{ mark.code }}" {% if mark.code in mark_codes %}checked{% endif %}
-                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
+                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters, #provider-catalog-sort-state" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
                                         onchange="updateProviderMarkCount()">
                                     <span>{{ mark.description or mark.code }}</span>
                                 </label>
@@ -633,7 +665,7 @@
                                 {% for department in departments %}
                                 <label class="dropdown-item provider-department-option">
                                     <input class="form-check-input" type="checkbox" name="department_codes" value="{{ department.code }}" {% if department.code in department_codes %}checked{% endif %}
-                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
+                                        hx-get="{{ url_for('shopping.provider_catalog_modal') }}" hx-trigger="change" hx-include="#provider-catalog-filters, #provider-catalog-sort-state" hx-vals='{"list_only":"1"}' hx-target="#provider-catalog-list" hx-swap="outerHTML"
                                         onchange="updateProviderDepartmentCount()">
                                     <span>{{ department.description or department.code }}</span>
                                 </label>
@@ -1106,6 +1138,46 @@
         }
         submitProviderProductSelection([payload]);
     }
+
+    function sortProviderCatalog(trigger) {
+        const list = document.getElementById('provider-catalog-list');
+        if (!trigger || list?.classList.contains('htmx-request')) {
+            return;
+        }
+
+        const sortBy = trigger?.getAttribute('data-sort-by') || '';
+        const sortDir = trigger?.getAttribute('data-sort-dir') || 'desc';
+        const params = new URLSearchParams();
+
+        document.querySelectorAll('#provider-catalog-filters input, #provider-catalog-filters select').forEach((field) => {
+            if (!field.name || field.disabled) {
+                return;
+            }
+            if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
+                return;
+            }
+            params.append(field.name, field.value);
+        });
+
+        const onlyProviderProducts = document.getElementById('provider-only-products');
+        if (onlyProviderProducts) {
+            params.set('only_provider_products', onlyProviderProducts.checked ? '1' : '0');
+        }
+
+        params.set('list_only', '1');
+        params.set('sort_by', sortBy);
+        params.set('sort_dir', sortDir);
+
+        const url = `{{ url_for('shopping.provider_catalog_modal') }}?${params.toString()}`;
+        if (window.htmx) {
+            window.htmx.ajax('GET', url, {
+                source: list || trigger,
+                target: '#provider-catalog-list',
+                swap: 'outerHTML',
+            });
+        }
+    }
+    window.sortProviderCatalog = sortProviderCatalog;
 
     function addProviderProductDirect(productCode, unitCorrelative) {
         const row = document.querySelector(`#provider-catalog-list tr.provider-product-row[data-product-code="${productCode}"]`);

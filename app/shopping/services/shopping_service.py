@@ -681,27 +681,18 @@ def get_provider_catalog_products(
     only_provider_products=False,
     page=1,
     per_page=20,
+    sort_by='',
+    sort_dir='asc',
 ):
     query = (query or '').strip()
     reference = (reference or '').strip()
     mark_codes = [normalize_code(code) for code in (mark_codes or []) if normalize_code(code)]
     department_codes = [normalize_code(code) for code in (department_codes or []) if normalize_code(code)]
     provider_code = normalize_code(provider_code)
+    sort_by = (sort_by or '').strip()
+    sort_dir = 'desc' if sort_dir == 'desc' else 'asc'
     page = max(page or 1, 1)
     per_page = max(min(per_page or 20, 100), 1)
-
-    provider_last_cost_subquery = None
-    if provider_code:
-        provider_last_cost_subquery = (
-            db.session.query(ProductsProvider.unitary_cost)
-            .filter(
-                func.upper(func.trim(ProductsProvider.product_code)) == func.upper(func.trim(Product.code)),
-                func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
-            )
-            .order_by(ProductsProvider.emission_date.desc().nullslast(), ProductsProvider.line.desc())
-            .limit(1)
-            .scalar_subquery()
-        )
 
     product_query = (
         db.session.query(
@@ -710,27 +701,13 @@ def get_provider_catalog_products(
             Product.referenc.label('reference'),
             Department.description.label('department'),
             Mark.description.label('brand'),
-            func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_total'),
             func.coalesce(ShoppingProductsParam.minimum_stock, 0).label('minimum_stock'),
             func.coalesce(ShoppingProductsParam.maximum_stock, 0).label('maximum_stock'),
         )
         .outerjoin(Department, Department.code == Product.department)
         .outerjoin(Mark, Mark.code == Product.mark)
-        .outerjoin(ProductsStock, ProductsStock.product_code == Product.code)
-        .outerjoin(
-            ShoppingProductsParam,
-            func.upper(func.trim(ShoppingProductsParam.code)) == func.upper(func.trim(Product.code)),
-        )
+        .outerjoin(ShoppingProductsParam, ShoppingProductsParam.code == Product.code)
         .filter(Product.status == '01')
-        .group_by(
-            Product.code,
-            Product.description,
-            Product.referenc,
-            Department.description,
-            Mark.description,
-            ShoppingProductsParam.minimum_stock,
-            ShoppingProductsParam.maximum_stock,
-        )
     )
 
     if query:
@@ -773,24 +750,16 @@ def get_provider_catalog_products(
         )
 
     if only_provider_products and provider_code:
-        product_query = product_query.filter(
-            db.session.query(ProductsProvider.line)
-            .filter(
-                func.upper(func.trim(ProductsProvider.product_code)) == func.upper(func.trim(Product.code)),
-                func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
-            )
-            .exists()
+        provider_product_codes = (
+            db.session.query(ProductsProvider.product_code)
+            .filter(func.upper(func.trim(ProductsProvider.provider_code)) == provider_code)
+            .distinct()
         )
+        product_query = product_query.filter(Product.code.in_(provider_product_codes))
 
-    product_query = product_query.order_by(Product.description.asc(), Product.code.asc())
-    total_products = product_query.count()
+    total_products = product_query.order_by(None).with_entities(func.count(Product.code)).scalar() or 0
 
-    if provider_last_cost_subquery is not None:
-        product_query = product_query.add_columns(
-            provider_last_cost_subquery.label('last_provider_cost')
-        )
-    else:
-        product_query = product_query.add_columns(literal(None).label('last_provider_cost'))
+    product_query = _apply_provider_catalog_order(product_query, sort_by, sort_dir, provider_code)
 
     total_pages = max((total_products + per_page - 1) // per_page, 1)
     page = min(page, total_pages)
@@ -798,6 +767,7 @@ def get_provider_catalog_products(
     rows = product_query.limit(per_page).offset((page - 1) * per_page).all()
     product_codes = [row.code for row in rows]
     catalog_units = _get_provider_catalog_units(product_codes, provider_code)
+    last_costs = _get_latest_provider_costs(product_codes, provider_code)
 
     stock_stores = [
         {
@@ -829,13 +799,14 @@ def get_provider_catalog_products(
             unit['conversion_factor'] if unit else 1,
             unit['unit_type'] if unit else 0,
         )
-        stock_total = float(row.stock_total or 0) / units_per_main
+        raw_stock_by_store = stock_by_product.get(row.code, {})
+        stock_total = sum(raw_stock_by_store.values()) / units_per_main
         minimum_stock = float(row.minimum_stock or 0) / units_per_main
         maximum_stock = float(row.maximum_stock or 0) / units_per_main
         replenishment_needed = _calculate_replenishment_quantity(
             stock_total, minimum_stock, maximum_stock
         )
-        raw_stock_by_store = stock_by_product.get(row.code, {})
+        last_provider_cost = last_costs.get(normalize_code(row.code))
         products.append({
             'code': row.code,
             'name': row.name,
@@ -850,7 +821,7 @@ def get_provider_catalog_products(
             'minimum_stock': minimum_stock,
             'maximum_stock': maximum_stock,
             'replenishment_needed': replenishment_needed,
-            'last_provider_cost': float(row.last_provider_cost) if row.last_provider_cost is not None else None,
+            'last_provider_cost': last_provider_cost,
             'unit_code': unit['unit_code'] if unit else '',
             'unit_description': unit['unit_description'] if unit else 'UND',
             'conversion_factor': unit['conversion_factor'] if unit else 1.0,
@@ -859,6 +830,172 @@ def get_provider_catalog_products(
         })
 
     return products, total_products, total_pages, page, stock_stores
+
+
+def _stock_aggregate_subquery(store_code=None):
+    stock_query = db.session.query(
+        ProductsStock.product_code.label('product_code'),
+        func.coalesce(func.sum(ProductsStock.stock), 0).label('stock_quantity'),
+    )
+    if store_code:
+        stock_query = stock_query.filter(ProductsStock.store == store_code)
+    return stock_query.group_by(ProductsStock.product_code).subquery()
+
+
+def _latest_provider_cost_subquery(provider_code):
+    return (
+        db.session.query(
+            ProductsProvider.product_code.label('product_code'),
+            ProductsProvider.unitary_cost.label('unitary_cost'),
+        )
+        .distinct(ProductsProvider.product_code)
+        .filter(func.upper(func.trim(ProductsProvider.provider_code)) == provider_code)
+        .order_by(
+            ProductsProvider.product_code,
+            ProductsProvider.emission_date.desc().nullslast(),
+            ProductsProvider.line.desc(),
+        )
+        .subquery()
+    )
+
+
+def _get_latest_provider_costs(product_codes, provider_code):
+    if not product_codes or not provider_code:
+        return {}
+
+    rows = (
+        db.session.query(
+            ProductsProvider.product_code,
+            ProductsProvider.unitary_cost,
+        )
+        .filter(
+            ProductsProvider.product_code.in_(product_codes),
+            func.upper(func.trim(ProductsProvider.provider_code)) == provider_code,
+        )
+        .order_by(
+            ProductsProvider.emission_date.desc().nullslast(),
+            ProductsProvider.line.desc(),
+        )
+        .all()
+    )
+    latest = {}
+    for row in rows:
+        latest.setdefault(
+            normalize_code(row.product_code),
+            float(row.unitary_cost) if row.unitary_cost is not None else None,
+        )
+    return latest
+
+
+def _catalog_units_per_main_expression(product_query, provider_code):
+    main_units = (
+        db.session.query(
+            ProductsUnit.product_code.label('product_code'),
+            ProductsUnit.conversion_factor.label('conversion_factor'),
+            ProductsUnit.unit_type.label('unit_type'),
+        )
+        .filter(ProductsUnit.main_unit.is_(True))
+        .distinct(ProductsUnit.product_code)
+        .order_by(ProductsUnit.product_code, ProductsUnit.correlative.desc())
+        .subquery()
+    )
+    product_query = product_query.outerjoin(main_units, main_units.c.product_code == Product.code)
+    conversion_factor = main_units.c.conversion_factor
+    unit_type = main_units.c.unit_type
+
+    if provider_code:
+        provider_units = (
+            db.session.query(
+                ProductsProvider.product_code.label('product_code'),
+                ProductsUnit.conversion_factor.label('conversion_factor'),
+                ProductsUnit.unit_type.label('unit_type'),
+            )
+            .outerjoin(ProductsUnit, ProductsUnit.correlative == ProductsProvider.unit)
+            .distinct(ProductsProvider.product_code)
+            .filter(func.upper(func.trim(ProductsProvider.provider_code)) == provider_code)
+            .order_by(
+                ProductsProvider.product_code,
+                ProductsProvider.emission_date.desc().nullslast(),
+                ProductsProvider.line.desc(),
+            )
+            .subquery()
+        )
+        product_query = product_query.outerjoin(provider_units, provider_units.c.product_code == Product.code)
+        conversion_factor = func.coalesce(provider_units.c.conversion_factor, main_units.c.conversion_factor)
+        unit_type = func.coalesce(provider_units.c.unit_type, main_units.c.unit_type)
+
+    factor = func.greatest(func.coalesce(conversion_factor, 1), 0.0001)
+    units_per_main = case(
+        (unit_type == 1, factor),
+        (unit_type == 2, literal(1.0) / factor),
+        else_=literal(1.0),
+    )
+    return product_query, units_per_main
+
+
+def _apply_provider_catalog_order(product_query, sort_by, sort_dir, provider_code=''):
+    descending = sort_dir == 'desc'
+
+    def ordered(expression):
+        return expression.desc().nullslast() if descending else expression.asc().nullsfirst()
+
+    unit_sort = sort_by in ('stock_total', 'replenish', 'minimum', 'maximum') or sort_by.startswith('stock:')
+    units_per_main = literal(1.0)
+    if unit_sort:
+        product_query, units_per_main = _catalog_units_per_main_expression(product_query, provider_code)
+
+    if sort_by.startswith('stock:'):
+        store_code = normalize_code(sort_by.split(':', 1)[1])
+        if store_code:
+            stock_sub = _stock_aggregate_subquery(store_code)
+            product_query = product_query.outerjoin(stock_sub, stock_sub.c.product_code == Product.code)
+            return product_query.order_by(
+                ordered(func.coalesce(stock_sub.c.stock_quantity, 0) / units_per_main),
+                Product.description.asc(),
+                Product.code.asc(),
+            )
+
+    if sort_by in ('stock_total', 'replenish'):
+        stock_sub = _stock_aggregate_subquery()
+        product_query = product_query.outerjoin(stock_sub, stock_sub.c.product_code == Product.code)
+        stock_expr = func.coalesce(stock_sub.c.stock_quantity, 0)
+        if sort_by == 'replenish':
+            stock_expr = func.greatest(
+                literal(0),
+                func.coalesce(ShoppingProductsParam.maximum_stock, 0) - stock_expr,
+            )
+        return product_query.order_by(
+            ordered(stock_expr / units_per_main),
+            Product.description.asc(),
+            Product.code.asc(),
+        )
+
+    if sort_by == 'last_cost' and provider_code:
+        cost_sub = _latest_provider_cost_subquery(provider_code)
+        product_query = product_query.outerjoin(cost_sub, cost_sub.c.product_code == Product.code)
+        return product_query.order_by(
+            ordered(cost_sub.c.unitary_cost),
+            Product.description.asc(),
+            Product.code.asc(),
+        )
+
+    sort_columns = {
+        'code_name': Product.description,
+        'department': Department.description,
+        'brand': Mark.description,
+        'reference': Product.referenc,
+        'minimum': func.coalesce(ShoppingProductsParam.minimum_stock, 0) / units_per_main,
+        'maximum': func.coalesce(ShoppingProductsParam.maximum_stock, 0) / units_per_main,
+    }
+    primary = sort_columns.get(sort_by)
+    if primary is None:
+        return product_query.order_by(Product.description.asc(), Product.code.asc())
+
+    return product_query.order_by(
+        ordered(primary),
+        Product.description.asc(),
+        Product.code.asc(),
+    )
 
 
 def _get_provider_catalog_units(product_codes, provider_code):
@@ -872,8 +1009,6 @@ def _get_provider_catalog_units(product_codes, provider_code):
             db.session.query(
                 ProductsProvider.product_code,
                 ProductsProvider.unit,
-                ProductsProvider.emission_date,
-                ProductsProvider.line,
                 ProductsUnit.correlative.label('unit_correlative'),
                 ProductsUnit.unit.label('unit_code'),
                 ProductsUnit.conversion_factor,

@@ -1,4 +1,10 @@
+{% set sort_by = sort_by|default('') %}
+{% set sort_dir = sort_dir|default('asc') %}
 <div class="provider-table-wrap" id="provider-catalog-list" data-total-products="{{ total_products }}">
+    <span id="provider-catalog-sort-state" class="d-none">
+        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+        <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+    </span>
     <div class="table-responsive provider-table-scroll" id="provider-catalog-table-scroll">
         <table class="table provider-table align-middle mb-0">
             <thead>
@@ -11,19 +17,90 @@
                             onchange="toggleProviderVisibleProducts(this)"
                         >
                     </th>
-                    <th style="width: 22%;" data-col="code_name">Código / Nombre</th>
-                    <th style="width: 12%;" data-col="department">Departamento</th>
-                    <th style="width: 10%;" data-col="brand">Marca</th>
-                    <th style="width: 12%;" data-col="reference">Referencia</th>
-                    <th style="width: 10%;" data-col="unit">Unidad</th>
-                    <th style="width: 10%;" data-col="stock_total">Stock total (unidad)</th>
-                    {% for store in stock_stores %}
-                    <th style="width: 8%;" data-col="store-{{ store.code }}" class="text-end" title="{{ store.description }}">{{ store.description }}</th>
+                    {% set sort_headers = [
+                        ('code_name', 'Código / Nombre', 'code_name', 'width: 22%;', ''),
+                        ('department', 'Departamento', 'department', 'width: 12%;', ''),
+                        ('brand', 'Marca', 'brand', 'width: 10%;', ''),
+                        ('reference', 'Referencia', 'reference', 'width: 12%;', ''),
+                    ] %}
+                    {% for key, label, col, extra_style, extra_class in sort_headers %}
+                    {% set next_sort_dir = 'asc' if sort_by == key and sort_dir == 'desc' else 'desc' %}
+                    <th style="{{ extra_style }}" data-col="{{ col }}" class="{{ extra_class }}">
+                        <button
+                            type="button"
+                            class="provider-col-sort"
+                            data-sort-by="{{ key }}"
+                            data-sort-dir="{{ next_sort_dir }}"
+                            onclick="sortProviderCatalog(this)"
+                            aria-label="Ordenar {{ label }} {{ 'de menor a mayor' if next_sort_dir == 'asc' else 'de mayor a menor' }}"
+                        >
+                            <span class="text-truncate">{{ label }}</span>
+                            {% if sort_by == key %}
+                            <span class="provider-sort-icon" aria-hidden="true">{{ '↑' if sort_dir == 'asc' else '↓' }}</span>
+                            {% endif %}
+                        </button>
+                    </th>
                     {% endfor %}
-                    <th style="width: 10%;" data-col="minimum">Mínimo (unidad)</th>
-                    <th style="width: 10%;" data-col="maximum">Máximo (unidad)</th>
-                    <th style="width: 10%;" data-col="replenish">Reponer (unidad)</th>
-                    <th style="width: 12%;" data-col="last_cost" class="text-end">Último costo (unidad)</th>
+                    <th style="width: 10%;" data-col="unit">Unidad</th>
+                    {% set next_stock_total_dir = 'asc' if sort_by == 'stock_total' and sort_dir == 'desc' else 'desc' %}
+                    <th style="width: 10%;" data-col="stock_total">
+                        <button
+                            type="button"
+                            class="provider-col-sort"
+                            data-sort-by="stock_total"
+                            data-sort-dir="{{ next_stock_total_dir }}"
+                            onclick="sortProviderCatalog(this)"
+                            aria-label="Ordenar stock total {{ 'de menor a mayor' if next_stock_total_dir == 'asc' else 'de mayor a menor' }}"
+                        >
+                            <span class="text-truncate">Stock total (unidad)</span>
+                            {% if sort_by == 'stock_total' %}
+                            <span class="provider-sort-icon" aria-hidden="true">{{ '↑' if sort_dir == 'asc' else '↓' }}</span>
+                            {% endif %}
+                        </button>
+                    </th>
+                    {% for store in stock_stores %}
+                    {% set stock_sort_key = 'stock:' ~ store.code %}
+                    {% set next_store_dir = 'asc' if sort_by == stock_sort_key and sort_dir == 'desc' else 'desc' %}
+                    <th style="width: 8%;" data-col="store-{{ store.code }}" class="text-end" title="{{ store.description }}">
+                        <button
+                            type="button"
+                            class="provider-col-sort w-100 justify-content-end"
+                            data-sort-by="{{ stock_sort_key }}"
+                            data-sort-dir="{{ next_store_dir }}"
+                            onclick="sortProviderCatalog(this)"
+                            aria-label="Ordenar {{ store.description }} {{ 'de menor a mayor' if next_store_dir == 'asc' else 'de mayor a menor' }}"
+                        >
+                            <span class="text-truncate">{{ store.description }}</span>
+                            {% if sort_by == stock_sort_key %}
+                            <span class="provider-sort-icon" aria-hidden="true">{{ '↑' if sort_dir == 'asc' else '↓' }}</span>
+                            {% endif %}
+                        </button>
+                    </th>
+                    {% endfor %}
+                    {% set extra_numeric_headers = [
+                        ('minimum', 'Mínimo (unidad)', 'minimum', 'width: 10%;', ''),
+                        ('maximum', 'Máximo (unidad)', 'maximum', 'width: 10%;', ''),
+                        ('replenish', 'Reponer (unidad)', 'replenish', 'width: 10%;', ''),
+                        ('last_cost', 'Último costo (unidad)', 'last_cost', 'width: 12%;', 'text-end'),
+                    ] %}
+                    {% for key, label, col, extra_style, extra_class in extra_numeric_headers %}
+                    {% set next_sort_dir = 'asc' if sort_by == key and sort_dir == 'desc' else 'desc' %}
+                    <th style="{{ extra_style }}" data-col="{{ col }}" class="{{ extra_class }}">
+                        <button
+                            type="button"
+                            class="provider-col-sort{% if extra_class == 'text-end' %} w-100 justify-content-end{% endif %}"
+                            data-sort-by="{{ key }}"
+                            data-sort-dir="{{ next_sort_dir }}"
+                            onclick="sortProviderCatalog(this)"
+                            aria-label="Ordenar {{ label }} {{ 'de menor a mayor' if next_sort_dir == 'asc' else 'de mayor a menor' }}"
+                        >
+                            <span class="text-truncate">{{ label }}</span>
+                            {% if sort_by == key %}
+                            <span class="provider-sort-icon" aria-hidden="true">{{ '↑' if sort_dir == 'asc' else '↓' }}</span>
+                            {% endif %}
+                        </button>
+                    </th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
