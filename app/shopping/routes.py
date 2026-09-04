@@ -106,12 +106,53 @@ def _provider_offer_session_key(provider_code):
     return f"provider_offer_items:{normalize_upper(provider_code)}"
 
 
+def _provider_offer_draft_session_key(provider_code):
+    return f"provider_offer_draft_id:{normalize_upper(provider_code)}"
+
+
+def _provider_offer_notes_session_key(provider_code):
+    return f"provider_offer_notes:{normalize_upper(provider_code)}"
+
+
+def _get_provider_offer_notes(provider_code):
+    return session.get(_provider_offer_notes_session_key(provider_code), '')
+
+
+def _set_provider_offer_notes(provider_code, notes):
+    session[_provider_offer_notes_session_key(provider_code)] = notes or ''
+    session.modified = True
+
+
 def _get_provider_offer_items(provider_code):
-    return session.get(_provider_offer_session_key(provider_code), [])
+    items_key = _provider_offer_session_key(provider_code)
+    if items_key in session:
+        return session.get(items_key, [])
+
+    # La sesion se perdio (navegador cerrado): restaurar el borrador activo guardado en BD.
+    draft = service.get_active_provider_offer_draft(provider_code)
+    if draft is not None:
+        session[items_key] = draft.items or []
+        session[_provider_offer_draft_session_key(provider_code)] = draft.correlative
+        _set_provider_offer_notes(provider_code, draft.provider_notes or '')
+        session.modified = True
+        return session[items_key]
+
+    return []
 
 
 def _set_provider_offer_items(provider_code, items):
     session[_provider_offer_session_key(provider_code)] = items
+    session.modified = True
+    draft = service.save_provider_offer_draft(
+        provider_code,
+        session.get(_provider_offer_draft_session_key(provider_code)),
+        items,
+        coin_code=session.get('provider_offer_coin_code'),
+    )
+    if draft is None:
+        session.pop(_provider_offer_draft_session_key(provider_code), None)
+    else:
+        session[_provider_offer_draft_session_key(provider_code)] = draft.correlative
     session.modified = True
 
 
@@ -593,6 +634,10 @@ def provider_panel():
     session['provider_offer_coin_code'] = selected_coin_code
     offer_items = _get_provider_offer_items(provider_code)
     offer_context = service.build_provider_offer_context(offer_items, selected_coin_symbol)
+    current_draft = service.get_provider_offer_draft(
+        provider_code,
+        session.get(_provider_offer_draft_session_key(provider_code)),
+    )
 
     return render_template(
         'providers/provider_panel.html',
@@ -602,6 +647,8 @@ def provider_panel():
         selected_coin_code=selected_coin_code,
         selected_coin_symbol=selected_coin_symbol,
         offer_context=offer_context,
+        provider_notes=_get_provider_offer_notes(provider_code),
+        current_draft_name=(current_draft.name or f'Lista #{current_draft.correlative}') if current_draft else '',
     )
 
 
@@ -1230,6 +1277,7 @@ def provider_offer_items_submit_review():
     for item in offer_items:
         _delete_provider_offer_item_image(provider_code, item)
     _set_provider_offer_items(provider_code, [])
+    _set_provider_offer_notes(provider_code, '')
     flash(f'Se envió la oferta a revisión con la referencia {review_list.reference}.', 'success')
     return redirect(url_for('shopping.provider_panel'))
 
@@ -1490,19 +1538,132 @@ def provider_offer_items_clear():
     for item in _get_provider_offer_items(provider_code):
         _delete_provider_offer_item_image(provider_code, item)
     _set_provider_offer_items(provider_code, [])
+    _set_provider_offer_notes(provider_code, '')
     offer_context = service.build_provider_offer_context([], _provider_offer_coin_symbol())
     return render_template('providers/partials/offer_details_container.html', offer_context=offer_context)
 
 
+@shopping_bp.route('/provider_offer_drafts/hold', methods=['POST'])
+@provider_session_required
+def provider_offer_drafts_hold():
+    provider_code = session.get('provider_code', '')
+    offer_items = _get_provider_offer_items(provider_code)
+
+    if not offer_items:
+        flash('No hay productos en la lista actual para poner en espera.', 'warning')
+        return redirect(url_for('shopping.provider_panel'))
+
+    draft_correlative = session.get(_provider_offer_draft_session_key(provider_code))
+    if not draft_correlative:
+        # Sesion previa al guardado automatico: persistir primero para poder poner en espera.
+        new_draft = service.save_provider_offer_draft(
+            provider_code,
+            None,
+            offer_items,
+            coin_code=session.get('provider_offer_coin_code'),
+        )
+        draft_correlative = new_draft.correlative if new_draft else None
+
+    draft = service.hold_provider_offer_draft(
+        provider_code,
+        draft_correlative,
+        provider_notes=_get_provider_offer_notes(provider_code),
+    )
+    if draft is None:
+        flash('No se pudo poner la lista en espera. Intenta nuevamente.', 'error')
+        return redirect(url_for('shopping.provider_panel'))
+
+    session.pop(_provider_offer_session_key(provider_code), None)
+    session.pop(_provider_offer_draft_session_key(provider_code), None)
+    session.pop(_provider_offer_notes_session_key(provider_code), None)
+    session.modified = True
+    flash(f'La lista {draft.name} quedo en espera. Puedes recuperarla desde el boton Cargar.', 'success')
+    return redirect(url_for('shopping.provider_panel'))
+
+
+@shopping_bp.route('/provider_offer_drafts/modal')
+@provider_session_required
+def provider_offer_drafts_modal():
+    provider_code = session.get('provider_code', '')
+    drafts = service.get_provider_on_hold_drafts(
+        provider_code,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template(
+        'providers/partials/offer_drafts_modal.html',
+        drafts=drafts,
+    )
+
+
+@shopping_bp.route('/provider_offer_drafts/<int:draft_correlative>/load', methods=['POST'])
+@provider_session_required
+def provider_offer_draft_load(draft_correlative):
+    provider_code = session.get('provider_code', '')
+    current_draft_id = session.get(_provider_offer_draft_session_key(provider_code))
+
+    if current_draft_id and current_draft_id != draft_correlative:
+        # El trabajo actual ya esta persistido: se pone en espera automaticamente.
+        service.hold_provider_offer_draft(
+            provider_code,
+            current_draft_id,
+            provider_notes=_get_provider_offer_notes(provider_code),
+        )
+
+    draft = service.load_provider_offer_draft(provider_code, draft_correlative)
+    if draft is None:
+        flash('No se encontro la lista en espera solicitada.', 'warning')
+        return redirect(url_for('shopping.provider_panel'))
+
+    session[_provider_offer_session_key(provider_code)] = draft.items or []
+    session[_provider_offer_draft_session_key(provider_code)] = draft.correlative
+    _set_provider_offer_notes(provider_code, draft.provider_notes or '')
+    session.modified = True
+    flash(f'Se cargo la lista {draft.name or f"Lista #{draft.correlative}"} para continuar editandola.', 'success')
+    return redirect(url_for('shopping.provider_panel'))
+
+
+@shopping_bp.route('/provider_offer_drafts/<int:draft_correlative>/delete', methods=['POST'])
+@provider_session_required
+def provider_offer_draft_delete(draft_correlative):
+    provider_code = session.get('provider_code', '')
+    draft = service.get_provider_offer_draft(provider_code, draft_correlative)
+    if draft is not None:
+        for item in (draft.items or []):
+            _delete_provider_offer_item_image(provider_code, item)
+        service.delete_provider_offer_draft(provider_code, draft_correlative)
+
+    drafts = service.get_provider_on_hold_drafts(
+        provider_code,
+        coin_symbol=_provider_offer_coin_symbol(),
+    )
+    return render_template(
+        'providers/partials/offer_drafts_content.html',
+        drafts=drafts,
+    )
+
+
+@shopping_bp.route('/provider_offer_drafts/notes', methods=['POST'])
+@provider_session_required
+def provider_offer_drafts_notes():
+    provider_code = session.get('provider_code', '')
+    notes = (request.form.get('provider_description') or '').strip()
+    _set_provider_offer_notes(provider_code, notes)
+
+    draft_correlative = session.get(_provider_offer_draft_session_key(provider_code))
+    if draft_correlative:
+        service.update_provider_offer_draft_notes(provider_code, draft_correlative, notes)
+
+    return ('', 204)
+
+
 @shopping_bp.route('/provider_logout')
 def provider_logout():
-    provider_code = session.get('provider_code', '')
-    for item in _get_provider_offer_items(provider_code):
-        _delete_provider_offer_item_image(provider_code, item)
+    # Las imagenes se conservan: el trabajo queda persistido como borrador en BD
+    # para que el proveedor lo recupere al iniciar sesion nuevamente.
     session.pop('provider_logged_in', None)
     session.pop('provider_username', None)
     session.pop('provider_code', None)
-    flash('Sesión de proveedor cerrada correctamente.', 'success')
+    flash('Sesión de proveedor cerrada correctamente. Tu lista quedo guardada.', 'success')
     return redirect(url_for('shopping.provider_login'))
 
 

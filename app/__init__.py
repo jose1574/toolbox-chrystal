@@ -243,6 +243,11 @@ def create_app():
             "shopping.provider_offer_items_unit",
             "shopping.provider_offer_items_remove",
             "shopping.provider_offer_items_clear",
+            "shopping.provider_offer_drafts_hold",
+            "shopping.provider_offer_drafts_modal",
+            "shopping.provider_offer_draft_load",
+            "shopping.provider_offer_draft_delete",
+            "shopping.provider_offer_drafts_notes",
             "shopping.provider_purchases",
             "shopping.provider_inventory",
         }

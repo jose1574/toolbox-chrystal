@@ -748,9 +748,9 @@
                         </div>
                         <div class="provider-summary-row mt-2 pt-2 border-top border-secondary-subtle">
                             <span>Estado</span>
-                            <span class="provider-status-pill">
+                            <span class="provider-status-pill" title="Tu trabajo se guarda automaticamente">
                                 <span class="provider-status-dot"></span>
-                                Borrador
+                                {{ current_draft_name or 'Borrador' }} · guardado
                             </span>
                         </div>
                     </div>
@@ -781,6 +781,36 @@
                 </div>
 
                 <div class="d-grid gap-2 mt-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <form method="post" action="{{ url_for('shopping.provider_offer_drafts_hold') }}" class="m-0 h-100">
+                                <button
+                                    type="submit"
+                                    class="provider-warning-btn btn w-100 h-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2"
+                                    title="Guarda la lista actual y la pone en espera para retomarla luego"
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    </svg>
+                                    <span>En espera</span>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-6">
+                            <button
+                                type="button"
+                                class="provider-secondary-btn btn w-100 h-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2"
+                                onclick="openProviderOfferDraftsModal()"
+                                title="Carga una lista que dejaste en espera"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>Cargar</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <form method="post" action="{{ url_for('shopping.provider_offer_items_submit_review') }}" class="m-0 d-grid gap-2">
                         <div class="summary-box p-3">
                             <label for="provider-offer-description" class="form-label small fw-semibold text-body-emphasis mb-2">Descripcion de la oferta</label>
@@ -790,7 +820,10 @@
                                 class="form-control provider-secondary-btn"
                                 rows="3"
                                 placeholder="Agrega un contexto breve para esta lista de oferta"
-                            ></textarea>
+                                hx-post="{{ url_for('shopping.provider_offer_drafts_notes') }}"
+                                hx-trigger="keyup changed delay:800ms"
+                                hx-swap="none"
+                            >{{ provider_notes or '' }}</textarea>
                         </div>
                         <button type="submit" class="btn btn-success shadow-sm border-0 rounded-3 w-100 fw-semibold py-2 d-inline-flex align-items-center justify-content-center gap-2">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -827,6 +860,7 @@
     <div id="provider-catalog-modal-container"></div>
     <div id="provider-new-product-modal-container"></div>
     <div id="provider-offer-lists-modal-container"></div>
+    <div id="provider-offer-drafts-modal-container"></div>
 
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -913,6 +947,13 @@
             });
         }
 
+        function openProviderOfferDraftsModal() {
+            htmx.ajax('GET', '{{ url_for("shopping.provider_offer_drafts_modal") }}', {
+                target: '#provider-offer-drafts-modal-container',
+                swap: 'innerHTML'
+            });
+        }
+
         function closeProviderCatalogModal() {
             const modalEl = document.getElementById('providerCatalogModal');
             if (!modalEl || !window.bootstrap) {
@@ -976,6 +1017,27 @@
             }
         }
 
+        function closeProviderOfferDraftsModal() {
+            const modalEl = document.getElementById('providerOfferDraftsModal');
+            if (!modalEl || !window.bootstrap) {
+                return;
+            }
+
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+            document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+
+            if (modalEl.parentNode) {
+                modalEl.parentNode.removeChild(modalEl);
+            }
+        }
+
         document.addEventListener('htmx:afterSwap', function (event) {
             if (event.detail?.target?.id !== 'provider-catalog-modal-container') {
                 return;
@@ -1010,6 +1072,20 @@
             }
 
             const modalEl = document.getElementById('providerOfferListsModal');
+            if (!modalEl || !window.bootstrap) {
+                return;
+            }
+
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        });
+
+        document.addEventListener('htmx:afterSwap', function (event) {
+            if (event.detail?.target?.id !== 'provider-offer-drafts-modal-container') {
+                return;
+            }
+
+            const modalEl = document.getElementById('providerOfferDraftsModal');
             if (!modalEl || !window.bootstrap) {
                 return;
             }

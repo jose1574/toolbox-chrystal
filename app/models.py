@@ -10073,3 +10073,50 @@ class SalesInvoiceDispatchEvent(db.Model):
         primaryjoin="SalesInvoiceDispatchEvent.user_code == User.code",
         backref="sales_invoice_dispatch_events",
     )
+
+
+class ProviderOfferDraft(db.Model):
+    __tablename__ = "provider_offer_drafts"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('ACTIVE','ON_HOLD')",
+            name="ck_provider_offer_drafts_status",
+        ),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    provider_code = db.Column(
+        db.ForeignKey("public.provider.code", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = db.Column(db.String)
+    coin_code = db.Column(db.String)
+    provider_notes = db.Column(db.String)
+    # PostgreSQL 9.1 no soporta JSON nativo: se persiste serializado en Text.
+    items_data = db.Column("items", db.Text, nullable=False, server_default="[]")
+    status = db.Column(db.String(16), nullable=False, server_default="ACTIVE", index=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    provider = db.relationship(
+        "Provider",
+        primaryjoin="ProviderOfferDraft.provider_code == Provider.code",
+        backref="offer_drafts",
+    )
+
+    @property
+    def items(self):
+        try:
+            return json.loads(self.items_data or "[]")
+        except (TypeError, ValueError):
+            return []
+
+    @items.setter
+    def items(self, value):
+        self.items_data = json.dumps(value or [])

@@ -11,6 +11,7 @@ from app.models import (
     Department,
     Mark,
     Product,
+    ProviderOfferDraft,
     PurchaseReviewList,
     PurchaseReviewListItem,
     PurchaseReviewNewProductItem,
@@ -1475,6 +1476,163 @@ def build_provider_offer_context(items, coin_symbol='$'):
         'total_amount': float(_quantize_money(total_amount)),
         'coin_symbol': coin_symbol or '$',
     }
+
+
+def get_provider_offer_draft(provider_code, draft_correlative):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return None
+
+    try:
+        correlative = int(draft_correlative)
+    except (TypeError, ValueError):
+        return None
+
+    return ProviderOfferDraft.query.filter_by(
+        correlative=correlative,
+        provider_code=normalized_provider_code,
+    ).first()
+
+
+def get_active_provider_offer_draft(provider_code):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return None
+
+    return (
+        ProviderOfferDraft.query.filter_by(
+            provider_code=normalized_provider_code,
+            status='ACTIVE',
+        )
+        .order_by(
+            ProviderOfferDraft.updated_at.desc(),
+            ProviderOfferDraft.correlative.desc(),
+        )
+        .first()
+    )
+
+
+def save_provider_offer_draft(provider_code, draft_correlative, items, coin_code=None, provider_notes=None):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return None
+
+    items = items or []
+    draft = None
+    if draft_correlative:
+        draft = get_provider_offer_draft(normalized_provider_code, draft_correlative)
+
+    if not items:
+        if draft is not None:
+            db.session.delete(draft)
+            db.session.commit()
+        return None
+
+    if draft is None:
+        draft = ProviderOfferDraft(
+            provider_code=normalized_provider_code,
+            status='ACTIVE',
+        )
+        db.session.add(draft)
+        db.session.flush()
+        draft.name = f'Lista #{draft.correlative}'
+
+    draft.items = items
+    draft.status = 'ACTIVE'
+    if coin_code:
+        draft.coin_code = coin_code
+    if provider_notes is not None:
+        draft.provider_notes = provider_notes
+    draft.updated_at = datetime.utcnow()
+    db.session.commit()
+    return draft
+
+
+def hold_provider_offer_draft(provider_code, draft_correlative, provider_notes=None):
+    draft = get_provider_offer_draft(provider_code, draft_correlative)
+    if draft is None:
+        return None
+
+    draft.status = 'ON_HOLD'
+    if provider_notes is not None:
+        draft.provider_notes = provider_notes
+    draft.updated_at = datetime.utcnow()
+    db.session.commit()
+    return draft
+
+
+def load_provider_offer_draft(provider_code, draft_correlative):
+    draft = get_provider_offer_draft(provider_code, draft_correlative)
+    if draft is None:
+        return None
+
+    draft.status = 'ACTIVE'
+    draft.updated_at = datetime.utcnow()
+    db.session.commit()
+    return draft
+
+
+def delete_provider_offer_draft(provider_code, draft_correlative):
+    draft = get_provider_offer_draft(provider_code, draft_correlative)
+    if draft is None:
+        return None
+
+    db.session.delete(draft)
+    db.session.commit()
+    return draft
+
+
+def update_provider_offer_draft_notes(provider_code, draft_correlative, notes):
+    draft = get_provider_offer_draft(provider_code, draft_correlative)
+    if draft is None:
+        return None
+
+    draft.provider_notes = notes
+    draft.updated_at = datetime.utcnow()
+    db.session.commit()
+    return draft
+
+
+def summarize_provider_offer_draft(draft, coin_symbol='$'):
+    items = draft.items or []
+    total_amount = Decimal('0')
+    for item in items:
+        quantity = _to_decimal(item.get('quantity') or 0)
+        unit_price = _to_decimal(item.get('unit_price') or 0)
+        discount_percent = _to_decimal(item.get('discount_percent') or 0)
+        discount_factor = Decimal('1') - (discount_percent / Decimal('100'))
+        total_amount += _quantize_money(quantity * unit_price * discount_factor)
+
+    return {
+        'correlative': draft.correlative,
+        'name': draft.name or f'Lista #{draft.correlative}',
+        'provider_notes': draft.provider_notes or '',
+        'status': draft.status or '',
+        'created_at': draft.created_at,
+        'updated_at': draft.updated_at,
+        'products_count': len(items),
+        'total_amount': float(_quantize_money(total_amount)),
+        'coin_symbol': coin_symbol or '$',
+    }
+
+
+def get_provider_on_hold_drafts(provider_code, coin_symbol='$'):
+    normalized_provider_code = normalize_code(provider_code)
+    if not normalized_provider_code:
+        return []
+
+    drafts = (
+        ProviderOfferDraft.query.filter_by(
+            provider_code=normalized_provider_code,
+            status='ON_HOLD',
+        )
+        .order_by(
+            ProviderOfferDraft.updated_at.desc(),
+            ProviderOfferDraft.correlative.desc(),
+        )
+        .all()
+    )
+    return [summarize_provider_offer_draft(draft, coin_symbol=coin_symbol) for draft in drafts]
 
 
 def _provider_review_status_meta(status):
