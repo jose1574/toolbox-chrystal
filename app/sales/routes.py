@@ -122,6 +122,38 @@ def scan_dispatch_product(dispatch_id):
     )
 
 
+@sales_bp.route("/dispatch/<int:dispatch_id>/manual-qty/<int:item_id>", methods=["GET"])
+@login_required
+def manual_dispatch_qty(dispatch_id, item_id):
+    dispatch = sales_service.get_dispatch(dispatch_id)
+    if not dispatch:
+        return render_template(
+            "sales/partials/dispatch_qty_modal.html",
+            item=None,
+            remaining=0,
+            error="No se encontro el despacho indicado.",
+        )
+
+    try:
+        item, remaining = sales_service.get_item_for_manual_qty(dispatch_id, item_id)
+    except sales_service.DispatchError as exc:
+        return render_template(
+            "sales/partials/dispatch_qty_modal.html",
+            item=None,
+            remaining=0,
+            error=str(exc),
+        )
+
+    return render_template(
+        "sales/partials/dispatch_qty_modal.html",
+        item=item,
+        remaining=remaining,
+        error=None,
+        scanned_code=item.product_code,
+        dispatch=dispatch,
+    )
+
+
 @sales_bp.route("/dispatch/<int:dispatch_id>/confirm-qty", methods=["POST"])
 @login_required
 def confirm_dispatch_qty(dispatch_id):

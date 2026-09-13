@@ -219,6 +219,17 @@ def find_pending_item_for_product(dispatch_id, scanned_code):
     return item, main_code, remaining_amount(item)
 
 
+def get_item_for_manual_qty(dispatch_id, item_id):
+    item = SalesInvoiceDispatchItem.query.get(item_id)
+    if not item or item.dispatch_id != dispatch_id:
+        raise DispatchError("No se encontro el producto en esta factura.")
+
+    remaining = remaining_amount(item)
+    if remaining <= QTY_EPSILON:
+        raise DispatchError("Este producto ya fue despachado por completo.")
+    return item, remaining
+
+
 def confirm_dispatch_quantity(dispatch_id, item_id, quantity, user_code):
     dispatch = get_dispatch(dispatch_id)
     if not dispatch:

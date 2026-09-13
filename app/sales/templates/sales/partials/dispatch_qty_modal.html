@@ -1,40 +1,81 @@
-<div class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center p-3" style="z-index: 1055;">
-    <div class="p-3 border w-100 shadow rounded bg-body" style="max-width: 28rem;">
-        {% if error and not item %}
-        <h3 class="h5 fw-semibold text-body mb-2">No se pudo cargar el producto</h3>
-        <p class="small text-danger mb-3">{{ error }}</p>
-        {% if scanned_code %}
-        <p class="small text-body-secondary">Codigo leido: <span class="font-monospace">{{ scanned_code }}</span></p>
-        {% endif %}
-        <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="document.getElementById('dispatch-qty-modal').innerHTML=''; document.getElementById('product_code') && document.getElementById('product_code').focus();">
-            Cerrar
+<div id="dispatch-qty-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-start align-items-md-center justify-content-center p-2 p-md-3 overflow-auto" style="z-index: 1055;"
+    onclick="if (event.target === this) closeDispatchQtyModal();">
+    <div class="dispatch-qty-dialog position-relative p-3 p-md-4 w-100 rounded-4 bg-body" style="max-width: 28rem;" onclick="event.stopPropagation()">
+        <button type="button" class="btn btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar"
+            onclick="closeDispatchQtyModal();">
+            <svg width="18" height="18" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
         </button>
-        {% else %}
-        <h3 class="h5 fw-semibold text-body mb-2">Cantidad a despachar</h3>
-        <p class="small text-body-secondary mb-1">{{ item.product_description or '-' }}</p>
-        <p class="small text-body-secondary mb-1">Codigo: <span class="font-monospace">{{ item.product_code }}</span></p>
-        <p class="small mb-1">Facturado: <span class="fw-semibold">{{ '%.2f'|format(item.invoiced_amount or 0) }}</span></p>
-        <p class="small mb-1">Ya despachado: <span class="fw-semibold">{{ '%.2f'|format(item.dispatched_amount or 0) }}</span></p>
-        <p class="small mb-3">Pendiente: <span class="fw-semibold">{{ '%.2f'|format(remaining) }}</span></p>
-        {% if error %}
-        <div class="alert alert-danger py-2 small">{{ error }}</div>
+        {% if error and not item %}
+        <h3 class="h5 fw-semibold text-body mb-2 pe-4">No se pudo cargar el producto</h3>
+        <p class="text-danger mb-0">{{ error }}</p>
+        {% if scanned_code %}
+        <p class="text-body-secondary mb-0 mt-2">Codigo leido: <span class="font-monospace">{{ scanned_code }}</span></p>
         {% endif %}
+        {% else %}
         <form hx-post="{{ url_for('sales.confirm_dispatch_qty', dispatch_id=dispatch.correlative) }}"
             hx-target="#dispatch-lines-wrap"
             hx-swap="outerHTML">
             <input type="hidden" name="item_id" value="{{ item.correlative }}">
-            <label for="dispatch-quantity" class="form-label small fw-semibold">Cantidad que esta entregando</label>
+            <label for="dispatch-quantity" class="form-label fw-semibold mb-1">Cantidad</label>
             <input type="number" step="0.01" min="0.01" max="{{ remaining }}" name="quantity" id="dispatch-quantity"
-                class="form-control" value="{{ '%.2f'|format(remaining) }}" required autofocus>
-            <div class="form-text">Puede despachar el restante completo o una cantidad parcial.</div>
-            <div class="d-flex gap-2 mt-3">
-                <button type="submit" class="btn btn-primary btn-sm flex-fill">Confirmar despacho</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill"
-                    onclick="document.getElementById('dispatch-qty-modal').innerHTML=''; document.getElementById('product_code') && document.getElementById('product_code').focus();">
-                    Cancelar
-                </button>
+                class="form-control form-control-lg text-center dispatch-qty-input" value="{{ '%.2f'|format(remaining) }}" required autofocus
+                inputmode="decimal" onfocus="this.select()">
+            {% if error %}
+            <div class="alert alert-danger py-2 mt-2 mb-0">{{ error }}</div>
+            {% endif %}
+            <div class="dispatch-product-name text-break mt-3 mb-1 pe-4">{{ item.product_description or '-' }}</div>
+            <div class="dispatch-product-code font-monospace text-break">{{ item.product_code }}</div>
+            <div class="dispatch-qty-meta text-body-secondary mt-1">
+                Por despachar {{ '%.2f'|format(remaining) }}
+                <span class="mx-1">·</span>
+                Facturado {{ '%.2f'|format(item.invoiced_amount or 0) }}
+                <span class="mx-1">·</span>
+                Despachado {{ '%.2f'|format(item.dispatched_amount or 0) }}
             </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">Confirmar despacho</button>
         </form>
         {% endif %}
     </div>
+    <script>
+        (function () {
+            const overlay = document.getElementById('dispatch-qty-overlay');
+            const input = document.getElementById('dispatch-quantity');
+            const viewport = window.visualViewport;
+
+            document.body.classList.add('dispatch-qty-open');
+
+            function syncToVisibleArea() {
+                if (!overlay || !overlay.isConnected) {
+                    document.body.classList.remove('dispatch-qty-open');
+                    if (viewport) {
+                        viewport.removeEventListener('resize', syncToVisibleArea);
+                        viewport.removeEventListener('scroll', syncToVisibleArea);
+                    }
+                    return;
+                }
+                if (!viewport) return;
+                overlay.style.top = viewport.offsetTop + 'px';
+                overlay.style.left = viewport.offsetLeft + 'px';
+                overlay.style.width = viewport.width + 'px';
+                overlay.style.height = viewport.height + 'px';
+            }
+
+            if (viewport) {
+                syncToVisibleArea();
+                viewport.addEventListener('resize', syncToVisibleArea);
+                viewport.addEventListener('scroll', syncToVisibleArea);
+            }
+
+            if (input) {
+                input.focus({ preventScroll: true });
+                setTimeout(function () {
+                    input.focus({ preventScroll: true });
+                    input.select();
+                    syncToVisibleArea();
+                }, 50);
+            }
+        })();
+    </script>
 </div>

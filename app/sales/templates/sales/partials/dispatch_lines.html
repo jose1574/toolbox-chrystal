@@ -1,15 +1,99 @@
 <div id="dispatch-lines-wrap">
+    {% set ns = namespace(pending=0, complete=0) %}
+    {% for item in items %}
+        {% if item.status == 'COMPLETE' %}
+            {% set ns.complete = ns.complete + 1 %}
+        {% else %}
+            {% set ns.pending = ns.pending + 1 %}
+        {% endif %}
+    {% endfor %}
     {% if success_message %}
-    <div class="alert alert-success py-2 small mb-3" role="status">{{ success_message }}</div>
+    <div class="alert alert-success py-2 mb-3" role="status">{{ success_message }}</div>
     <span id="dispatch-status-badge" hx-swap-oob="true"
         class="badge {% if dispatch.status == 'COMPLETE' %}text-bg-success{% elif dispatch.status == 'PARTIAL' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
         {% if dispatch.status == 'COMPLETE' %}Completo{% elif dispatch.status == 'PARTIAL' %}Parcial{% else %}Pendiente{% endif %}
     </span>
     {% endif %}
-    <div class="card border-secondary-subtle shadow-sm">
+
+    <div class="d-flex align-items-center justify-content-end px-3 px-sm-4 mb-2">
+        <div class="dropdown">
+            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Filtro de productos">
+                <svg width="16" height="16" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"></path>
+                </svg>
+                {% if ns.complete %}
+                <span class="badge text-bg-secondary">{{ ns.complete }}</span>
+                {% endif %}
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-2">
+                <label class="dropdown-item-text d-flex align-items-center gap-2 mb-0">
+                    <input type="checkbox" class="form-check-input m-0" id="show-completed-items">
+                    <span>Mostrar despachados</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    {% if items and ns.pending == 0 %}
+    <div class="dispatch-empty-pending text-center text-body-secondary py-3 px-3">No hay productos pendientes de despachar.</div>
+    {% endif %}
+
+    <div class="d-lg-none d-grid gap-2 px-3 px-sm-4">
+        {% for item in items %}
+        {% set remaining = (item.invoiced_amount or 0) - (item.dispatched_amount or 0) %}
+        <button type="button"
+            class="dispatch-product-card card shadow-sm text-start w-100 {% if item.status == 'COMPLETE' %}dispatch-item-complete border-success-subtle bg-success-subtle{% elif item.status == 'PARTIAL' %}border-warning-subtle bg-warning-subtle{% else %}border-secondary-subtle{% endif %}"
+            {% if remaining > 0 %}
+            title="Ingresar cantidad sin escanear"
+            hx-get="{{ url_for('sales.manual_dispatch_qty', dispatch_id=dispatch.correlative, item_id=item.correlative) }}"
+            hx-target="#dispatch-qty-modal"
+            hx-swap="innerHTML"
+            {% else %}
+            disabled
+            {% endif %}>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                    <div>
+                        <div class="text-body-secondary text-uppercase dispatch-qty-label">Por despachar</div>
+                        <div class="fw-bold lh-1 dispatch-qty-value">{{ '%.2f'|format(remaining if remaining > 0 else 0) }}</div>
+                    </div>
+                    {% if item.status == 'COMPLETE' %}
+                    <span class="badge text-bg-success flex-shrink-0">Completo</span>
+                    {% elif item.status == 'PARTIAL' %}
+                    <span class="badge text-bg-warning flex-shrink-0">Parcial</span>
+                    {% else %}
+                    <span class="badge text-bg-secondary flex-shrink-0">Pendiente</span>
+                    {% endif %}
+                </div>
+                <div class="dispatch-product-name text-break mb-1">{{ item.product_description or '-' }}</div>
+                <div class="dispatch-product-code font-monospace text-break">{{ item.product_code }}</div>
+                <div class="dispatch-qty-meta text-body-secondary">
+                    Facturado {{ '%.2f'|format(item.invoiced_amount or 0) }}
+                    <span class="mx-1">·</span>
+                    Despachado {{ '%.2f'|format(item.dispatched_amount or 0) }}
+                    <span class="mx-1">·</span>
+                    {% if participants is defined and participants.get(item.correlative) %}
+                    {% for name, qty in participants.get(item.correlative) %}
+                    {{ name }} ({{ '%.2f'|format(qty) }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    Sin despachar
+                    {% endif %}
+                </div>
+            </div>
+        </button>
+        {% else %}
+        <div class="card border-secondary-subtle shadow-sm">
+            <div class="card-body text-center text-body-secondary py-4">Esta factura no tiene productos.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card border-secondary-subtle shadow-sm d-none d-lg-block">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
+                <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Codigo</th>
@@ -19,12 +103,13 @@
                             <th class="text-end">Pendiente</th>
                             <th>Estado</th>
                             <th>Despachado por</th>
+                            <th class="text-end">Accion</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         {% set remaining = (item.invoiced_amount or 0) - (item.dispatched_amount or 0) %}
-                        <tr class="{% if item.status == 'COMPLETE' %}table-success{% elif item.status == 'PARTIAL' %}table-warning{% endif %}">
+                        <tr class="{% if item.status == 'COMPLETE' %}dispatch-item-complete table-success{% elif item.status == 'PARTIAL' %}table-warning{% endif %}">
                             <td class="fw-semibold font-monospace">{{ item.product_code }}</td>
                             <td>{{ item.product_description or '-' }}</td>
                             <td class="text-end">{{ '%.2f'|format(item.invoiced_amount or 0) }}</td>
@@ -46,10 +131,23 @@
                                 {% endfor %}
                                 {% else %}-{% endif %}
                             </td>
+                            <td class="text-end">
+                                {% if remaining > 0 %}
+                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                    title="Ingresar cantidad sin escanear"
+                                    hx-get="{{ url_for('sales.manual_dispatch_qty', dispatch_id=dispatch.correlative, item_id=item.correlative) }}"
+                                    hx-target="#dispatch-qty-modal"
+                                    hx-swap="innerHTML">
+                                    Ingresar
+                                </button>
+                                {% else %}
+                                <span class="text-body-secondary">-</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-body-secondary py-4">Esta factura no tiene productos.</td>
+                            <td colspan="8" class="text-center text-body-secondary py-4">Esta factura no tiene productos.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
