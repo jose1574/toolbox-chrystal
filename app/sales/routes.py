@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 
 from flask import Response, flash, make_response, redirect, render_template, request, url_for
@@ -5,7 +6,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.models import SalesInvoiceDispatchItem
-from app.reports.utils import render_pdf
+from app.reports.utils import generate_barcode, render_pdf
 from app.sales import sales_bp
 from app.sales.services import sales_service
 
@@ -84,6 +85,54 @@ def invoice_dispatch_detail(dispatch_id):
         flash("No se encontro el despacho indicado.", "error")
         return redirect(url_for("sales.invoice_dispatch"))
     return render_template("sales/invoice_dispatch.html", **_dispatch_context(dispatch))
+
+
+@sales_bp.route("/dispatch/<int:dispatch_id>/dispatched-pdf")
+@login_required
+def dispatched_products_pdf(dispatch_id):
+    dispatch = sales_service.get_dispatch(dispatch_id)
+    if not dispatch:
+        flash("No se encontro el despacho indicado.", "error")
+        return redirect(url_for("sales.invoice_dispatch"))
+
+    items = sales_service.get_dispatched_items(dispatch_id)
+    document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
+    barcode_base64 = generate_barcode(document_no) if document_no else None
+
+    estimated_line_units = 0
+    for item in items:
+        description = item.product_description or ""
+        estimated_line_units += max(1, math.ceil(len(description) / 22))
+    page_height_mm = max(120, 90 + (estimated_line_units * 6))
+
+    return Response(
+        render_pdf(
+            "sales/reports/dispatched_products_pdf.html",
+            {
+                "dispatch": dispatch,
+                "items": items,
+                "now": datetime.now(),
+                "user": current_user,
+                "barcode_base64": barcode_base64,
+            },
+            paper_format="Letter",
+            orientation="Portrait",
+            extra_options={
+                "page-width": "80mm",
+                "page-height": f"{page_height_mm}mm",
+                "margin-top": "0mm",
+                "margin-right": "0mm",
+                "margin-bottom": "0mm",
+                "margin-left": "0mm",
+                "disable-smart-shrinking": None,
+                "print-media-type": None,
+            },
+        ),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=despacho_{document_no}.pdf"
+        },
+    )
 
 
 @sales_bp.route("/dispatch/<int:dispatch_id>/scan-product", methods=["GET"])

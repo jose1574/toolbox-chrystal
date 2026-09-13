@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Despacho {{ dispatch.document_no or dispatch.sales_operation_correlative }}</title>
+    <style>
+        @page {
+            size: 77mm auto;
+            margin-right: 4mm;
+        }
+
+        :root {
+            --text: #111;
+            --muted: #444;
+            --border: #000;
+            --light: #f2f2f2;
+            --dark: #1f1f1f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            width: 77mm;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 77mm;
+            min-width: 77mm;
+            max-width: 77mm;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: var(--text);
+            letter-spacing: 0.6px;
+            line-height: 1.3;
+        }
+
+        .label {
+            border: 2px solid var(--border);
+            padding: 1mm;
+            width: 77mm;
+            min-width: 77mm;
+            max-width: 77mm;
+        }
+
+        .title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: var(--dark);
+            color: #fff;
+            border: 1px solid var(--border);
+            padding: 4px 5px;
+            margin-bottom: 5px;
+            letter-spacing: 1.4px;
+            text-align: center;
+        }
+
+        .meta {
+            margin: 0;
+            padding: 3px 4px;
+            border: 1px solid var(--border);
+            border-bottom: 0;
+            letter-spacing: 0.8px;
+        }
+
+        .meta:last-of-type {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .meta span {
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .barcode {
+            margin: 5px 0;
+            text-align: center;
+            border: 1px solid var(--border);
+            padding: 4px;
+        }
+
+        .barcode img {
+            max-width: 100%;
+            height: 16mm;
+            object-fit: contain;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 1px solid #222;
+            padding: 2px 3px;
+        }
+
+        th {
+            text-transform: uppercase;
+            font-size: 9px;
+            background: var(--light);
+            text-align: center;
+            letter-spacing: 1px;
+            border: 2px solid var(--border);
+        }
+
+        td {
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 0.6px;
+            line-height: 1.3;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .product-code {
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        tr,
+        td,
+        th {
+            page-break-inside: avoid;
+        }
+
+        .qty {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .col-code {
+            width: 30%;
+        }
+
+        .col-desc {
+            width: 52%;
+        }
+
+        .col-qty {
+            width: 18%;
+        }
+
+        .empty {
+            text-align: center;
+            font-style: italic;
+            color: var(--muted);
+        }
+
+        .totals {
+            margin-top: 4px;
+            padding: 4px;
+            border: 1px solid var(--border);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sign {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .sign-line {
+            margin: 14px 8px 4px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer {
+            margin-top: 6px;
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 0.8px;
+            border-top: 1px solid var(--border);
+            padding-top: 4px;
+        }
+
+        h3 {
+            text-align: center;
+            margin: 4px 0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="label">
+        <div class="title">Productos despachados</div>
+
+        <div class="meta"><span>Factura:</span> {{ dispatch.document_no or dispatch.sales_operation_correlative }}</div>
+        <div class="meta"><span>Cliente:</span> {{ dispatch.client_name or dispatch.client_code or '-' }}</div>
+        <div class="meta"><span>Fecha factura:</span> {% if dispatch.emission_date %}{{ dispatch.emission_date.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</div>
+        <div class="meta"><span>Impreso:</span> {{ now.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div class="">
+            <h3>Productos Despachados</h3>
+
+        {% if barcode_base64 %}
+        <div class="barcode">
+            <img src="data:image/png;base64,{{ barcode_base64 }}" alt="Barcode {{ dispatch.document_no or dispatch.sales_operation_correlative }}">
+        </div>
+        {% endif %}
+
+        {% set ns = namespace(total=0) %}
+        <table>
+            <colgroup>
+                <col class="col-code">
+                <col class="col-desc">
+                <col class="col-qty">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="qty">Cant.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                {% set ns.total = ns.total + (item.dispatched_amount or 0) %}
+                <tr>
+                    <td class="product-code">{{ item.product_code }}</td>
+                    <td>{{ item.product_description or '-' }}</td>
+                    <td class="qty">{{ '%.2f'|format(item.dispatched_amount or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="empty">No hay productos despachados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if items %}
+        <div class="totals">Items: {{ items|length }} &nbsp;·&nbsp; Cantidad: {{ '%.2f'|format(ns.total) }}</div>
+        {% endif %}
+
+        <div class="sign">
+            <div class="sign-line"></div>
+            Recibido conforme por el cliente
+        </div>
+    </div>
+</body>
+
+</html>

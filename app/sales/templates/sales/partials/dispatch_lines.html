@@ -1,6 +1,9 @@
 <div id="dispatch-lines-wrap">
-    {% set ns = namespace(pending=0, complete=0) %}
+    {% set ns = namespace(pending=0, complete=0, dispatched=0) %}
     {% for item in items %}
+        {% if (item.dispatched_amount or 0) > 0 %}
+            {% set ns.dispatched = ns.dispatched + 1 %}
+        {% endif %}
         {% if item.status == 'COMPLETE' %}
             {% set ns.complete = ns.complete + 1 %}
         {% else %}
@@ -15,7 +18,24 @@
     </span>
     {% endif %}
 
-    <div class="d-flex align-items-center justify-content-end px-3 px-sm-4 mb-2">
+    <div class="d-flex align-items-center justify-content-end gap-2 px-3 px-sm-4 mb-2">
+        {% if ns.dispatched %}
+        <a href="{{ url_for('sales.dispatched_products_pdf', dispatch_id=dispatch.correlative) }}"
+            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+            target="_blank" title="Imprimir productos despachados" aria-label="Imprimir productos despachados">
+            <svg width="16" height="16" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"></path>
+            </svg>
+        </a>
+        {% else %}
+        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" disabled
+            title="Aun no hay productos despachados">
+            <svg width="16" height="16" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"></path>
+            </svg>
+            Productos despachados
+        </button>
+        {% endif %}
         <div class="dropdown">
             <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                 data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Filtro de productos">

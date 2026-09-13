@@ -131,6 +131,14 @@ def get_dispatch_items(dispatch_id):
     )
 
 
+def get_dispatched_items(dispatch_id):
+    return [
+        item
+        for item in get_dispatch_items(dispatch_id)
+        if _as_float(item.dispatched_amount) > QTY_EPSILON
+    ]
+
+
 def _invoice_details(invoice_correlative):
     return (
         SalesOperationDetail.query.filter_by(main_correlative=invoice_correlative)
