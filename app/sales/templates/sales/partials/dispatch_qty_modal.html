@@ -19,9 +19,13 @@
             hx-swap="outerHTML">
             <input type="hidden" name="item_id" value="{{ item.correlative }}">
             <label for="dispatch-quantity" class="form-label fw-semibold mb-1">Cantidad</label>
-            <input type="number" step="0.01" min="0.01" max="{{ remaining }}" name="quantity" id="dispatch-quantity"
-                class="form-control form-control-lg text-center dispatch-qty-input" value="{{ '%.2f'|format(remaining) }}" required autofocus
-                inputmode="decimal" onfocus="this.select()">
+            <div class="input-group input-group-lg">
+                <button type="button" class="btn btn-outline-secondary" id="dispatch-qty-minus" aria-label="Disminuir cantidad">-</button>
+                <input type="number" step="0.01" min="0.01" max="{{ remaining }}" name="quantity" id="dispatch-quantity"
+                    class="form-control text-center dispatch-qty-input" value="{{ '%.2f'|format(remaining) }}" required autofocus
+                    inputmode="decimal" onfocus="this.select()">
+                <button type="button" class="btn btn-outline-secondary" id="dispatch-qty-plus" aria-label="Aumentar cantidad">+</button>
+            </div>
             {% if error %}
             <div class="alert alert-danger py-2 mt-2 mb-0">{{ error }}</div>
             {% endif %}
@@ -67,6 +71,46 @@
                 viewport.addEventListener('resize', syncToVisibleArea);
                 viewport.addEventListener('scroll', syncToVisibleArea);
             }
+
+            const maxQty = parseFloat(input?.getAttribute('max')) || 0;
+            const minQty = parseFloat(input?.getAttribute('min')) || 0.01;
+            const step = parseFloat(input?.getAttribute('step')) || 0.01;
+
+            function setQtyValue(newVal) {
+                let v = Math.round(newVal / step) * step;
+                if (v > maxQty) v = maxQty;
+                if (v < minQty) v = minQty;
+                input.value = v.toFixed(2);
+            }
+
+            document.getElementById('dispatch-qty-plus')?.addEventListener('click', function () {
+                const current = parseFloat(input.value) || 0;
+                setQtyValue(current + 1);
+                input.focus();
+            });
+
+            document.getElementById('dispatch-qty-minus')?.addEventListener('click', function () {
+                const current = parseFloat(input.value) || 0;
+                setQtyValue(current - 1);
+                input.focus();
+            });
+
+            input?.addEventListener('input', function () {
+                const val = parseFloat(input.value);
+                if (!isNaN(val)) {
+                    if (val > maxQty) input.value = maxQty.toFixed(2);
+                    if (val < minQty) input.value = minQty.toFixed(2);
+                }
+            });
+
+            input?.addEventListener('blur', function () {
+                const val = parseFloat(input.value);
+                if (isNaN(val) || val <= 0) {
+                    input.value = minQty.toFixed(2);
+                } else {
+                    setQtyValue(val);
+                }
+            });
 
             if (input) {
                 input.focus({ preventScroll: true });
