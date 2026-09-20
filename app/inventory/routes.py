@@ -2043,6 +2043,7 @@ def save_order_check():
     order.operation_comments = operation_comments or None
 
     try:
+        inventory_service.commit_origin_stock_for_checked_order(order)
         inventory_service.register_flow_step2(order_id, current_user.code)
         inventory_service.lock_packages_for_operation(order_id)
         inventory_service.clear_user_checking_progress(order_id, current_user.code)
@@ -2310,6 +2311,7 @@ def receive_transfer_operation(operation_id):
         return redirect(url_for("inventory.check_transfer_operation"))
 
     try:
+        inventory_service.release_origin_stock_for_received_order(operation)
         inventory_service.register_flow_step4(operation_id, current_user.code)
         inventory_service.process_inventory_operation(operation_id)
         inventory_service.clear_transfer_reception_progress(operation_id)

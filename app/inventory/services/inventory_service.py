@@ -3564,6 +3564,143 @@ def lock_packages_for_operation(operation_correlative):
   db.session.flush()
 
 
+def _lock_product_stock_rows(product_code, store_code):
+  return (
+    ProductsStock.query.filter(
+      func.upper(func.trim(ProductsStock.product_code)) == normalize_code(product_code),
+      func.upper(func.trim(ProductsStock.store)) == normalize_code(store_code),
+    )
+    .with_for_update()
+    .all()
+  )
+
+
+def _sort_stock_rows_for_committed(rows, preferred_location, for_release=False):
+  preferred = normalize_code(preferred_location)
+
+  def sort_key(row):
+    is_preferred = 0 if normalize_code(row.locations) == preferred else 1
+    if for_release:
+      capacity = float(row.committed_stock or 0)
+    else:
+      capacity = max(float(row.stock or 0) - float(row.committed_stock or 0), 0)
+    return (is_preferred, -capacity)
+
+  return sorted(rows, key=sort_key)
+
+
+def _increase_origin_committed_stock(product_code, store_code, quantity, preferred_location=None):
+  qty = float(quantity or 0)
+  if qty <= 1e-9:
+    return
+
+  rows = _lock_product_stock_rows(product_code, store_code)
+  if not rows:
+    raise ValueError(
+      f"No hay registro de stock para comprometer el producto {product_code} "
+      f"en el depósito {store_code}."
+    )
+
+  remaining = qty
+  ordered_rows = _sort_stock_rows_for_committed(rows, preferred_location, for_release=False)
+  for row in ordered_rows:
+    if remaining <= 1e-9:
+      break
+    available = max(float(row.stock or 0) - float(row.committed_stock or 0), 0)
+    if available <= 1e-9:
+      continue
+    take = min(available, remaining)
+    row.committed_stock = float(row.committed_stock or 0) + take
+    remaining -= take
+
+  if remaining > 1e-9:
+    target = ordered_rows[0]
+    target.committed_stock = float(target.committed_stock or 0) + remaining
+
+
+def _decrease_origin_committed_stock(product_code, store_code, quantity, preferred_location=None):
+  qty = float(quantity or 0)
+  if qty <= 1e-9:
+    return
+
+  rows = _lock_product_stock_rows(product_code, store_code)
+  if not rows:
+    return
+
+  remaining = qty
+  for row in _sort_stock_rows_for_committed(rows, preferred_location, for_release=True):
+    if remaining <= 1e-9:
+      break
+    current = max(float(row.committed_stock or 0), 0)
+    if current <= 1e-9:
+      continue
+    take = min(current, remaining)
+    row.committed_stock = current - take
+    remaining -= take
+
+
+def _get_checked_order_commit_items(order, use_original_checked_amount=False):
+  origin_store = normalize_code(order.store)
+  details = get_order_details(order.correlative)
+  differences = (
+    get_reception_difference_map(order.correlative) if use_original_checked_amount else {}
+  )
+  items = []
+  for detail in details:
+    product_code = normalize_code(detail.code_product)
+    if not product_code:
+      continue
+
+    if use_original_checked_amount:
+      difference = differences.get(detail.line)
+      quantity = float(
+        difference.original_amount if difference is not None else (detail.amount or 0)
+      )
+    else:
+      quantity = float(detail.amount or 0)
+
+    if quantity <= 1e-9:
+      continue
+
+    items.append(
+      {
+        "product_code": product_code,
+        "store": origin_store or normalize_code(detail.store),
+        "location": detail.locations or "00",
+        "quantity": quantity,
+      }
+    )
+  return items
+
+
+def commit_origin_stock_for_checked_order(order):
+  if not order:
+    raise ValueError("Orden no encontrada para comprometer stock.")
+
+  for item in _get_checked_order_commit_items(order, use_original_checked_amount=False):
+    _increase_origin_committed_stock(
+      item["product_code"],
+      item["store"],
+      item["quantity"],
+      item["location"],
+    )
+  db.session.flush()
+
+
+def release_origin_stock_for_received_order(order):
+  if not order:
+    raise ValueError("Orden no encontrada para liberar stock comprometido.")
+
+  for item in _get_checked_order_commit_items(order, use_original_checked_amount=True):
+    _decrease_origin_committed_stock(
+      item["product_code"],
+      item["store"],
+      item["quantity"],
+      item["location"],
+    )
+  db.session.flush()
+
+
 def rollback_session():
   db.session.rollback()
 
