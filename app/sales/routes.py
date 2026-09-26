@@ -14,8 +14,9 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app import db
+from app import db, get_device_id
 from app.models import SalesInvoiceDispatchItem
+from app.printer_config.services import printer_config_service
 from app.reports.utils import generate_barcode, render_pdf
 from app.sales import sales_bp
 from app.sales.services import printing_service, sales_service
@@ -161,13 +162,21 @@ def print_dispatched_products(dispatch_id):
     if not items:
         return jsonify(error="No hay productos despachados para imprimir."), 400
 
+    printer_name = printer_config_service.resolve_printer_name(
+        get_device_id(), "sales_dispatch"
+    )
+    if not printer_name:
+        return jsonify(
+            error="No hay una impresora configurada para este dispositivo ni "
+            "una predeterminada en el servidor. Configure una en "
+            "Configuracion de impresoras."
+        ), 400
+
     try:
-        printing_service.print_dispatched_products(
+        printing_service.print_pdf_to_windows_printer(
             _render_dispatched_products_pdf(dispatch, items),
-            host=current_app.config["DISPATCH_PRINTER_HOST"],
-            port=current_app.config["DISPATCH_PRINTER_PORT"],
+            printer_name=printer_name,
             width_dots=current_app.config["DISPATCH_PRINTER_WIDTH_DOTS"],
-            timeout=current_app.config["DISPATCH_PRINTER_TIMEOUT"],
         )
     except Exception:
         current_app.logger.exception(
@@ -175,7 +184,7 @@ def print_dispatched_products(dispatch_id):
         )
         return jsonify(error="No se pudo enviar el recibo a la impresora."), 502
 
-    return jsonify(message="El trabajo fue enviado a la impresora.")
+    return jsonify(message=f"El trabajo fue enviado a la impresora {printer_name}.")
 
 
 @sales_bp.route("/dispatch/<int:dispatch_id>/scan-product", methods=["GET"])

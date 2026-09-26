@@ -68,6 +68,7 @@ Módulos actuales:
 | `reports` | `/reports` | Reportes (PDF/Excel), códigos de barras, ubicación de productos (`utils.py`, `services/reports_service.py`) |
 | `document_manager` | `/documents` | Gestión de documentos/operaciones de inventario (recepción, transferencias) |
 | `products_label` | `/etiquetas` | Generación de etiquetas de productos (PDF) |
+| `printer_config` | `/printer-config` | Configuración de impresoras por reporte y dispositivo (cookie persistente `toolbox_device_id`); impresión vía driver de Windows (`win32print`/`win32ui`) |
 
 `notifications/` no contiene código activo (solo restos de rutas).
 

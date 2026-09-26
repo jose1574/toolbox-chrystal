@@ -445,23 +445,31 @@
                     </ul>
                 </li>
 
-                {# <li>
-                    <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-admin" aria-expanded="false" aria-controls="dropdown-admin">
+                <li>
+                    <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-configuration" aria-expanded="false" aria-controls="dropdown-configuration">
                         <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
+                            <path fill-rule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.14.7a1 1 0 01-.75.77l-.73.18a1 1 0 00-.35 1.77l.62.43a1 1 0 01.41 1.07l-.16.71a1 1 0 001.48 1.08l.63-.38a1 1 0 011.06 0l.63.38a1 1 0 001.48-1.08l-.16-.71a1 1 0 01.41-1.07l-.62-.43a1 1 0 00-.35-1.77l-.73-.18a1 1 0 01-.75-.77l-.14-.7zM10 13a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"></path>
                         </svg>
-                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Administración</span>
+                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Configuración</span>
                         <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
                             xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                         </svg>
                     </button>
-                    <ul id="dropdown-admin" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
-                        <li><a href="{{ url_for('admin.manage_users') }}" class="sidebar-subitem" role="menuitem">Usuarios</a></li>
+                    <ul id="dropdown-configuration" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
+                        <li>
+                            <a href="{{ url_for('printer_config.index') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-secondary" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v2a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2v-4a2 2 0 00-2-2H5zm1 3a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Configuración de Impresoras</span>
+                            </a>
+                        </li>
+                        {# <li><a href="{{ url_for('admin.manage_users') }}" class="sidebar-subitem" role="menuitem">Usuarios</a></li>
                         <li><a href="{{ url_for('admin.user_profile') }}" class="sidebar-subitem" role="menuitem">Perfiles</a></li>
-                        <li><a href="{{ url_for('admin.manage_menus') }}" class="sidebar-subitem" role="menuitem">Menús</a></li>
+                        <li><a href="{{ url_for('admin.manage_menus') }}" class="sidebar-subitem" role="menuitem">Menús</a></li> #}
                     </ul>
-                </li> #}
+                </li>
 
                 <li>
                     <a href="{{ url_for('document_manager.index') }}" class="sidebar-item">

@@ -10120,3 +10120,25 @@ class ProviderOfferDraft(db.Model):
     @items.setter
     def items(self, value):
         self.items_data = json.dumps(value or [])
+
+
+class PrinterSetting(db.Model):
+    __tablename__ = "printer_settings"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "device_id", "report_key", name="uq_printer_settings_device_report"
+        ),
+        {"schema": "toolbox", "extend_existing": True},
+    )
+
+    correlative = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(64), nullable=False, index=True)
+    report_key = db.Column(db.String(50), nullable=False)
+    printer_name = db.Column(db.String(255), nullable=False)
+    updated_by = db.Column(db.String(50))
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )

@@ -1,7 +1,8 @@
 import os
 import logging
+import uuid
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, redirect, url_for, session, flash
+from flask import Flask, g, request, redirect, url_for, session, flash
 from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
@@ -10,6 +11,27 @@ from logging.handlers import RotatingFileHandler
 
 
 db = SQLAlchemy()
+
+DEVICE_COOKIE_NAME = "toolbox_device_id"
+# 5 años: identifica de forma durable el navegador/dispositivo para preferencias
+# como la impresora seleccionada por reporte.
+DEVICE_COOKIE_MAX_AGE = 5 * 365 * 24 * 60 * 60
+
+
+def get_device_id():
+    """Devuelve el identificador del dispositivo (cookie persistente).
+
+    Si la petición actual aún no tiene cookie, genera un identificador nuevo y
+    lo deja en `g` para que `ensure_device_cookie` lo fije en la respuesta.
+    """
+    device_id = request.cookies.get(DEVICE_COOKIE_NAME)
+    if device_id:
+        return device_id
+    device_id = getattr(g, "device_id", None)
+    if not device_id:
+        device_id = uuid.uuid4().hex
+        g.device_id = device_id
+    return device_id
 
 
 def configure_production_logging(app):
@@ -280,6 +302,21 @@ def create_app():
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.url))
 
+    @app.after_request
+    def ensure_device_cookie(response):
+        """Fija la cookie persistente que identifica el dispositivo/navegador."""
+        if request.cookies.get(DEVICE_COOKIE_NAME):
+            return response
+        device_id = getattr(g, "device_id", None) or uuid.uuid4().hex
+        response.set_cookie(
+            DEVICE_COOKIE_NAME,
+            device_id,
+            max_age=DEVICE_COOKIE_MAX_AGE,
+            httponly=True,
+            samesite="Lax",
+        )
+        return response
+
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -307,6 +344,7 @@ def create_app():
     from app.document_manager import document_manager_bp
     from app.products_label import label_bp
     from app.sales import sales_bp
+    from app.printer_config import printer_config_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -319,6 +357,7 @@ def create_app():
     app.register_blueprint(document_manager_bp, url_prefix='/documents')
     app.register_blueprint(label_bp, url_prefix='/etiquetas')
     app.register_blueprint(sales_bp)
+    app.register_blueprint(printer_config_bp)
 
     return app
 
