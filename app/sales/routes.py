@@ -1,14 +1,24 @@
 import math
 from datetime import datetime
 
-from flask import Response, flash, make_response, redirect, render_template, request, url_for
+from flask import (
+    Response,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app import db
 from app.models import SalesInvoiceDispatchItem
 from app.reports.utils import generate_barcode, render_pdf
 from app.sales import sales_bp
-from app.sales.services import sales_service
+from app.sales.services import printing_service, sales_service
 
 
 def _dispatch_context(dispatch, extra=None):
@@ -87,6 +97,40 @@ def invoice_dispatch_detail(dispatch_id):
     return render_template("sales/invoice_dispatch.html", **_dispatch_context(dispatch))
 
 
+def _render_dispatched_products_pdf(dispatch, items):
+    document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
+    barcode_base64 = generate_barcode(document_no) if document_no else None
+
+    estimated_line_units = 0
+    for item in items:
+        description = item.product_description or ""
+        estimated_line_units += max(1, math.ceil(len(description) / 22))
+    page_height_mm = max(120, 90 + (estimated_line_units * 6))
+
+    return render_pdf(
+        "sales/reports/dispatched_products_pdf.html",
+        {
+            "dispatch": dispatch,
+            "items": items,
+            "now": datetime.now(),
+            "user": current_user,
+            "barcode_base64": barcode_base64,
+        },
+        paper_format="Letter",
+        orientation="Portrait",
+        extra_options={
+            "page-width": "80mm",
+            "page-height": f"{page_height_mm}mm",
+            "margin-top": "0mm",
+            "margin-right": "0mm",
+            "margin-bottom": "0mm",
+            "margin-left": "0mm",
+            "disable-smart-shrinking": None,
+            "print-media-type": None,
+        },
+    )
+
+
 @sales_bp.route("/dispatch/<int:dispatch_id>/dispatched-pdf")
 @login_required
 def dispatched_products_pdf(dispatch_id):
@@ -97,42 +141,41 @@ def dispatched_products_pdf(dispatch_id):
 
     items = sales_service.get_dispatched_items(dispatch_id)
     document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
-    barcode_base64 = generate_barcode(document_no) if document_no else None
-
-    estimated_line_units = 0
-    for item in items:
-        description = item.product_description or ""
-        estimated_line_units += max(1, math.ceil(len(description) / 22))
-    page_height_mm = max(120, 90 + (estimated_line_units * 6))
-
     return Response(
-        render_pdf(
-            "sales/reports/dispatched_products_pdf.html",
-            {
-                "dispatch": dispatch,
-                "items": items,
-                "now": datetime.now(),
-                "user": current_user,
-                "barcode_base64": barcode_base64,
-            },
-            paper_format="Letter",
-            orientation="Portrait",
-            extra_options={
-                "page-width": "80mm",
-                "page-height": f"{page_height_mm}mm",
-                "margin-top": "0mm",
-                "margin-right": "0mm",
-                "margin-bottom": "0mm",
-                "margin-left": "0mm",
-                "disable-smart-shrinking": None,
-                "print-media-type": None,
-            },
-        ),
+        _render_dispatched_products_pdf(dispatch, items),
         mimetype="application/pdf",
         headers={
             "Content-Disposition": f"inline; filename=despacho_{document_no}.pdf"
         },
     )
+
+
+@sales_bp.route("/dispatch/<int:dispatch_id>/print", methods=["POST"])
+@login_required
+def print_dispatched_products(dispatch_id):
+    dispatch = sales_service.get_dispatch(dispatch_id)
+    if not dispatch:
+        return jsonify(error="No se encontro el despacho indicado."), 404
+
+    items = sales_service.get_dispatched_items(dispatch_id)
+    if not items:
+        return jsonify(error="No hay productos despachados para imprimir."), 400
+
+    try:
+        printing_service.print_dispatched_products(
+            _render_dispatched_products_pdf(dispatch, items),
+            host=current_app.config["DISPATCH_PRINTER_HOST"],
+            port=current_app.config["DISPATCH_PRINTER_PORT"],
+            width_dots=current_app.config["DISPATCH_PRINTER_WIDTH_DOTS"],
+            timeout=current_app.config["DISPATCH_PRINTER_TIMEOUT"],
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Failed to print dispatched products for dispatch %s", dispatch_id
+        )
+        return jsonify(error="No se pudo enviar el recibo a la impresora."), 502
+
+    return jsonify(message="El trabajo fue enviado a la impresora.")
 
 
 @sales_bp.route("/dispatch/<int:dispatch_id>/scan-product", methods=["GET"])

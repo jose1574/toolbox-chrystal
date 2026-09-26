@@ -196,6 +196,18 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'una_clave_secreta_muy_segura_dev_123')
     app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
+    app.config['DISPATCH_PRINTER_HOST'] = os.getenv(
+        'DISPATCH_PRINTER_HOST', '192.168.33.78'
+    )
+    app.config['DISPATCH_PRINTER_PORT'] = int(
+        os.getenv('DISPATCH_PRINTER_PORT', '9100')
+    )
+    app.config['DISPATCH_PRINTER_WIDTH_DOTS'] = int(
+        os.getenv('DISPATCH_PRINTER_WIDTH_DOTS', '576')
+    )
+    app.config['DISPATCH_PRINTER_TIMEOUT'] = float(
+        os.getenv('DISPATCH_PRINTER_TIMEOUT', '5')
+    )
 
     login_manager = LoginManager(app)
     login_manager.login_view = 'auth.login'

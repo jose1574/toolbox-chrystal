@@ -77,6 +77,7 @@
         </div>
         <div class="col-12 col-lg-8">
             {% include 'sales/partials/dispatch_lines.html' %}
+            <div id="dispatch-print-status" class="mt-2" aria-live="polite"></div>
         </div>
     </div>
     <div id="dispatch-qty-modal"></div>
@@ -182,6 +183,51 @@
     document.body.addEventListener('dispatchQtySaved', function () {
         closeDispatchQtyModal();
         applyDispatchCompletedFilter();
+    });
+
+    document.body.addEventListener('click', async function (event) {
+        const button = event.target.closest('[data-dispatch-print]');
+        if (!button || button.disabled) return;
+
+        const status = document.getElementById('dispatch-print-status');
+        if (!status) return;
+
+        button.disabled = true;
+        status.className = 'mt-2 alert alert-info py-2';
+        status.textContent = 'Enviando recibo a la impresora...';
+
+        try {
+            const response = await fetch(button.dataset.printUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'No se pudo imprimir el recibo.');
+            }
+
+            status.className = 'mt-2 alert alert-success py-2';
+            status.textContent = result.message;
+        } catch (error) {
+            status.className = 'mt-2 alert alert-danger py-2';
+            status.replaceChildren();
+
+            const message = document.createElement('span');
+            message.textContent = error.message || 'No se pudo contactar con la impresora.';
+            status.append(message, document.createTextNode(' '));
+
+            const pdfLink = document.createElement('a');
+            pdfLink.href = button.dataset.pdfUrl;
+            pdfLink.target = '_blank';
+            pdfLink.rel = 'noopener';
+            pdfLink.textContent = 'Abrir PDF';
+            status.append(pdfLink);
+        } finally {
+            button.disabled = false;
+        }
     });
 
     applyDispatchCompletedFilter();
