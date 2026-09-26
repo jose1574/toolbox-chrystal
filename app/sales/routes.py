@@ -95,7 +95,15 @@ def invoice_dispatch_detail(dispatch_id):
     if not dispatch:
         flash("No se encontro el despacho indicado.", "error")
         return redirect(url_for("sales.invoice_dispatch"))
-    return render_template("sales/invoice_dispatch.html", **_dispatch_context(dispatch))
+    show_completion_choice = (
+        request.args.get("ask_report") == "1"
+        and dispatch.status == sales_service.STATUS_COMPLETE
+    )
+    return render_template(
+        "sales/invoice_dispatch.html",
+        **_dispatch_context(dispatch),
+        show_completion_choice=show_completion_choice,
+    )
 
 
 @sales_bp.route("/dispatch/reprints")
@@ -324,9 +332,16 @@ def confirm_dispatch_qty(dispatch_id):
             f"{dispatch.document_no or dispatch.sales_operation_correlative}.",
             "success",
         )
-        response = make_response("", 200)
-        response.headers["HX-Redirect"] = url_for("sales.invoice_dispatch")
-        return response
+        completion_url = url_for(
+            "sales.invoice_dispatch_detail",
+            dispatch_id=dispatch.correlative,
+            ask_report=1,
+        )
+        if request.headers.get("HX-Request"):
+            response = make_response("", 200)
+            response.headers["HX-Redirect"] = completion_url
+            return response
+        return redirect(completion_url)
 
     items = sales_service.get_dispatch_items(dispatch.correlative)
     participants = sales_service.get_dispatch_participants(dispatch.correlative)

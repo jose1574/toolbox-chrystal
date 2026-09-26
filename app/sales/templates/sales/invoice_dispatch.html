@@ -81,6 +81,34 @@
         </div>
     </div>
     <div id="dispatch-qty-modal"></div>
+    {% if show_completion_choice %}
+    <div class="modal fade" id="dispatch-completion-choice" tabindex="-1"
+        data-bs-backdrop="static" data-bs-keyboard="false"
+        aria-labelledby="dispatch-completion-choice-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="dispatch-completion-choice-title">Despacho completado</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">¿Deseas imprimir el despacho o mostrar el comprobante en pantalla?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                        data-dispatch-print
+                        data-print-url="{{ url_for('sales.print_dispatched_products', dispatch_id=dispatch.correlative) }}"
+                        data-pdf-url="{{ url_for('sales.dispatched_products_pdf', dispatch_id=dispatch.correlative) }}">
+                        Imprimir
+                    </button>
+                    <a href="{{ url_for('sales.dispatched_products_pdf', dispatch_id=dispatch.correlative) }}"
+                        class="btn btn-outline-primary" target="_blank" rel="noopener" data-bs-dismiss="modal">
+                        Mostrar en pantalla
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 </div>
 <style>
@@ -229,6 +257,16 @@
             button.disabled = false;
         }
     });
+
+    {% if show_completion_choice %}
+    const dispatchCompletionModal = document.getElementById('dispatch-completion-choice');
+    if (dispatchCompletionModal && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(dispatchCompletionModal).show();
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('ask_report');
+        window.history.replaceState({}, '', currentUrl);
+    }
+    {% endif %}
 
     applyDispatchCompletedFilter();
 </script>
