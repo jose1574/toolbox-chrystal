@@ -98,6 +98,29 @@ def invoice_dispatch_detail(dispatch_id):
     return render_template("sales/invoice_dispatch.html", **_dispatch_context(dispatch))
 
 
+@sales_bp.route("/dispatch/reprints")
+@login_required
+def dispatch_reprints():
+    page = request.args.get("page", 1, type=int) or 1
+    filters = {
+        "q": (request.args.get("q") or "").strip(),
+        "status": request.args.get("status") or "all",
+    }
+    if filters["status"] not in ("all", sales_service.STATUS_PARTIAL, sales_service.STATUS_COMPLETE):
+        filters["status"] = "all"
+
+    result = sales_service.list_dispatches_for_reprint(
+        page=page,
+        query_text=filters["q"],
+        status_filter=filters["status"],
+    )
+    result["page_numbers"] = range(
+        max(1, result["page"] - 2), min(result["pages"], result["page"] + 2) + 1
+    )
+    result["filters"] = filters
+    return render_template("sales/dispatch_reprints.html", **result)
+
+
 def _render_dispatched_products_pdf(dispatch, items):
     document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
     barcode_base64 = generate_barcode(document_no) if document_no else None

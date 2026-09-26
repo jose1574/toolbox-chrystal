@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Reimprimir despachos de ventas{% endblock %}
+{% block content %}
+<div class="container-fluid py-3 py-lg-4 px-2 px-sm-3 px-lg-4">
+    <div class="card shadow-sm border-0 bg-body">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
+                <div>
+                    <h1 class="h4 fw-bold mb-1">Despachos de ventas</h1>
+                    <p class="text-body-secondary mb-0">Consulta y reimpresión de productos despachados.</p>
+                </div>
+                <span class="badge text-bg-secondary align-self-start align-self-sm-center">{{ total }} despachos</span>
+            </div>
+
+            <form method="get" action="{{ url_for('sales.dispatch_reprints') }}" class="row g-2 align-items-end mb-3">
+                <div class="col-12 col-md-6 col-xl-5">
+                    <label for="dispatch-reprints-q" class="form-label fw-semibold mb-1">Buscar</label>
+                    <input type="search" id="dispatch-reprints-q" name="q" value="{{ filters.q }}"
+                        class="form-control" placeholder="Nombre del cliente, cédula o documento" autocomplete="off">
+                </div>
+                <div class="col-12 col-md-4 col-xl-3">
+                    <label for="dispatch-reprints-status" class="form-label fw-semibold mb-1">Estado</label>
+                    <select id="dispatch-reprints-status" name="status" class="form-select">
+                        <option value="all" {% if filters.status == 'all' %}selected{% endif %}>Todos los estados</option>
+                        <option value="PARTIAL" {% if filters.status == 'PARTIAL' %}selected{% endif %}>Parciales</option>
+                        <option value="COMPLETE" {% if filters.status == 'COMPLETE' %}selected{% endif %}>Completos</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">Buscar</button>
+                    <a href="{{ url_for('sales.dispatch_reprints') }}" class="btn btn-outline-secondary">Limpiar</a>
+                </div>
+            </form>
+
+            <div class="table-responsive border rounded-2">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Factura</th>
+                            <th scope="col">Cliente</th>
+                            <th scope="col">Fecha factura</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Actualizado</th>
+                            <th scope="col" class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            <td class="fw-semibold font-monospace text-nowrap">{{ row.document_no or row.correlative }}</td>
+                            <td class="text-break">
+                                <div>{{ row.client_name or '-' }}</div>
+                                {% if row.client_code %}<div class="small text-body-secondary">{{ row.client_code }}</div>{% endif %}
+                            </td>
+                            <td class="text-nowrap">{% if row.emission_date %}{{ row.emission_date.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if row.status == 'COMPLETE' %}
+                                <span class="badge text-bg-success">Completo</span>
+                                {% else %}
+                                <span class="badge text-bg-warning">Parcial</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-nowrap">{% if row.updated_at %}{{ row.updated_at.strftime('%d/%m/%Y %H:%M') }}{% else %}-{% endif %}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('sales.dispatched_products_pdf', dispatch_id=row.correlative) }}"
+                                    class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener"
+                                    aria-label="Reimprimir despacho {{ row.document_no or row.correlative }}">
+                                    Reimprimir
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-body-secondary py-4">No hay despachos con los filtros indicados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if pages > 1 %}
+            <nav class="mt-3" aria-label="Paginación de despachos">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('sales.dispatch_reprints', page=page - 1 if page > 1 else 1, q=filters.q, status=filters.status) }}"
+                            {% if page <= 1 %}aria-disabled="true" tabindex="-1"{% endif %}>Anterior</a>
+                    </li>
+                    {% for page_number in page_numbers %}
+                    <li class="page-item {% if page_number == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('sales.dispatch_reprints', page=page_number, q=filters.q, status=filters.status) }}"
+                            {% if page_number == page %}aria-current="page"{% endif %}>{{ page_number }}</a>
+                    </li>
+                    {% endfor %}
+                    <li class="page-item {% if page >= pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('sales.dispatch_reprints', page=page + 1 if page < pages else pages, q=filters.q, status=filters.status) }}"
+                            {% if page >= pages %}aria-disabled="true" tabindex="-1"{% endif %}>Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

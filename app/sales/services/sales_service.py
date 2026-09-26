@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app import db
@@ -371,3 +371,77 @@ def list_pending_dispatches(query_text="", status_filter="open"):
         )
 
     return db.session.execute(stmt).all()
+
+
+def list_dispatches_for_reprint(
+    page=1, page_size=25, query_text="", status_filter="all"
+):
+    page = max(1, int(page or 1))
+    page_size = max(1, int(page_size or 25))
+    has_dispatched_items = exists().where(
+        SalesInvoiceDispatchItem.dispatch_id == SalesInvoiceDispatch.correlative,
+        SalesInvoiceDispatchItem.dispatched_amount > QTY_EPSILON,
+    )
+    filters = [has_dispatched_items]
+
+    search = (query_text or "").strip()
+    if search:
+        like = f"%{search}%"
+        filters.append(
+            or_(
+                SalesInvoiceDispatch.document_no.ilike(like),
+                SalesInvoiceDispatch.client_name.ilike(like),
+                SalesOperation.client_name.ilike(like),
+                SalesOperation.client_id.ilike(like),
+            )
+        )
+
+    if status_filter in (STATUS_PARTIAL, STATUS_COMPLETE):
+        filters.append(SalesInvoiceDispatch.status == status_filter)
+
+    total = db.session.scalar(
+        select(func.count(SalesInvoiceDispatch.correlative))
+        .select_from(SalesInvoiceDispatch)
+        .join(
+            SalesOperation,
+            SalesOperation.correlative
+            == SalesInvoiceDispatch.sales_operation_correlative,
+        )
+        .where(*filters)
+    ) or 0
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+
+    stmt = (
+        select(
+            SalesInvoiceDispatch.correlative,
+            SalesInvoiceDispatch.document_no,
+            SalesInvoiceDispatch.client_code,
+            SalesInvoiceDispatch.client_name,
+            SalesInvoiceDispatch.emission_date,
+            SalesInvoiceDispatch.status,
+            SalesInvoiceDispatch.loaded_at,
+            SalesInvoiceDispatch.updated_at,
+            SalesOperation.client_id.label("client_id"),
+        )
+        .select_from(SalesInvoiceDispatch)
+        .join(
+            SalesOperation,
+            SalesOperation.correlative
+            == SalesInvoiceDispatch.sales_operation_correlative,
+        )
+        .where(*filters)
+        .order_by(
+            SalesInvoiceDispatch.updated_at.desc(),
+            SalesInvoiceDispatch.correlative.desc(),
+        )
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
+
+    return {
+        "rows": db.session.execute(stmt).all(),
+        "page": page,
+        "pages": total_pages,
+        "total": total,
+    }

@@ -442,6 +442,40 @@
                                 <span>Ubicación de productos</span>
                             </a>
                         </li>
+                        <li>
+                            <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-reprint" aria-expanded="false" aria-controls="dropdown-reprint">
+                                <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v2h2V4h10v2h2V4a2 2 0 00-2-2H5zm10 6H5a3 3 0 00-3 3v3h3v4h10v-4h3v-3a3 3 0 00-3-3zm-2 8H7v-4h6v4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Reimprimir</span>
+                                <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                </svg>
+                            </button>
+                            <ul id="dropdown-reprint" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
+                                <li>
+                                    <button type="button" class="sidebar-item sidebar-dropdown-trigger" data-dropdown="dropdown-reprint-sales" aria-expanded="false" aria-controls="dropdown-reprint-sales">
+                                        <svg class="sidebar-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span class="sidebar-text d-none flex-grow-1 ms-3 text-start text-nowrap">Ventas</span>
+                                        <svg class="sidebar-arrow d-none sidebar-arrow-icon flex-shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                    <ul id="dropdown-reprint-sales" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
+                                        <li>
+                                            <a href="{{ url_for('sales.dispatch_reprints') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                                <svg class="sidebar-mini-icon flex-shrink-0 text-success" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                                    <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H5zm2 3a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 000 2h4a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                <span>Despacho de ventas</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 
@@ -576,9 +610,27 @@
                 const panel = id ? document.getElementById(id) : null;
                 if (!panel) return;
 
-                closeSubmenus();
-                panel.classList.remove('d-none');
-                button.setAttribute('aria-expanded', 'true');
+                const ancestorMenus = [];
+                let parentMenu = button.closest('.sidebar-submenu');
+                while (parentMenu) {
+                    ancestorMenus.push(parentMenu);
+                    parentMenu = parentMenu.parentElement.closest('.sidebar-submenu');
+                }
+
+                const willOpen = panel.classList.contains('d-none');
+                submenus.forEach((submenu) => {
+                    const shouldRemainOpen = ancestorMenus.includes(submenu) || (willOpen && submenu === panel);
+                    submenu.classList.toggle('d-none', !shouldRemainOpen);
+                });
+
+                dropdownButtons.forEach((dropdownButton) => {
+                    const dropdownId = dropdownButton.getAttribute('data-dropdown');
+                    const dropdownPanel = dropdownId ? document.getElementById(dropdownId) : null;
+                    dropdownButton.setAttribute(
+                        'aria-expanded',
+                        dropdownPanel && !dropdownPanel.classList.contains('d-none') ? 'true' : 'false'
+                    );
+                });
             }
 
             function setExpandedState(value, persist = true) {
@@ -657,11 +709,7 @@
                     event.preventDefault();
                     event.stopPropagation();
 
-                    const id = button.getAttribute('data-dropdown');
-                    const panel = id ? document.getElementById(id) : null;
-                    const willOpen = panel && panel.classList.contains('d-none');
-                    closeSubmenus();
-                    if (willOpen) openDropdown(button);
+                    openDropdown(button);
                 });
             });
 
