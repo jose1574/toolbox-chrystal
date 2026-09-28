@@ -2,6 +2,7 @@
 {% block title %}Punto de venta{% endblock %}
 {% block body_class %}bg-body-tertiary pos-fullscreen{% endblock %}
 {% block content %}
+{% set pos_user_name = current_user.description or current_user.code %}
 <div class="pos-page h-100 d-flex flex-column">
   <header class="pos-band border-bottom px-2 px-lg-3 py-2">
     <div
@@ -29,6 +30,7 @@
               >Sucursal Centro · Caja 04</small
             ></span
           >
+          <span class="badge bg-danger text-nowrap">Ventas en desarrollo</span>
         </div>
         <nav
           class="nav nav-pills flex-nowrap"
@@ -55,11 +57,11 @@
         <div class="d-none d-md-flex align-items-center gap-2">
           <span
             class="pos-avatar rounded-circle d-flex align-items-center justify-content-center fw-bold"
-            >LM</span
+            >{{ pos_user_name.split()[:2] | map('first') | join('') | upper }}</span
           >
           <span class="d-none d-lg-grid lh-sm"
-            ><strong>Laura Méndez</strong
-            ><small class="text-secondary">Cajera principal</small></span
+            ><strong>{{ pos_user_name }}</strong
+            ><small class="text-secondary">{{ current_user.code }}</small></span
           >
           <span class="text-secondary" aria-hidden="true">⌄</span>
         </div>
@@ -166,18 +168,6 @@
                 >0 líneas · 0 uds</span
               >
             </div>
-            <div class="d-flex gap-2">
-              <button type="button" class="btn btn-sm btn-outline-secondary">
-                ☷ <span class="d-none d-sm-inline">Columnas</span>
-              </button>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                aria-label="Más opciones"
-              >
-                •••
-              </button>
-            </div>
           </div>
           <div class="table-responsive pos-table-scroll flex-grow-1">
             <table
@@ -193,7 +183,7 @@
                   <th scope="col"></th>
                 </tr>
               </thead>
-              {% include "sales/partials/pos_cart_lines.html" %}
+              {% include "bill_point/partials/pos_cart_lines.html" %}
             </table>
           </div>
            <section class="card pos-card" aria-label="Captura de producto">
