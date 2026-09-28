@@ -133,11 +133,14 @@ def _render_dispatched_products_pdf(dispatch, items):
     document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
     barcode_base64 = generate_barcode(document_no) if document_no else None
 
-    estimated_line_units = 0
+    estimated_extra_lines = 0
     for item in items:
         description = item.product_description or ""
-        estimated_line_units += max(1, math.ceil(len(description) / 22))
-    page_height_mm = max(120, 90 + (estimated_line_units * 6))
+        description_lines = max(1, math.ceil(len(description) / 22))
+        estimated_extra_lines += max(0, description_lines - 3)
+    page_height_mm = max(
+        120, 89 + (len(items) * 14.5) + (estimated_extra_lines * 2.8)
+    )
 
     return render_pdf(
         "sales/reports/dispatched_products_pdf.html",

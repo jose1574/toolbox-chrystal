@@ -6,11 +6,13 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import (
     ProductsCode,
+    ProductsUnit,
     SalesInvoiceDispatch,
     SalesInvoiceDispatchEvent,
     SalesInvoiceDispatchItem,
     SalesOperation,
     SalesOperationDetail,
+    Unit,
     User,
 )
 
@@ -124,11 +126,30 @@ def get_dispatch(dispatch_id):
 
 
 def get_dispatch_items(dispatch_id):
-    return (
+    items = (
         SalesInvoiceDispatchItem.query.filter_by(dispatch_id=dispatch_id)
         .order_by(SalesInvoiceDispatchItem.sales_line.asc())
         .all()
     )
+    dispatch = get_dispatch(dispatch_id)
+    if not items or not dispatch:
+        return items
+
+    unit_rows = db.session.execute(
+        select(SalesOperationDetail.line, Unit.description)
+        .outerjoin(
+            ProductsUnit, SalesOperationDetail.unit == ProductsUnit.correlative
+        )
+        .outerjoin(Unit, ProductsUnit.unit == Unit.code)
+        .where(
+            SalesOperationDetail.main_correlative
+            == dispatch.sales_operation_correlative
+        )
+    ).all()
+    units_by_line = {line: description for line, description in unit_rows}
+    for item in items:
+        item.unit_description = units_by_line.get(item.sales_line)
+    return items
 
 
 def get_dispatched_items(dispatch_id):

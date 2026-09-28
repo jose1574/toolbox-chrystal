@@ -80,6 +80,7 @@
                     <div>
                         <div class="text-body-secondary text-uppercase dispatch-qty-label">Por despachar</div>
                         <div class="fw-bold lh-1 dispatch-qty-value">{{ '%.2f'|format(remaining if remaining > 0 else 0) }}</div>
+                        <div class="small text-body-secondary">{{ item.unit_description or 'Unidad no especificada' }}</div>
                     </div>
                     {% if item.status == 'COMPLETE' %}
                     <span class="badge text-bg-success flex-shrink-0">Completo</span>
@@ -121,6 +122,7 @@
                         <tr>
                             <th>Codigo</th>
                             <th>Descripcion</th>
+                            <th>Unidad</th>
                             <th class="text-end">Facturado</th>
                             <th class="text-end">Despachado</th>
                             <th class="text-end">Pendiente</th>
@@ -135,6 +137,7 @@
                         <tr class="{% if item.status == 'COMPLETE' %}dispatch-item-complete table-success{% elif item.status == 'PARTIAL' %}table-warning{% endif %}">
                             <td class="fw-semibold font-monospace">{{ item.product_code }}</td>
                             <td>{{ item.product_description or '-' }}</td>
+                            <td>{{ item.unit_description or '-' }}</td>
                             <td class="text-end">{{ '%.2f'|format(item.invoiced_amount or 0) }}</td>
                             <td class="text-end">{{ '%.2f'|format(item.dispatched_amount or 0) }}</td>
                             <td class="text-end">{{ '%.2f'|format(remaining if remaining > 0 else 0) }}</td>
@@ -170,7 +173,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-body-secondary py-4">Esta factura no tiene productos.</td>
+                            <td colspan="9" class="text-center text-body-secondary py-4">Esta factura no tiene productos.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
