@@ -22,6 +22,12 @@ from app.sales import sales_bp
 from app.sales.services import printing_service, sales_service
 
 
+@sales_bp.route("/point-of-sale")
+@login_required
+def point_of_sale():
+    return render_template("bill_point/point_of_sale_bootstrap.html")
+
+
 def _dispatch_context(dispatch, extra=None):
     items = sales_service.get_dispatch_items(dispatch.correlative)
     context = {

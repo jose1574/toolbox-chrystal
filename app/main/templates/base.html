@@ -182,7 +182,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 
-<body class="bg-body-tertiary" id="main-content">
+<body class="{% block body_class %}bg-body-tertiary{% endblock %}" id="main-content">
     <div id="app-shell">
     <nav>
         <aside id="default-sidebar"
@@ -367,6 +367,14 @@
                         </svg>
                     </button>
                     <ul id="dropdown-sales" class="sidebar-submenu d-none py-2 list-unstyled d-grid gap-1" role="menu">
+                        <li>
+                            <a href="{{ url_for('sales.point_of_sale') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-success" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M3 3a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2H3zm2 3a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm0 4a1 1 0 011-1h3a1 1 0 110 2H6a1 1 0 01-1-1zm8 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Punto de venta</span>
+                            </a>
+                        </li>
                         <li>
                             <a href="{{ url_for('sales.invoice_dispatch') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
                                 <svg class="sidebar-mini-icon flex-shrink-0 text-primary" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
