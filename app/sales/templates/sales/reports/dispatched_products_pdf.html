@@ -50,15 +50,18 @@
         }
 
         .meta-row {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 2mm;
-            padding: 1.25mm 2mm;
+            display: table;
+            width: 100%;
             border: 1px solid #000;
             border-bottom: 0;
             font-size: 8px;
             line-height: 1.2;
+        }
+
+        .meta-row > .meta-label,
+        .meta-row > .meta-value,
+        .meta-row > .meta-date {
+            padding: 1.25mm 2mm;
         }
 
         .meta-row:last-child {
@@ -66,16 +69,26 @@
         }
 
         .meta-label {
-            flex-shrink: 0;
             font-weight: 800;
             text-transform: uppercase;
+        }
+
+        .meta-row > .meta-label {
+            display: table-cell;
+            width: 1%;
+            white-space: nowrap;
         }
 
         .meta-value {
             min-width: 0;
             font-weight: 500;
-            text-align: right;
             overflow-wrap: anywhere;
+        }
+
+        .meta-row > .meta-value {
+            display: table-cell;
+            width: 99%;
+            text-align: right;
         }
 
         .meta-row-dates {
@@ -83,10 +96,23 @@
             font-size: 7.5px;
         }
 
-        .meta-date {
-            display: flex;
-            gap: 1mm;
+        .meta-row-dates .meta-date {
+            display: table-cell;
+            width: 50%;
             min-width: 0;
+        }
+
+        .meta-row-dates .meta-date:last-child {
+            text-align: right;
+        }
+
+        .meta-date .meta-label,
+        .meta-date .meta-value {
+            display: inline;
+        }
+
+        .meta-date .meta-label {
+            margin-right: 1mm;
         }
 
         .meta-date .meta-value {

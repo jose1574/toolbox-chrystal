@@ -181,7 +181,7 @@ def _render_dispatched_products_pdf(dispatch, items):
         description_lines = max(1, math.ceil(len(description) / 22))
         estimated_extra_lines += max(0, description_lines - 3)
     page_height_mm = max(
-        120, 89 + (len(items) * 14.5) + (estimated_extra_lines * 2.8)
+        120, 110 + (len(items) * 14.5) + (estimated_extra_lines * 2.8)
     )
 
     return render_pdf(
