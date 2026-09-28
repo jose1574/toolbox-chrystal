@@ -25,7 +25,17 @@ from app.sales.services import printing_service, sales_service
 @sales_bp.route("/point-of-sale")
 @login_required
 def point_of_sale():
-    return render_template("bill_point/point_of_sale_bootstrap.html")
+    return render_template("bill_point/sales_bill_point.html")
+
+
+@sales_bp.route("/point-of-sale/products")
+@login_required
+def pos_product_catalog():
+    result = sales_service.list_pos_products(
+        page=request.args.get("page", 1, type=int),
+        query_text=request.args.get("q", ""),
+    )
+    return render_template("bill_point/partials/product_catalog_results.html", **result)
 
 
 def _dispatch_context(dispatch, extra=None):

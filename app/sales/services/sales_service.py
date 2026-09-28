@@ -5,13 +5,17 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.models import (
+    Coin,
+    Product,
     ProductsCode,
+    ProductsStock,
     ProductsUnit,
     SalesInvoiceDispatch,
     SalesInvoiceDispatchEvent,
     SalesInvoiceDispatchItem,
     SalesOperation,
     SalesOperationDetail,
+    Store,
     Unit,
     User,
 )
@@ -47,6 +51,81 @@ def _as_float(value):
         return float(value or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def list_pos_products(page=1, per_page=25, query_text=""):
+    page = max(int(page or 1), 1)
+    per_page = min(max(int(per_page or 25), 1), 100)
+    query_text = (query_text or "").strip()
+
+    statement = (
+        select(
+            Product.code.label("code"),
+            Product.description.label("description"),
+            Product.coin.label("coin_code"),
+            Coin.symbol.label("coin_symbol"),
+            ProductsUnit.offer_price.label("offer_price"),
+            ProductsUnit.minimum_price.label("minimum_price"),
+            ProductsUnit.maximum_price.label("maximum_price"),
+        )
+        .outerjoin(
+            ProductsUnit,
+            (ProductsUnit.product_code == Product.code)
+            & ProductsUnit.main_unit.is_(True),
+        )
+        .outerjoin(Coin, Coin.code == Product.coin)
+        .order_by(Product.code.asc())
+    )
+    if query_text:
+        search_pattern = f"%{query_text}%"
+        statement = statement.where(
+            or_(
+                Product.code.ilike(search_pattern),
+                Product.description.ilike(search_pattern),
+            )
+        )
+
+    count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
+    total = db.session.scalar(count_statement) or 0
+    pages = max((total + per_page - 1) // per_page, 1)
+    page = min(page, pages)
+    products = db.session.execute(
+        statement.limit(per_page).offset((page - 1) * per_page)
+    ).mappings().all()
+    products = [dict(product) for product in products]
+    stores = db.session.execute(
+        select(Store.code, Store.description).order_by(
+            Store.description.asc(), Store.code.asc()
+        )
+    ).all()
+
+    stock_by_product = {product["code"]: {} for product in products}
+    product_codes = list(stock_by_product)
+    if product_codes:
+        stock_rows = db.session.execute(
+            select(
+                ProductsStock.product_code,
+                ProductsStock.store,
+                func.sum(func.coalesce(ProductsStock.stock, 0)).label("stock"),
+            )
+            .where(ProductsStock.product_code.in_(product_codes))
+            .group_by(ProductsStock.product_code, ProductsStock.store)
+        ).all()
+        for product_code, store_code, stock in stock_rows:
+            stock_by_product[product_code][store_code] = stock or 0
+
+    for product in products:
+        product["stock_by_store"] = stock_by_product[product["code"]]
+
+    return {
+        "products": products,
+        "stores": stores,
+        "page": page,
+        "pages": pages,
+        "total": total,
+        "per_page": per_page,
+        "query_text": query_text,
+    }
 
 
 def remaining_amount(item):

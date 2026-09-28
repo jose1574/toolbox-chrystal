@@ -1,0 +1,183 @@
+<div
+  class="pos-catalog-results"
+  data-catalog-count="{{ products|length }}"
+  data-catalog-total="{{ total }}"
+>
+  <div class="pos-catalog-table-scroll">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 text-nowrap pos-catalog-table">
+        <thead>
+          <tr>
+            <th scope="col" data-catalog-col="product">Producto / código</th>
+            {% for store in stores %}
+            <th
+              scope="col"
+              class="text-end"
+              data-catalog-col="store"
+              data-catalog-store="{{ store.code }}"
+              data-catalog-store-name="{{ store.description or store.code }}"
+            >Exist. {{ store.description or store.code }}</th>
+            {% endfor %}
+            <th scope="col" class="text-end" data-catalog-col="total">Total</th>
+            <th scope="col" class="text-end" data-catalog-col="offer">P. oferta</th>
+            <th scope="col" class="text-end" data-catalog-col="minimum">P. mínimo</th>
+            <th scope="col" class="text-end" data-catalog-col="maximum">P. máximo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td class="pos-catalog-product" data-catalog-col="product">
+              <strong>{{ product.description or '-' }}</strong>
+              <span class="font-monospace">{{ product.code }}</span>
+            </td>
+            {% for store in stores %}
+            <td class="text-end" data-catalog-store="{{ store.code }}">
+              {{ '%.2f'|format(product.stock_by_store.get(store.code, 0)|float) }}
+            </td>
+            {% endfor %}
+            <td class="text-end fw-bold" data-catalog-col="total">
+              {{ '%.2f'|format(product.stock_by_store.values()|sum|float) }}
+            </td>
+            <td class="text-end" data-catalog-col="offer">
+              {% if product.offer_price is not none %}
+              {{ product.coin_symbol or product.coin_code or '' }} {{ '%.2f'|format(product.offer_price|float) }}
+              {% else %}<span class="text-secondary">-</span>{% endif %}
+            </td>
+            <td class="text-end" data-catalog-col="minimum">
+              {% if product.minimum_price is not none %}
+              {{ product.coin_symbol or product.coin_code or '' }} {{ '%.2f'|format(product.minimum_price|float) }}
+              {% else %}<span class="text-secondary">-</span>{% endif %}
+            </td>
+            <td class="text-end" data-catalog-col="maximum">
+              {% if product.maximum_price is not none %}
+              {{ product.coin_symbol or product.coin_code or '' }} {{ '%.2f'|format(product.maximum_price|float) }}
+              {% else %}<span class="text-secondary">-</span>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="{{ stores|length + 5 }}" class="py-5 text-center text-body-secondary">
+              No se encontraron productos.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pos-catalog-footer">
+    <span class="small text-body-secondary">
+      {% if total %}{{ (page - 1) * per_page + 1 }}-{{ [page * per_page, total]|min }} de {{ total }}{% else %}0 de 0{% endif %}
+    </span>
+    <nav aria-label="Paginación de productos">
+      <div class="d-flex gap-2">
+        <button
+          type="button"
+          class="btn pos-catalog-page-button"
+          hx-get="{{ url_for('sales.pos_product_catalog', page=page - 1) }}"
+          hx-include="#product-catalog-search-form"
+          hx-target="#product-catalog-results"
+          hx-swap="innerHTML"
+          aria-label="Página anterior"
+          {% if page <= 1 %}disabled{% endif %}
+        >
+          <img src="{{ url_for('sales.static', filename='product_catalog/chevron-left.svg') }}" alt="" />
+        </button>
+        <button
+          type="button"
+          class="btn pos-catalog-page-button"
+          hx-get="{{ url_for('sales.pos_product_catalog', page=page + 1) }}"
+          hx-include="#product-catalog-search-form"
+          hx-target="#product-catalog-results"
+          hx-swap="innerHTML"
+          aria-label="Página siguiente"
+          {% if page >= pages %}disabled{% endif %}
+        >
+          <img src="{{ url_for('sales.static', filename='product_catalog/chevron-right.svg') }}" alt="" />
+        </button>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<style>
+  .pos-catalog-table-scroll {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+  }
+  .pos-catalog-table {
+    min-width: 1120px;
+    --bs-table-bg: #0b1220;
+    --bs-table-color: #f8fafc;
+    --bs-table-border-color: #1f2937;
+    --bs-table-hover-bg: #111c2e;
+    --bs-table-hover-color: #f8fafc;
+    font-size: 0.8125rem;
+  }
+  .pos-catalog-table thead th {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    padding: 0.75rem 0.875rem;
+    color: #94a3b8;
+    background: #0f172a;
+    border-bottom-color: #1f2937;
+    font-size: 0.625rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .pos-catalog-table tbody td {
+    padding: 0.75rem 0.875rem;
+  }
+  .pos-catalog-product {
+    min-width: 19rem;
+    max-width: 30rem;
+  }
+  .pos-catalog-product strong,
+  .pos-catalog-product span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pos-catalog-product strong {
+    color: #f8fafc;
+    font-weight: 600;
+  }
+  .pos-catalog-product span {
+    margin-top: 0.2rem;
+    color: #94a3b8;
+    font-size: 0.6875rem;
+  }
+  .pos-catalog-footer {
+    display: flex;
+    min-height: 3.625rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: #111827;
+    border-top: 1px solid #1f2937;
+  }
+  .pos-catalog-page-button {
+    display: inline-flex;
+    width: 1.875rem;
+    height: 1.875rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 0.375rem;
+  }
+  .pos-catalog-page-button img {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .pos-catalog-page-button:disabled {
+    opacity: 0.45;
+  }
+</style>
