@@ -34,6 +34,7 @@ def pos_product_catalog():
     result = sales_service.list_pos_products(
         page=request.args.get("page", 1, type=int),
         query_text=request.args.get("q", ""),
+        profile_code=current_user.profile,
     )
     return render_template("bill_point/partials/product_catalog_results.html", **result)
 

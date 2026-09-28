@@ -162,8 +162,8 @@
           >
             <div class="d-flex align-items-center gap-2">
               <h1 class="h6 mb-0" id="pos-lines-title">Artículos</h1>
-              <span class="badge pos-lines-count rounded-pill"
-                >6 líneas · 18 uds</span
+              <span class="badge pos-lines-count rounded-pill" id="pos-lines-count"
+                >0 líneas · 0 uds</span
               >
             </div>
             <div class="d-flex gap-2">
@@ -189,13 +189,11 @@
                   <th scope="col" class="text-center">Cant. <kbd>F2</kbd></th>
                   <th scope="col">Unidad <kbd>F12</kbd></th>
                   <th scope="col" class="text-end">Precio <kbd>F8</kbd></th>
-                  <th scope="col" class="text-end text-nowrap">Precio (VES)</th>
-                  <th scope="col" class="text-center">Desc.</th>
                   <th scope="col" class="text-end">Total</th>
                   <th scope="col"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="pos-cart-lines" hidden>
                 <tr>
                   <td>
                     <div class="d-grid lh-sm">
@@ -567,38 +565,15 @@
             <div
               class="d-flex justify-content-between gap-2 text-secondary small mb-3"
             >
-              <span>FAC-1024 · 6 líneas</span
-              ><strong class="text-body">$55.04</strong>
+              <span id="pos-summary-count">0 líneas · 0 uds</span
+              ><strong class="text-body" id="pos-summary-total">—</strong>
             </div>
-            <div class="d-grid gap-2 small">
-              <div class="d-flex justify-content-between gap-2">
-                <span>Subtotal</span><strong>$58.40</strong>
-              </div>
-              <div class="d-flex justify-content-between gap-2">
-                <span>Descuento por línea</span
-                ><strong class="text-success">−$2.80</strong>
-              </div>
-              <div class="d-flex justify-content-between gap-2">
-                <span>Base imponible</span><strong>$48.00</strong>
-              </div>
-              <div class="d-flex justify-content-between gap-2">
-                <span>IVA (16%)</span><strong>$7.68</strong>
-              </div>
-            </div>
+            <div class="d-grid gap-2 small" id="pos-cart-currency-totals" aria-live="polite"></div>
             <div
               class="d-flex justify-content-between align-items-center gap-2 border-top mt-3 pt-3"
             >
               <strong>Total a pagar</strong
-              ><strong class="pos-grand-total">$55.68</strong>
-            </div>
-            <div
-              class="d-flex justify-content-between align-items-start gap-2 border-top mt-3 pt-3 small"
-            >
-              <span class="text-secondary"
-                >Tasa BCV · 1 USD<small class="d-block mt-1"
-                  >Actualizado hoy</small
-                ></span
-              ><strong>Bs. 35,00</strong>
+              ><strong class="pos-grand-total" id="pos-grand-total">—</strong>
             </div>
             <button class="btn btn-success w-100 mt-3 fw-bold" type="button">
               <span aria-hidden="true">◉</span> COBRAR VENTA <kbd>F9</kbd>
@@ -754,7 +729,220 @@
     const results = document.getElementById("product-catalog-results");
     const storeMenu = document.getElementById("product-catalog-store-menu");
     const summary = document.getElementById("product-catalog-summary");
+    const cartBody = document.getElementById("pos-cart-lines");
+    const lineCount = document.getElementById("pos-lines-count");
+    const summaryCount = document.getElementById("pos-summary-count");
+    const summaryTotal = document.getElementById("pos-summary-total");
+    const grandTotal = document.getElementById("pos-grand-total");
+    const currencyTotals = document.getElementById("pos-cart-currency-totals");
     const storeVisibility = new Map();
+    const cart = new Map();
+    const amountFormatter = new Intl.NumberFormat("es-VE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    const formatAmount = (amount) => amountFormatter.format(amount);
+    const getCurrencyLabel = (item) => item.coinSymbol || item.coinCode || "Moneda";
+    const getLineTotal = (item) =>
+      item.price === null ? null : item.quantity * item.price;
+
+    const createCell = (className = "") => {
+      const cell = document.createElement("td");
+      if (className) cell.className = className;
+      return cell;
+    };
+
+    const createCartRow = (item) => {
+      const row = document.createElement("tr");
+      row.dataset.cartCode = item.code;
+
+      const productCell = createCell();
+      const productText = document.createElement("div");
+      productText.className = "d-grid lh-sm";
+      const description = document.createElement("strong");
+      description.className = "fw-normal";
+      description.textContent = item.description;
+      const code = document.createElement("small");
+      code.className = "text-secondary";
+      code.textContent = item.code;
+      productText.append(description, code);
+      productCell.append(productText);
+
+      const quantityCell = createCell("text-center");
+      const quantityInput = document.createElement("input");
+      quantityInput.className = "form-control form-control-sm text-center pos-quantity-input mx-auto";
+      quantityInput.type = "number";
+      quantityInput.min = item.allowDecimal ? "0.01" : "1";
+      quantityInput.step = item.allowDecimal ? "any" : "1";
+      quantityInput.value = String(item.quantity);
+      quantityInput.dataset.cartQuantity = "";
+      quantityInput.setAttribute("aria-label", `Cantidad de ${item.description}`);
+      quantityCell.append(quantityInput);
+
+      const unitCell = createCell();
+      unitCell.textContent = item.unit;
+
+      const priceCell = createCell("text-end");
+      priceCell.textContent = `${getCurrencyLabel(item)} ${formatAmount(item.price)}`;
+
+      const totalCell = createCell("text-end fw-semibold");
+      totalCell.dataset.cartLineTotal = "";
+      const lineTotal = getLineTotal(item);
+      totalCell.textContent = lineTotal === null
+        ? "Por definir"
+        : `${getCurrencyLabel(item)} ${formatAmount(lineTotal)}`;
+
+      const removeCell = createCell();
+      const removeButton = document.createElement("button");
+      removeButton.className = "btn btn-sm btn-outline-danger";
+      removeButton.type = "button";
+      removeButton.dataset.cartAction = "remove";
+      removeButton.setAttribute("aria-label", `Quitar ${item.description}`);
+      removeButton.title = "Quitar artículo";
+      removeButton.textContent = "×";
+      removeCell.append(removeButton);
+
+      row.append(productCell, quantityCell, unitCell, priceCell, totalCell, removeCell);
+      return row;
+    };
+
+    const updateCartSummary = () => {
+      let units = 0;
+      let hasUnpricedItems = false;
+      const totals = new Map();
+
+      for (const item of cart.values()) {
+        units += item.quantity;
+        const currencyKey = item.coinCode || item.coinSymbol || "unknown";
+        const total = totals.get(currencyKey) || {
+          label: getCurrencyLabel(item),
+          amount: 0,
+        };
+        const lineTotal = getLineTotal(item);
+        if (lineTotal === null) {
+          hasUnpricedItems = true;
+        } else {
+          total.amount += lineTotal;
+        }
+        totals.set(currencyKey, total);
+      }
+
+      const countText = `${cart.size} líneas · ${formatAmount(units)} uds`;
+      lineCount.textContent = countText;
+      summaryCount.textContent = countText;
+      currencyTotals.replaceChildren();
+      for (const total of totals.values()) {
+        const line = document.createElement("div");
+        line.className = "d-flex justify-content-between gap-2";
+        const label = document.createElement("span");
+        label.textContent = `Importe · ${total.label}`;
+        const amount = document.createElement("strong");
+        amount.textContent = formatAmount(total.amount);
+        line.append(label, amount);
+        currencyTotals.append(line);
+      }
+
+      if (hasUnpricedItems) {
+        const pending = document.createElement("span");
+        pending.className = "text-warning";
+        pending.textContent = "Hay artículos con precio por definir";
+        currencyTotals.append(pending);
+      }
+
+      if (cart.size === 0) {
+        summaryTotal.textContent = "—";
+        grandTotal.textContent = "—";
+      } else if (hasUnpricedItems) {
+        summaryTotal.textContent = "Precio pendiente";
+        grandTotal.textContent = "Precio pendiente";
+      } else if (totals.size === 1) {
+        const [total] = totals.values();
+        const totalText = `${total.label} ${formatAmount(total.amount)}`;
+        summaryTotal.textContent = totalText;
+        grandTotal.textContent = totalText;
+      } else {
+        summaryTotal.textContent = `${totals.size} monedas`;
+        grandTotal.textContent = `${totals.size} monedas`;
+      }
+    };
+
+    const renderCart = () => {
+      cartBody.replaceChildren();
+      cartBody.hidden = false;
+      if (cart.size === 0) {
+        const row = document.createElement("tr");
+        const cell = createCell("py-5 text-center text-secondary");
+        cell.colSpan = 6;
+        cell.textContent = "Agrega productos desde el catálogo.";
+        row.append(cell);
+        cartBody.append(row);
+      } else {
+        for (const item of cart.values()) {
+          cartBody.append(createCartRow(item));
+        }
+      }
+      updateCartSummary();
+    };
+
+    results.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-pos-add-product]");
+      if (!button || button.disabled) return;
+
+      const code = button.dataset.productCode;
+      const existing = cart.get(code);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.set(code, {
+          code,
+          description: button.dataset.productDescription,
+          unit: button.dataset.productUnit,
+          coinCode: button.dataset.productCoinCode,
+          coinSymbol: button.dataset.productCoinSymbol,
+          price: button.dataset.productPrice === ""
+            ? null
+            : Number(button.dataset.productPrice),
+          allowDecimal: button.dataset.productAllowDecimal === "true",
+          quantity: 1,
+        });
+      }
+      renderCart();
+    });
+
+    cartBody.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-cart-action='remove']");
+      if (!button) return;
+      const row = button.closest("[data-cart-code]");
+      cart.delete(row.dataset.cartCode);
+      renderCart();
+    });
+
+    cartBody.addEventListener("input", (event) => {
+      const input = event.target;
+      const row = input.closest("[data-cart-code]");
+      if (!row) return;
+      const item = cart.get(row.dataset.cartCode);
+      if (input.matches("[data-cart-quantity]")) {
+        const quantity = Number(input.value);
+        if (Number.isFinite(quantity) && quantity >= Number(input.min)) {
+          item.quantity = quantity;
+        }
+      } else {
+        return;
+      }
+
+      updateCartLine(row, item);
+    });
+
+    const updateCartLine = (row, item) => {
+      const totalCell = row.querySelector("[data-cart-line-total]");
+      const lineTotal = getLineTotal(item);
+      totalCell.textContent = lineTotal === null
+        ? "Por definir"
+        : `${getCurrencyLabel(item)} ${formatAmount(lineTotal)}`;
+      updateCartSummary();
+    };
 
     const setStoreVisibility = (storeCode, isVisible) => {
       storeVisibility.set(storeCode, isVisible);
@@ -833,6 +1021,8 @@
     document.addEventListener("htmx:afterSwap", (event) => {
       if (event.detail.target === results) refreshCatalog();
     });
+
+    renderCart();
   })();
 </script>
 
@@ -1230,17 +1420,18 @@
     background: transparent;
     font-size: 0.62rem;
   }
-  .pos-quantity {
+  .pos-quantity-input {
     width: 5.25rem;
     min-width: 5.25rem;
     margin-inline: auto;
+    padding-inline: 0.5rem;
+    font-variant-numeric: tabular-nums;
+    appearance: textfield;
   }
-  .pos-quantity .btn {
-    padding-inline: 0.35rem;
-  }
-  .pos-quantity .form-control {
-    min-width: 2rem;
-    padding-inline: 0.25rem;
+  .pos-quantity-input::-webkit-inner-spin-button,
+  .pos-quantity-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
   }
   .pos-lines-table tbody td:nth-child(3) .btn {
     width: 3.75rem !important;

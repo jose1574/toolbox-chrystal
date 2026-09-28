@@ -22,6 +22,8 @@
             <th scope="col" class="text-end" data-catalog-col="offer">P. oferta</th>
             <th scope="col" class="text-end" data-catalog-col="minimum">P. mínimo</th>
             <th scope="col" class="text-end" data-catalog-col="maximum">P. máximo</th>
+            <th scope="col" class="text-end">Precio perfil · {{ price_label }}</th>
+            <th scope="col" class="text-end">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -54,10 +56,34 @@
               {{ product.coin_symbol or product.coin_code or '' }} {{ '%.2f'|format(product.maximum_price|float) }}
               {% else %}<span class="text-secondary">-</span>{% endif %}
             </td>
+            <td class="text-end">
+              {% if product.can_add %}
+              {{ product.coin_symbol or product.coin_code or '' }} {{ '%.2f'|format(product.unit_price|float) }}
+              {% if product.price_selector == 4 %}<small class="d-block text-body-secondary">Variable</small>{% endif %}
+              {% else %}
+              <span class="text-secondary">Sin precio</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <button
+                class="btn btn-sm btn-primary text-nowrap"
+                type="button"
+                data-pos-add-product
+                data-product-code="{{ product.code }}"
+                data-product-description="{{ product.description or product.code }}"
+                data-product-unit="{{ product.unit_description or 'UND' }}"
+                data-product-coin-code="{{ product.coin_code or '' }}"
+                data-product-coin-symbol="{{ product.coin_symbol or product.coin_code or '' }}"
+                data-product-price="{{ product.unit_price if product.unit_price is not none else '' }}"
+                data-product-allow-decimal="{{ 'true' if product.allow_decimal else 'false' }}"
+                aria-label="Agregar {{ product.description or product.code }}"
+                {% if not product.can_add %}disabled title="No hay un precio configurado para este producto"{% endif %}
+              >Agregar</button>
+            </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="{{ stores|length + 5 }}" class="py-5 text-center text-body-secondary">
+            <td colspan="{{ stores|length + 7 }}" class="py-5 text-center text-body-secondary">
               No se encontraron productos.
             </td>
           </tr>

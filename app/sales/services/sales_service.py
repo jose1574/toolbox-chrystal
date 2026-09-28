@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import case, exists, func, or_, select
+from sqlalchemy import case, exists, func, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app import db
@@ -15,6 +15,7 @@ from app.models import (
     SalesInvoiceDispatchItem,
     SalesOperation,
     SalesOperationDetail,
+    SystemProperty,
     Store,
     Unit,
     User,
@@ -26,6 +27,15 @@ STATUS_COMPLETE = "COMPLETE"
 OPEN_STATUSES = (STATUS_PENDING, STATUS_PARTIAL)
 ALL_STATUSES = (STATUS_PENDING, STATUS_PARTIAL, STATUS_COMPLETE)
 QTY_EPSILON = 1e-9
+POS_PRICE_PROPERTY_CODE = 49
+POS_PRICE_GROUP_CODE = "003"
+POS_PRICE_OPTIONS = {
+    0: ("maximum_price", "Máximo"),
+    1: ("offer_price", "Oferta"),
+    2: ("higher_price", "Mayor"),
+    3: ("minimum_price", "Mínimo"),
+    4: ("offer_price", "Variable"),
+}
 
 
 class DispatchError(Exception):
@@ -53,26 +63,66 @@ def _as_float(value):
         return 0.0
 
 
-def list_pos_products(page=1, per_page=25, query_text=""):
+def _get_pos_price_option(profile_code):
+    profile_code = str(profile_code or "").strip()
+    selector = db.session.scalar(
+        select(SystemProperty.system_value).where(
+            SystemProperty.code == POS_PRICE_PROPERTY_CODE,
+            SystemProperty.properties_group == POS_PRICE_GROUP_CODE,
+            SystemProperty.profile == profile_code,
+        )
+    )
+    if selector is None and profile_code != "00":
+        selector = db.session.scalar(
+            select(SystemProperty.system_value).where(
+                SystemProperty.code == POS_PRICE_PROPERTY_CODE,
+                SystemProperty.properties_group == POS_PRICE_GROUP_CODE,
+                SystemProperty.profile == "00",
+            )
+        )
+
+    try:
+        selector = int(selector)
+    except (TypeError, ValueError):
+        return None, "Sin precio configurado"
+
+    if selector not in POS_PRICE_OPTIONS:
+        return None, "Sin precio configurado"
+    return selector, POS_PRICE_OPTIONS[selector][1]
+
+
+def list_pos_products(page=1, per_page=25, query_text="", profile_code=None):
     page = max(int(page or 1), 1)
     per_page = min(max(int(per_page or 25), 1), 100)
     query_text = (query_text or "").strip()
+    price_selector, price_label = _get_pos_price_option(profile_code)
+    price_field, _ = POS_PRICE_OPTIONS.get(price_selector, (None, price_label))
+    selected_price = getattr(ProductsUnit, price_field) if price_field else None
 
     statement = (
         select(
             Product.code.label("code"),
             Product.description.label("description"),
+            Product.allow_decimal.label("allow_decimal"),
             Product.coin.label("coin_code"),
             Coin.symbol.label("coin_symbol"),
+            Unit.description.label("unit_description"),
+            (
+                selected_price.label("unit_price")
+                if selected_price is not None
+                else literal(None).label("unit_price")
+            ),
             ProductsUnit.offer_price.label("offer_price"),
             ProductsUnit.minimum_price.label("minimum_price"),
             ProductsUnit.maximum_price.label("maximum_price"),
+            ProductsUnit.higher_price.label("higher_price"),
         )
         .outerjoin(
             ProductsUnit,
             (ProductsUnit.product_code == Product.code)
             & ProductsUnit.main_unit.is_(True),
         )
+        .outerjoin(Unit, ProductsUnit.unit == Unit.code)
         .outerjoin(Coin, Coin.code == Product.coin)
         .order_by(Product.code.asc())
     )
@@ -116,6 +166,11 @@ def list_pos_products(page=1, per_page=25, query_text=""):
 
     for product in products:
         product["stock_by_store"] = stock_by_product[product["code"]]
+        product["price_selector"] = price_selector
+        product["price_label"] = price_label
+        product["can_add"] = (
+            price_selector in POS_PRICE_OPTIONS and product["unit_price"] is not None
+        )
 
     return {
         "products": products,
@@ -125,6 +180,7 @@ def list_pos_products(page=1, per_page=25, query_text=""):
         "total": total,
         "per_page": per_page,
         "query_text": query_text,
+        "price_label": price_label,
     }
 
 
