@@ -23,12 +23,24 @@
             <th scope="col" class="text-end" data-catalog-col="minimum">P. mínimo</th>
             <th scope="col" class="text-end" data-catalog-col="maximum">P. máximo</th>
             <th scope="col" class="text-end">Precio perfil · {{ price_label }}</th>
-            <th scope="col" class="text-end">Acción</th>
           </tr>
         </thead>
         <tbody>
           {% for product in products %}
-          <tr>
+          <tr
+            data-pos-add-product
+            data-product-code="{{ product.code }}"
+            data-product-description="{{ product.description or product.code }}"
+            data-product-unit="{{ product.unit_description or 'UND' }}"
+            data-product-coin-code="{{ product.coin_code or '' }}"
+            data-product-coin-symbol="{{ product.coin_symbol or product.coin_code or '' }}"
+            data-product-price="{{ product.unit_price if product.unit_price is not none else '' }}"
+            data-product-allow-decimal="{{ 'true' if product.allow_decimal else 'false' }}"
+            tabindex="{{ '0' if product.can_add else '-1' }}"
+            aria-disabled="{{ 'false' if product.can_add else 'true' }}"
+            aria-label="Agregar {{ product.description or product.code }}"
+            {% if not product.can_add %}title="No hay un precio configurado para este producto"{% endif %}
+          >
             <td class="pos-catalog-product" data-catalog-col="product">
               <strong>{{ product.description or '-' }}</strong>
               <span class="font-monospace">{{ product.code }}</span>
@@ -64,26 +76,10 @@
               <span class="text-secondary">Sin precio</span>
               {% endif %}
             </td>
-            <td class="text-end">
-              <button
-                class="btn btn-sm btn-primary text-nowrap"
-                type="button"
-                data-pos-add-product
-                data-product-code="{{ product.code }}"
-                data-product-description="{{ product.description or product.code }}"
-                data-product-unit="{{ product.unit_description or 'UND' }}"
-                data-product-coin-code="{{ product.coin_code or '' }}"
-                data-product-coin-symbol="{{ product.coin_symbol or product.coin_code or '' }}"
-                data-product-price="{{ product.unit_price if product.unit_price is not none else '' }}"
-                data-product-allow-decimal="{{ 'true' if product.allow_decimal else 'false' }}"
-                aria-label="Agregar {{ product.description or product.code }}"
-                {% if not product.can_add %}disabled title="No hay un precio configurado para este producto"{% endif %}
-              >Agregar</button>
-            </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="{{ stores|length + 7 }}" class="py-5 text-center text-body-secondary">
+            <td colspan="{{ stores|length + 6 }}" class="py-5 text-center text-body-secondary">
               No se encontraron productos.
             </td>
           </tr>
@@ -157,6 +153,13 @@
   }
   .pos-catalog-table tbody td {
     padding: 0.75rem 0.875rem;
+  }
+  .pos-catalog-table tbody tr[data-pos-add-product]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  .pos-catalog-table tbody tr[data-pos-add-product]:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
   }
   .pos-catalog-product {
     min-width: 19rem;

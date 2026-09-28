@@ -39,6 +39,31 @@ def pos_product_catalog():
     return render_template("bill_point/partials/product_catalog_results.html", **result)
 
 
+@sales_bp.route("/point-of-sale/product-by-code")
+@login_required
+def pos_product_by_code():
+    product = sales_service.get_pos_product_by_code(
+        request.args.get("code", ""), profile_code=current_user.profile
+    )
+    if not product:
+        return jsonify({"message": "No se encontró un producto con ese código."}), 404
+    if not product["can_add"]:
+        return jsonify({"message": "El producto no tiene un precio configurado."}), 422
+
+    return jsonify(
+        {
+            "code": product["code"],
+            "description": product["description"] or product["code"],
+            "unit": product["unit_description"] or "UND",
+            "coinCode": product["coin_code"] or "",
+            "coinSymbol": product["coin_symbol"] or product["coin_code"] or "",
+            "price": float(product["unit_price"]),
+            "allowDecimal": bool(product["allow_decimal"]),
+            "canAdd": True,
+        }
+    )
+
+
 def _dispatch_context(dispatch, extra=None):
     items = sales_service.get_dispatch_items(dispatch.correlative)
     context = {

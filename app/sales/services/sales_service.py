@@ -91,7 +91,7 @@ def _get_pos_price_option(profile_code):
     return selector, POS_PRICE_OPTIONS[selector][1]
 
 
-def list_pos_products(page=1, per_page=25, query_text="", profile_code=None):
+def list_pos_products(page=1, per_page=25, query_text="", profile_code=None, exact_code=None):
     page = max(int(page or 1), 1)
     per_page = min(max(int(per_page or 25), 1), 100)
     query_text = (query_text or "").strip()
@@ -126,7 +126,11 @@ def list_pos_products(page=1, per_page=25, query_text="", profile_code=None):
         .outerjoin(Coin, Coin.code == Product.coin)
         .order_by(Product.code.asc())
     )
-    if query_text:
+    if exact_code is not None:
+        statement = statement.where(
+            func.upper(func.trim(Product.code)) == normalize_code(exact_code)
+        )
+    elif query_text:
         search_pattern = f"%{query_text}%"
         statement = statement.where(
             or_(
@@ -182,6 +186,19 @@ def list_pos_products(page=1, per_page=25, query_text="", profile_code=None):
         "query_text": query_text,
         "price_label": price_label,
     }
+
+
+def get_pos_product_by_code(code, profile_code=None):
+    main_code = resolve_main_code(code)
+    if not main_code:
+        return None
+    result = list_pos_products(
+        page=1,
+        per_page=1,
+        profile_code=profile_code,
+        exact_code=main_code,
+    )
+    return result["products"][0] if result["products"] else None
 
 
 def remaining_amount(item):
