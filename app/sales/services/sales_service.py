@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace
 
 from sqlalchemy import case, exists, func, literal, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -304,11 +305,37 @@ def get_dispatch_items(dispatch_id):
     return items
 
 
-def get_dispatched_items(dispatch_id):
+def get_dispatched_items(dispatch_id, user_code=None):
+    items = get_dispatch_items(dispatch_id)
+    if user_code is None:
+        return [
+            item
+            for item in items
+            if _as_float(item.dispatched_amount) > QTY_EPSILON
+        ]
+
+    quantities = dict(
+        db.session.execute(
+            select(
+                SalesInvoiceDispatchEvent.item_id,
+                func.sum(SalesInvoiceDispatchEvent.quantity),
+            )
+            .where(
+                SalesInvoiceDispatchEvent.dispatch_id == dispatch_id,
+                SalesInvoiceDispatchEvent.user_code == user_code,
+            )
+            .group_by(SalesInvoiceDispatchEvent.item_id)
+        ).all()
+    )
     return [
-        item
-        for item in get_dispatch_items(dispatch_id)
-        if _as_float(item.dispatched_amount) > QTY_EPSILON
+        SimpleNamespace(
+            product_code=item.product_code,
+            product_description=item.product_description,
+            unit_description=item.unit_description,
+            dispatched_amount=quantity,
+        )
+        for item in items
+        if (quantity := quantities.get(item.correlative, 0)) > QTY_EPSILON
     ]
 
 

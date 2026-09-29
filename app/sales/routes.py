@@ -216,7 +216,8 @@ def dispatched_products_pdf(dispatch_id):
         flash("No se encontro el despacho indicado.", "error")
         return redirect(url_for("sales.invoice_dispatch"))
 
-    items = sales_service.get_dispatched_items(dispatch_id)
+    user_code = current_user.code if request.args.get("user_only") == "1" else None
+    items = sales_service.get_dispatched_items(dispatch_id, user_code)
     document_no = dispatch.document_no or str(dispatch.sales_operation_correlative)
     return Response(
         _render_dispatched_products_pdf(dispatch, items),
@@ -234,7 +235,7 @@ def print_dispatched_products(dispatch_id):
     if not dispatch:
         return jsonify(error="No se encontro el despacho indicado."), 404
 
-    items = sales_service.get_dispatched_items(dispatch_id)
+    items = sales_service.get_dispatched_items(dispatch_id, current_user.code)
     if not items:
         return jsonify(error="No hay productos despachados para imprimir."), 400
 
