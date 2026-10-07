@@ -34,6 +34,7 @@
             data-product-unit="{{ product.unit_description or 'UND' }}"
             data-product-coin-code="{{ product.coin_code or '' }}"
             data-product-coin-symbol="{{ product.coin_symbol or product.coin_code or '' }}"
+            data-product-sales-rate="{{ product.coin_sales_aliquot if product.coin_sales_aliquot is not none else '' }}"
             data-product-price="{{ product.unit_price if product.unit_price is not none else '' }}"
             data-product-allow-decimal="{{ 'true' if product.allow_decimal else 'false' }}"
             tabindex="{{ '0' if product.can_add else '-1' }}"

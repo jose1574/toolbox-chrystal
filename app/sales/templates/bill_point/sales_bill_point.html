@@ -178,7 +178,8 @@
                   <th scope="col">Producto / código</th>
                   <th scope="col" class="text-center">Cant. <kbd>F2</kbd></th>
                   <th scope="col">Unidad <kbd>F12</kbd></th>
-                  <th scope="col" class="text-end">Precio <kbd>F8</kbd></th>
+                  <th scope="col" class="text-end">Precio Bolivares<kbd>F8</kbd></th>
+                  <th scope="col" class="text-end">Precio divisa<kbd>F8</kbd></th>
                   <th scope="col" class="text-end">Total</th>
                   <th scope="col"></th>
                 </tr>
@@ -255,9 +256,32 @@
               ><strong class="text-body" id="pos-summary-total">—</strong>
             </div>
             <div class="d-grid gap-2 small" id="pos-cart-currency-totals" aria-live="polite"></div>
+            <div class="d-grid gap-1 small mt-2">
+              <div class="d-flex justify-content-between gap-2">
+                <span>Total USD</span>
+                <strong id="pos-cart-usd-total">—</strong>
+              </div>
+              <div class="d-flex justify-content-between gap-2">
+                <span>Total en bolívares</span>
+                <strong id="pos-cart-bs-total">—</strong>
+              </div>
+            </div>
+            <div
+              class="d-flex justify-content-between align-items-center gap-2 border-top mt-3 pt-3"
+              id="pos-exchange-rate"
+              data-rate="{% if exchange_coin and exchange_coin.sales_aliquot is not none %}{{ '%.2f'|format(exchange_coin.sales_aliquot|float) }}{% endif %}"
+            >
+              <span class="text-secondary">Tasa del día · {{ exchange_coin.description or 'Moneda 02' if exchange_coin else 'Moneda 02' }}</span>
+              {% if exchange_coin and exchange_coin.sales_aliquot is not none %}
+              <strong class="text-secondary">Bs. {{ '%.2f'|format(exchange_coin.sales_aliquot|float) }}</strong>
+              {% else %}
+              <strong class="text-secondary">No disponible</strong>
+              {% endif %}
+            </div>
             <div
               class="d-flex justify-content-between align-items-center gap-2 border-top mt-3 pt-3"
             >
+            
               <strong>Total a pagar</strong
               ><strong class="pos-grand-total" id="pos-grand-total">—</strong>
             </div>
@@ -268,6 +292,9 @@
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-primary" type="button">
                 ⊕ Nueva venta
+              </button>
+              <button class="btn btn-sm btn-outline-primary" type="button">
+                ⊕ En Espera
               </button>
               <button class="btn btn-sm btn-outline-danger" type="button">
                 ⊗ Devolución
@@ -424,6 +451,12 @@
     const summaryTotal = document.getElementById("pos-summary-total");
     const grandTotal = document.getElementById("pos-grand-total");
     const currencyTotals = document.getElementById("pos-cart-currency-totals");
+    const usdTotalElement = document.getElementById("pos-cart-usd-total");
+    const bolivarTotalElement = document.getElementById("pos-cart-bs-total");
+    const exchangeRateElement = document.getElementById("pos-exchange-rate");
+    const exchangeRate = exchangeRateElement.dataset.rate === ""
+      ? null
+      : Number(exchangeRateElement.dataset.rate);
     const storeVisibility = new Map();
     const cart = new Map();
     catalogModal.addEventListener("shown.bs.modal", () => catalogSearch.focus());
@@ -450,9 +483,14 @@
     });
 
     const formatAmount = (amount) => amountFormatter.format(amount);
+    const roundAmount = (amount) => Math.round((amount + Number.EPSILON) * 100) / 100;
     const getCurrencyLabel = (item) => item.coinSymbol || item.coinCode || "Moneda";
     const getLineTotal = (item) =>
       item.price === null ? null : item.quantity * item.price;
+    const getBolivarPrice = (item) =>
+      item.price === null || item.salesRate === null
+        ? null
+        : item.price * item.salesRate;
 
     const createCell = (className = "") => {
       const cell = document.createElement("td");
@@ -490,6 +528,12 @@
       const unitCell = createCell();
       unitCell.textContent = item.unit;
 
+      const bolivarPriceCell = createCell("text-end text-nowrap");
+      const bolivarPrice = getBolivarPrice(item);
+      bolivarPriceCell.textContent = bolivarPrice === null
+        ? "Sin tasa"
+        : `Bs. ${formatAmount(bolivarPrice)}`;
+
       const priceCell = createCell("text-end");
       priceCell.textContent = `${getCurrencyLabel(item)} ${formatAmount(item.price)}`;
 
@@ -510,7 +554,15 @@
       removeButton.textContent = "×";
       removeCell.append(removeButton);
 
-      row.append(productCell, quantityCell, unitCell, priceCell, totalCell, removeCell);
+      row.append(
+        productCell,
+        quantityCell,
+        unitCell,
+        bolivarPriceCell,
+        priceCell,
+        totalCell,
+        removeCell,
+      );
       return row;
     };
 
@@ -525,10 +577,12 @@
         const total = totals.get(currencyKey) || {
           label: getCurrencyLabel(item),
           amount: 0,
+          hasUnpricedItems: false,
         };
         const lineTotal = getLineTotal(item);
         if (lineTotal === null) {
           hasUnpricedItems = true;
+          total.hasUnpricedItems = true;
         } else {
           total.amount += lineTotal;
         }
@@ -545,9 +599,24 @@
         const label = document.createElement("span");
         label.textContent = `Importe · ${total.label}`;
         const amount = document.createElement("strong");
-        amount.textContent = formatAmount(total.amount);
+        amount.textContent = formatAmount(roundAmount(total.amount));
         line.append(label, amount);
         currencyTotals.append(line);
+      }
+
+      const usdTotal = totals.get("02");
+      if (cart.size === 0) {
+        usdTotalElement.textContent = "—";
+        bolivarTotalElement.textContent = "—";
+      } else if (usdTotal && usdTotal.hasUnpricedItems) {
+        usdTotalElement.textContent = "Pendiente";
+        bolivarTotalElement.textContent = "Pendiente";
+      } else {
+        const usdAmount = roundAmount(usdTotal ? usdTotal.amount : 0);
+        usdTotalElement.textContent = `USD ${formatAmount(usdAmount)}`;
+        bolivarTotalElement.textContent = Number.isFinite(exchangeRate)
+          ? `Bs. ${formatAmount(roundAmount(usdAmount * exchangeRate))}`
+          : "No disponible";
       }
 
       if (hasUnpricedItems) {
@@ -580,7 +649,7 @@
       if (cart.size === 0) {
         const row = document.createElement("tr");
         const cell = createCell("py-5 text-center text-secondary");
-        cell.colSpan = 6;
+        cell.colSpan = 7;
         cell.textContent = "Agrega productos desde el catálogo.";
         row.append(cell);
         cartBody.append(row);
@@ -600,6 +669,9 @@
         unit: row.dataset.productUnit,
         coinCode: row.dataset.productCoinCode,
         coinSymbol: row.dataset.productCoinSymbol,
+        salesRate: row.dataset.productSalesRate === ""
+          ? null
+          : Number(row.dataset.productSalesRate),
         price: row.dataset.productPrice === "" ? null : Number(row.dataset.productPrice),
         allowDecimal: row.dataset.productAllowDecimal === "true",
         canAdd: true,
@@ -619,6 +691,7 @@
           unit: product.unit,
           coinCode: product.coinCode,
           coinSymbol: product.coinSymbol,
+          salesRate: product.salesRate,
           price: product.price,
           allowDecimal: product.allowDecimal,
           quantity: 1,

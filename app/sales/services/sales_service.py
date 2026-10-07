@@ -18,6 +18,7 @@ from app.models import (
     SalesOperationDetail,
     SystemProperty,
     Store,
+    Tax,
     Unit,
     User,
 )
@@ -92,6 +93,10 @@ def _get_pos_price_option(profile_code):
     return selector, POS_PRICE_OPTIONS[selector][1]
 
 
+def get_pos_exchange_coin():
+    return db.session.get(Coin, "02")
+
+
 def list_pos_products(page=1, per_page=25, query_text="", profile_code=None, exact_code=None):
     page = max(int(page or 1), 1)
     per_page = min(max(int(per_page or 25), 1), 100)
@@ -99,6 +104,10 @@ def list_pos_products(page=1, per_page=25, query_text="", profile_code=None, exa
     price_selector, price_label = _get_pos_price_option(profile_code)
     price_field, _ = POS_PRICE_OPTIONS.get(price_selector, (None, price_label))
     selected_price = getattr(ProductsUnit, price_field) if price_field else None
+    tax_multiplier = 1 + func.coalesce(Tax.aliquot, 0) / 100.0
+    selected_price_with_tax = (
+        selected_price * tax_multiplier if selected_price is not None else None
+    )
 
     statement = (
         select(
@@ -107,16 +116,17 @@ def list_pos_products(page=1, per_page=25, query_text="", profile_code=None, exa
             Product.allow_decimal.label("allow_decimal"),
             Product.coin.label("coin_code"),
             Coin.symbol.label("coin_symbol"),
+            Coin.sales_aliquot.label("coin_sales_aliquot"),
             Unit.description.label("unit_description"),
             (
-                selected_price.label("unit_price")
-                if selected_price is not None
+                selected_price_with_tax.label("unit_price")
+                if selected_price_with_tax is not None
                 else literal(None).label("unit_price")
             ),
-            ProductsUnit.offer_price.label("offer_price"),
-            ProductsUnit.minimum_price.label("minimum_price"),
-            ProductsUnit.maximum_price.label("maximum_price"),
-            ProductsUnit.higher_price.label("higher_price"),
+            (ProductsUnit.offer_price * tax_multiplier).label("offer_price"),
+            (ProductsUnit.minimum_price * tax_multiplier).label("minimum_price"),
+            (ProductsUnit.maximum_price * tax_multiplier).label("maximum_price"),
+            (ProductsUnit.higher_price * tax_multiplier).label("higher_price"),
         )
         .outerjoin(
             ProductsUnit,
@@ -125,6 +135,7 @@ def list_pos_products(page=1, per_page=25, query_text="", profile_code=None, exa
         )
         .outerjoin(Unit, ProductsUnit.unit == Unit.code)
         .outerjoin(Coin, Coin.code == Product.coin)
+        .outerjoin(Tax, Tax.code == Product.sale_tax)
         .order_by(Product.code.asc())
     )
     if exact_code is not None:

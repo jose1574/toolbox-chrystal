@@ -25,7 +25,10 @@ from app.sales.services import printing_service, sales_service
 @sales_bp.route("/point-of-sale")
 @login_required
 def point_of_sale():
-    return render_template("bill_point/sales_bill_point.html")
+    return render_template(
+        "bill_point/sales_bill_point.html",
+        exchange_coin=sales_service.get_pos_exchange_coin(),
+    )
 
 
 @sales_bp.route("/point-of-sale/products")
@@ -57,6 +60,11 @@ def pos_product_by_code():
             "unit": product["unit_description"] or "UND",
             "coinCode": product["coin_code"] or "",
             "coinSymbol": product["coin_symbol"] or product["coin_code"] or "",
+            "salesRate": (
+                float(product["coin_sales_aliquot"])
+                if product["coin_sales_aliquot"] is not None
+                else None
+            ),
             "price": float(product["unit_price"]),
             "allowDecimal": bool(product["allow_decimal"]),
             "canAdd": True,
