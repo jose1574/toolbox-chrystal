@@ -302,6 +302,14 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ url_for('inventory.product_price_update') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-warning" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 6a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm4 2h4v2H8V8zm0 3h4v2H8v-2z"></path>
+                                </svg>
+                                <span>Actualización de precios</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ url_for('inventory.transfer_guide') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
                                 <svg class="sidebar-mini-icon flex-shrink-0 text-dark" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L14 2.586A2 2 0 0012.586 2H4zm8 1.5V7a1 1 0 001 1h2.5V16a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h8zm-6 5a1 1 0 000 2h8a1 1 0 100-2H6zm0 3a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
@@ -505,6 +513,14 @@
                                     <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v2a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2v-4a2 2 0 00-2-2H5zm1 3a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
                                 </svg>
                                 <span>Configuración de Impresoras</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('settings_app.price_update_access') }}" class="sidebar-subitem d-flex align-items-center gap-2" role="menuitem">
+                                <svg class="sidebar-mini-icon flex-shrink-0 text-warning" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 6a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm4 2h4v2H8V8zm0 3h4v2H8v-2z"></path>
+                                </svg>
+                                <span>Permisos de actualización de precios</span>
                             </a>
                         </li>
                         {# <li><a href="{{ url_for('admin.manage_users') }}" class="sidebar-subitem" role="menuitem">Usuarios</a></li>

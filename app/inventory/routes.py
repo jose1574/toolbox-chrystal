@@ -15,18 +15,153 @@ import math
 from io import BytesIO
 from flask_login import login_required, current_user
 from datetime import datetime
+from app import db
 from app.inventory import inventory_bp
 import pandas as pd
 import xlwt
 
 from app.reports.utils import render_pdf, generate_barcode
 from app.inventory.services import inventory_service
+from app.models import (
+    ProductPricingUpdateSetting,
+    ProductsUnit,
+    TxProfile,
+    User,
+    UserProfile,
+)
 
 
 @inventory_bp.route("/")
 @login_required
 def index():
     return render_template("index.html")
+
+
+def _normalize_csv_codes(value):
+    if value is None:
+        return set()
+    if isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = str(value).replace(";", ",").split(",")
+    normalized = set()
+    for item in values:
+        code = str(item).strip().upper()
+        if code:
+            normalized.add(code)
+    return normalized
+
+
+def _get_price_update_config():
+    return ProductPricingUpdateSetting.get_or_create_default()
+
+
+def _build_price_preview_rows(adjustment_factor):
+    factor = float(adjustment_factor or 1.20)
+    rows = []
+    for unit in (
+        ProductsUnit.query.filter(ProductsUnit.minimum_price.isnot(None))
+        .order_by(ProductsUnit.product_code)
+        .limit(10)
+        .all()
+    ):
+        minimum_price = float(unit.minimum_price or 0)
+        calculated_prices = inventory_service.calculate_product_prices(
+            minimum_price,
+            factor,
+            1.16,
+        )
+        rows.append(
+            {
+                "product_code": unit.product_code,
+                "minimum_price": minimum_price,
+                **calculated_prices,
+            }
+        )
+    return rows
+
+
+def _user_may_update_prices(user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+
+    config = _get_price_update_config()
+    allowed_users = _normalize_csv_codes(config.authorized_users_list)
+
+    if not allowed_users:
+        return False
+
+    user_code = str(getattr(user, "code", "") or "").strip().upper()
+    if user_code and user_code in allowed_users:
+        return True
+
+    return False
+
+
+@inventory_bp.route("/price-update", methods=["GET", "POST"])
+@login_required
+def product_price_update():
+    if not _user_may_update_prices(current_user):
+        flash("No tienes permisos para actualizar precios de productos.", "danger")
+        return redirect(url_for("inventory.index"))
+
+    config = _get_price_update_config()
+    preview_rows = _build_price_preview_rows(config.default_factor or 1.20)
+    history = inventory_service.get_product_price_update_history()
+
+    if request.method == "POST":
+        adjustment_factor_raw = (request.form.get("adjustment_factor") or "").strip()
+        try:
+            adjustment_factor = float(adjustment_factor_raw)
+        except (TypeError, ValueError):
+            flash("El factor de ajuste debe ser numérico.", "danger")
+            return render_template(
+                "price_update.html",
+                config=config,
+                preview_rows=preview_rows,
+                history=history,
+            )
+
+        if adjustment_factor <= 0:
+            flash("El factor de ajuste debe ser mayor que cero.", "danger")
+            return render_template(
+                "price_update.html",
+                config=config,
+                preview_rows=_build_price_preview_rows(adjustment_factor),
+                history=history,
+            )
+
+        config.default_factor = adjustment_factor
+        config.invoice_factor = 1.16
+        config.updated_by = current_user.code
+        config.updated_at = datetime.utcnow()
+        db.session.add(config)
+        db.session.commit()
+
+        updated_rows = inventory_service.update_product_prices(
+            adjustment_factor,
+            invoice_factor=config.invoice_factor,
+            updated_by=current_user.code,
+        )
+        flash(
+            f"Se actualizaron {updated_rows} registros de precios con el factor {adjustment_factor:.2f}.",
+            "success",
+        )
+        preview_rows = _build_price_preview_rows(adjustment_factor)
+        history = inventory_service.get_product_price_update_history()
+        return render_template(
+            "price_update.html",
+            config=config,
+            preview_rows=preview_rows,
+            history=history,
+        )
+
+    return render_template(
+        "price_update.html",
+        config=config,
+        preview_rows=preview_rows,
+        history=history,
+    )
 
 
 def _build_transfer_guide_steps():

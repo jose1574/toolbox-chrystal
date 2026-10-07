@@ -104,6 +104,16 @@
           </div>
 
           <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100 border-warning-subtle bg-warning-subtle inventory-panel-card">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Actualización de precios</h5>
+                <p class="card-text text-body-secondary flex-grow-1">Regula el factor de ajuste para recalcular precios mínimos, mayor, oferta y máximo.</p>
+                <a href="{{ url_for('inventory.product_price_update') }}" class="btn btn-primary btn-sm align-self-start">Abrir</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
             <div class="card h-100 border-danger-subtle bg-danger-subtle inventory-panel-card">
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">Ubicación de Productos</h5>

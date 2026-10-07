@@ -10142,3 +10142,100 @@ class PrinterSetting(db.Model):
     updated_at = db.Column(
         db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
+
+
+class ProductPricingUpdateSetting(db.Model):
+    __tablename__ = "product_pricing_update_settings"
+    __table_args__ = {"schema": "toolbox", "extend_existing": True}
+
+    code = db.Column(db.String(50), primary_key=True, default="DEFAULT")
+    default_factor = db.Column(db.Double(53), nullable=False, default=1.20)
+    invoice_factor = db.Column(db.Double(53), nullable=False, default=1.16)
+    authorized_profiles = db.Column(db.Text, nullable=False, default="[]")
+    authorized_users = db.Column(db.Text, nullable=False, default="[]")
+    updated_by = db.Column(
+        db.ForeignKey("public.users.code", ondelete="RESTRICT", onupdate="CASCADE")
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    user = db.relationship(
+        "User",
+        primaryjoin="ProductPricingUpdateSetting.updated_by == User.code",
+        backref="product_pricing_update_settings",
+    )
+
+    @staticmethod
+    def get_or_create_default():
+        config = ProductPricingUpdateSetting.query.filter_by(code="DEFAULT").first()
+        if config is not None:
+            return config
+
+        config = ProductPricingUpdateSetting(
+            code="DEFAULT",
+            default_factor=1.20,
+            invoice_factor=1.16,
+            authorized_profiles="[]",
+            authorized_users="[]",
+        )
+        db.session.add(config)
+        db.session.commit()
+        return config
+
+    @staticmethod
+    def _parse_code_list(value):
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            items = value
+        else:
+            items = str(value).replace(";", ",").split(",")
+
+        parsed = []
+        for item in items:
+            code = str(item).strip().upper()
+            if code:
+                parsed.append(code)
+        return sorted(set(parsed))
+
+    @property
+    def authorized_profiles_list(self):
+        try:
+            return self._parse_code_list(json.loads(self.authorized_profiles or "[]"))
+        except (TypeError, ValueError):
+            return self._parse_code_list(self.authorized_profiles or "[]")
+
+    @authorized_profiles_list.setter
+    def authorized_profiles_list(self, value):
+        self.authorized_profiles = json.dumps(self._parse_code_list(value))
+
+    @property
+    def authorized_users_list(self):
+        try:
+            return self._parse_code_list(json.loads(self.authorized_users or "[]"))
+        except (TypeError, ValueError):
+            return self._parse_code_list(self.authorized_users or "[]")
+
+    @authorized_users_list.setter
+    def authorized_users_list(self, value):
+        self.authorized_users = json.dumps(self._parse_code_list(value))
+
+    def as_display_string(self, kind):
+        if kind == "profiles":
+            return ", ".join(self.authorized_profiles_list)
+        return ", ".join(self.authorized_users_list)
+
+
+class ProductPriceUpdateHistory(db.Model):
+    __tablename__ = "product_price_update_history"
+    __table_args__ = {"schema": "toolbox", "extend_existing": True}
+
+    correlative = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    adjustment_factor = db.Column(db.Double(53), nullable=False)
+    invoice_factor = db.Column(db.Double(53), nullable=False, default=1.16)
+    updated_product_count = db.Column(db.Integer, nullable=False)
+    updated_by = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(
+        db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )

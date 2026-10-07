@@ -41,8 +41,84 @@ from app.models import (
   InventoryOperationReceptionDifference,
   ProductsCode,
   ProductsCounterHistory,
+  ProductPriceUpdateHistory,
   User,
 )
+
+
+def calculate_product_prices(minimum_price, adjustment_factor=1.20, invoice_factor=1.16):
+  minimum_price = float(minimum_price or 0)
+  adjustment_factor = float(adjustment_factor or 1.20)
+  invoice_factor = float(invoice_factor or 1.16)
+
+  higher_price = minimum_price * invoice_factor
+  offer_price = minimum_price * adjustment_factor
+  maximum_price = offer_price * invoice_factor
+
+  return {
+    "higher_price": higher_price,
+    "offer_price": offer_price,
+    "maximum_price": maximum_price,
+  }
+
+
+def update_product_prices(adjustment_factor, invoice_factor=1.16, updated_by=None):
+  adjustment_factor = float(adjustment_factor or 0)
+  invoice_factor = float(invoice_factor or 1.16)
+  if adjustment_factor <= 0:
+    raise ValueError("El factor de ajuste debe ser mayor que cero.")
+  if not updated_by:
+    raise ValueError("El usuario que realiza el ajuste es obligatorio.")
+
+  rows = ProductsUnit.query.filter(ProductsUnit.minimum_price.isnot(None)).all()
+  updated_count = 0
+
+  for unit in rows:
+    calculated_prices = calculate_product_prices(
+      unit.minimum_price,
+      adjustment_factor,
+      invoice_factor,
+    )
+    unit.higher_price = calculated_prices["higher_price"]
+    unit.offer_price = calculated_prices["offer_price"]
+    unit.maximum_price = calculated_prices["maximum_price"]
+    updated_count += 1
+
+  db.session.add(
+    ProductPriceUpdateHistory(
+      adjustment_factor=adjustment_factor,
+      invoice_factor=invoice_factor,
+      updated_product_count=updated_count,
+      updated_by=str(updated_by),
+    )
+  )
+  db.session.commit()
+  return updated_count
+
+
+def get_product_price_update_history(limit=20):
+  history_rows = (
+    db.session.query(ProductPriceUpdateHistory, User.description)
+    .outerjoin(User, ProductPriceUpdateHistory.updated_by == User.code)
+    .order_by(
+      ProductPriceUpdateHistory.created_at.desc(),
+      ProductPriceUpdateHistory.correlative.desc(),
+    )
+    .limit(limit)
+    .all()
+  )
+
+  return [
+    {
+      "created_at": history.created_at,
+      "updated_by": history.updated_by,
+      "user_name": user_name or history.updated_by,
+      "adjustment_factor": history.adjustment_factor,
+      "invoice_factor": history.invoice_factor,
+      "updated_product_count": history.updated_product_count,
+    }
+    for history, user_name in history_rows
+  ]
 
 
 def register_flow_step1(operation_correlative, user_code):

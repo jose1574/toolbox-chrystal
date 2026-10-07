@@ -345,6 +345,7 @@ def create_app():
     from app.products_label import label_bp
     from app.sales import sales_bp
     from app.printer_config import printer_config_bp
+    from app.settings_app import settings_app_bp
 
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -358,6 +359,7 @@ def create_app():
     app.register_blueprint(label_bp, url_prefix='/etiquetas')
     app.register_blueprint(sales_bp)
     app.register_blueprint(printer_config_bp)
+    app.register_blueprint(settings_app_bp)
 
     return app
 

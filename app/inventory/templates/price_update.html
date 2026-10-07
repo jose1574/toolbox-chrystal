@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Actualización de precios - Inventario{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 mb-1">Actualización de precios</h2>
+      <p class="text-body-secondary mb-0">Recalcula el ladder de precios base a partir del mínimo.</p>
+    </div>
+    <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary btn-sm">Volver</a>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <div class="alert alert-light border mb-4">
+        <strong>Fórmula aplicada:</strong>
+        <ul class="mb-0 mt-2">
+          <li>precio_mayor = precio_minimo * 1.16</li>
+          <li>precio_oferta = precio_minimo * factor de ajuste (inicial: 1.20)</li>
+          <li>precio_maximo = precio_oferta * 1.16</li>
+        </ul>
+      </div>
+
+      <form method="post">
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label for="adjustment_factor" class="form-label">Factor de ajuste</label>
+            <input
+              id="adjustment_factor"
+              type="number"
+              step="0.01"
+              min="0.01"
+              max="10"
+              class="form-control"
+              name="adjustment_factor"
+              value="{{ config.default_factor or 1.20 }}"
+              required
+            >
+            <div class="form-text">Ejemplo: 1.20, 1.25 o 1.19</div>
+          </div>
+
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="w-100">
+              <label class="form-label">Estado de autorización</label>
+              <div class="form-control bg-body-tertiary border-0">
+                {% if config.authorized_users_list %}
+                  {{ config.authorized_users_list|join(', ') }}
+                {% else %}
+                  <span class="text-body-secondary">Sin usuarios autorizados configurados.</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+          <button type="submit" class="btn btn-primary">Guardar y actualizar precios</button>
+          <span class="text-body-secondary small">Factor fijo de factura: 1.16</span>
+        </div>
+      </form>
+
+      <div class="card border-0 bg-body-tertiary mt-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Previsualización del ajuste</h3>
+            <span class="badge text-bg-primary-subtle text-primary-emphasis">Primeros 10 productos</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Mínimo</th>
+                  <th>Superior</th>
+                  <th>Oferta</th>
+                  <th>Máximo</th>
+                </tr>
+              </thead>
+              <tbody id="price-preview-body">
+                {% for row in preview_rows %}
+                <tr>
+                  <td>{{ row.product_code }}</td>
+                  <td>{{ '%.2f' % row.minimum_price }}</td>
+                  <td>{{ '%.2f' % row.higher_price }}</td>
+                  <td>{{ '%.2f' % row.offer_price }}</td>
+                  <td>{{ '%.2f' % row.maximum_price }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h3 class="h5 mb-3">Historial de ajustes</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Factor de ajuste</th>
+                <th>Factor factura</th>
+                <th>Productos actualizados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in history %}
+              <tr>
+                <td>{{ entry.created_at.strftime('%d/%m/%Y %H:%M') if entry.created_at else '' }}</td>
+                <td>{{ entry.user_name }} <span class="text-body-secondary">({{ entry.updated_by }})</span></td>
+                <td>{{ '%.2f' % entry.adjustment_factor }}</td>
+                <td>{{ '%.2f' % entry.invoice_factor }}</td>
+                <td>{{ entry.updated_product_count }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-body-secondary py-3">Todavía no hay ajustes registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const factorInput = document.getElementById('adjustment_factor');
+  const previewRows = {{ preview_rows|tojson }};
+  const previewBody = document.getElementById('price-preview-body');
+
+  function formatValue(value) {
+    return Number(value || 0).toLocaleString('es-CL', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function renderPreview() {
+    const factor = Number(factorInput.value || 1.2);
+    if (!previewBody || !Array.isArray(previewRows) || !previewRows.length) return;
+
+    previewBody.innerHTML = previewRows.map((row) => {
+      const minimum = Number(row.minimum_price || 0);
+      const higher = minimum * 1.16;
+      const offer = minimum * factor;
+      const maximum = offer * 1.16;
+
+      return `
+        <tr>
+          <td>${row.product_code}</td>
+          <td>${formatValue(minimum)}</td>
+          <td>${formatValue(higher)}</td>
+          <td>${formatValue(offer)}</td>
+          <td>${formatValue(maximum)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (factorInput) {
+    factorInput.addEventListener('input', renderPreview);
+    renderPreview();
+  }
+});
+</script>
+{% endblock %}
